@@ -5,3 +5,14 @@ config.h
 *#
 .DS_Store
 docsrc/stage
+
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Makefile
+install_manifest.txt
+*.cmake
+*.so
+stage.pc
+libstage/stage
+libstage/libstage.so.*

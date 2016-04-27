@@ -1,5 +1,6 @@
 
 SET( PLUGINS
+  eae_simple
   fasr
   sink
   source
@@ -15,14 +16,14 @@ SET( PLUGINS
 foreach( PLUGIN ${PLUGINS} )
   ADD_LIBRARY( ${PLUGIN} MODULE ${PLUGIN}.cc )
 endforeach( PLUGIN )
-				
+
 ADD_LIBRARY( fasr2 MODULE fasr2.cc astar/findpath.cpp )
 
 # add extras to the list of plugins
 SET( PLUGINS ${PLUGINS} fasr2 )
 
-set_source_files_properties( ${PLUGINS} PROPERTIES 
-  COMPILE_FLAGS "${FLTK_CFLAGS}" 
+set_source_files_properties( ${PLUGINS} PROPERTIES
+  COMPILE_FLAGS "${FLTK_CFLAGS}"
 )
 
 foreach( PLUGIN ${PLUGINS} )
@@ -33,5 +34,5 @@ endforeach( PLUGIN )
 SET_TARGET_PROPERTIES( ${PLUGINS} PROPERTIES PREFIX "" )
 
 # install in <prefix>/lib
-install( TARGETS ${PLUGINS} DESTINATION ${PROJECT_PLUGIN_DIR}) 
+install( TARGETS ${PLUGINS} DESTINATION ${PROJECT_PLUGIN_DIR})
 

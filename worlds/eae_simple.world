@@ -1,0 +1,41 @@
+
+# World for energy-aware exploration (eae) with simplified assumptions:
+#  - map has no obstacles
+#  - robots move from cell to cell
+#  - laser can see neighboring cells
+# Authors: Micha Rappaport
+# $Id: eae_simple.world,v 1.0 2016-04-22$
+
+include "pioneer.inc"
+include "map.inc"
+
+speedup 1
+paused 1
+
+
+# time at which to pause (in GUI mode) or quit (in headless mode) the simulation
+quit_time 1800 # 30 mins of simulated time
+
+resolution 1
+
+# configure the GUI window
+window
+(
+    size [ 800 600 ]
+
+    center [ 0 0 ]
+    rotate [ 0 0 ]
+    scale 50
+
+    show_data 1
+    show_flags 1
+    show_grid 1
+)
+
+define autorob pioneer2dx
+(
+    ctrl "eae_simple"
+    trail_length 100
+)
+
+autorob( pose [0 0 0 0] kjoules 500 name "robot_0" )

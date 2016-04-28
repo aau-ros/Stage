@@ -1,5 +1,11 @@
 #include "stage.hh"
-#include "boost/multi_array.hpp"
+#include <fstream>
+#include <ctime>
+#include <string>
+#include <stdexcept>
+#include <sstream>
+#include <sys/stat.h>
+//#include <boost/filesystem.hpp>
 
 using namespace Stg;
 using namespace std;
@@ -56,6 +62,11 @@ typedef enum {
   MODE_DEAD,
   MODE_FINISHED
 } nav_mode_t;
+
+/**
+ *
+ */
+const string log_path = "/media/mrappapo/Daten/Arbeit/NES/projects/2014_mrs/simulation/cpp_dock-coord/";
 
 /**
  * Map array definitions.
@@ -359,6 +370,71 @@ private:
     GridMap* map;
 
     /**
+     * A class for logging data.
+     */
+    class LogOutput
+    {
+    public:
+        /**
+         * Constructor
+         * Creates a subdirectory in the log_path directory, according to current date.
+         */
+        LogOutput()
+        {
+            // get current time
+            std::time_t now = time(NULL);
+            struct tm* timeinfo;
+            timeinfo = localtime(&now);
+
+            // path to log file
+            char dir[11];
+            strftime(dir, 11, "%y-%m-%d/", timeinfo);
+            string path = log_path + string(dir);
+
+            // make directory if it doesn't exist
+            mkdir(path.c_str(), 0777);
+
+            // file name
+            char filename[7];
+            strftime(filename, 7, "%H-%M", timeinfo);
+
+            // complete path of file
+            string filepath = path + string(filename) + ".log";
+            cout << "log file: " << filepath << endl;
+
+            // open log file
+            file.open(filepath.c_str());
+
+            // write header
+            write("x position\ty position\tangle\tdistance");
+        }
+
+        /**
+         * Destructor
+         * Closes the log file.
+         */
+        ~LogOutput()
+        {
+            file.close();
+        }
+
+        /**
+         * Write a string as one line to the log file.
+         */
+        void write(string text)
+        {
+            file << text << endl;
+        }
+
+    private:
+        /**
+         * The file stream for the log file.
+         */
+        ofstream file;
+    };
+    LogOutput* log;
+
+    /**
      * The position model of the robot.
      */
     ModelPosition* pos;
@@ -471,6 +547,9 @@ public:
 
         // create new map
         map = new GridMap();
+
+        // create log file
+        log = new LogOutput();
 
         // PositionUpdate() checks to see if we reached source or sink
         pos->AddCallback( Model::CB_UPDATE, (model_callback_t)PositionUpdate, this );
@@ -644,6 +723,9 @@ public:
         // move robot
         pos->GoTo(goal);
 
+        stringstream output;
+        output << goal.x << "\t" << goal.y << "\t" << goal.a << "\t" << dist_travel;
+        log->write(output.str());
         //printf("move to (%.0f,%.0f,%.1f), cost %.1f\n\n\n", goal.x, goal.y, goal.a, min_cost);
     }
 

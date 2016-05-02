@@ -503,7 +503,7 @@ bool Worldfile::LoadTokenInclude(FILE *file, int *line, int include)
       free(tmp);
     }
 
-  printf( "[Include %s]", filename );
+  printf( "[Include %s]\n", filename );
   fflush( stdout );
 
   // Open the include file

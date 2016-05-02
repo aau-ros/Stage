@@ -390,7 +390,7 @@ void World::Load( const std::string& worldfile_path )
   // note: must call Unload() before calling Load() if a world already
   // exists TODO: unload doesn't clean up enough right now
 
-  printf( " [Loading %s]", worldfile_path.c_str() );
+  printf( "[Loading %s]\n", worldfile_path.c_str() );
   fflush(stdout);
 
   this->wf = new Worldfile();

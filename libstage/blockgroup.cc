@@ -332,7 +332,7 @@ void BlockGroup::LoadBitmap( const std::string& bitmapfile, Worldfile* wf )
   
   CalcSize();
   
-  fputs( "]", stdout ); 
+  fputs( "]\n", stdout ); 
 }
 
 

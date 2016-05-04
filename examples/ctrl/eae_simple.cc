@@ -33,7 +33,7 @@ const double goal_tolerance = 0.05;
 const int map_offset = 50;
 
 /**
- * π
+ * Math constant π.
  */
 const double pi = 3.14159;
 
@@ -64,7 +64,7 @@ typedef enum {
 } nav_mode_t;
 
 /**
- *
+ * Path for log files. Subdirectories are automatically created.
  */
 const string log_path = "/media/mrappapo/Daten/Arbeit/NES/projects/2014_mrs/simulation/cpp_dock-coord/";
 
@@ -435,9 +435,46 @@ private:
     LogOutput* log;
 
     /**
+     * A class for the wifi messages.
+     *
+     * @todo: implement
+     */
+    class MyWifiMessage : public WifiMessageBase
+    {
+    public:
+        MyWifiMessage():WifiMessageBase(){};
+
+        ~MyWifiMessage(){ };
+
+        Pose gpose;
+
+        MyWifiMessage(const MyWifiMessage& toCopy) : WifiMessageBase(toCopy)
+        {
+            gpose = toCopy.gpose;
+        };
+
+        MyWifiMessage& operator=(const MyWifiMessage& toCopy)
+        {
+            WifiMessageBase::operator=(toCopy);
+            gpose = toCopy.gpose;
+            return *this;
+        };
+
+        virtual WifiMessageBase* Clone()
+        {
+            return new MyWifiMessage(*this);
+        };
+    };
+
+    /**
      * The position model of the robot.
      */
     ModelPosition* pos;
+
+    /**
+     * The wifi model of the robot.
+     */
+    ModelWifi* wifi;
 
     /**
      * The camera object that is used for visualization.
@@ -518,13 +555,14 @@ private:
 
     /**
      * Callback function that is called when the robot changes position.
+     * When the robot reached it's goal, it directs the robot to continue exploration.
      *
      * @param ModelPosition* pos: The instantiated position model of the robot.
      * @param Robot* robot: The instantiated robot object which attached the callback.
      *
      * @return int: Returns 0.
      */
-    static int PositionUpdate( ModelPosition* pos, Robot* robot )
+    static int PositionUpdate(ModelPosition* pos, Robot* robot)
     {
         // robot reached goal, continue exploration
         if(pos->GetPose().Distance(robot->goal) < goal_tolerance && (robot->mode == MODE_EXPLORE || robot->mode == MODE_IDLE)){
@@ -535,13 +573,50 @@ private:
         return 0; // run again
     }
 
+    /**
+     * Callback function that is called when @todo
+     *
+     * @param ModelWifi* wifi: The instantiated wifi model of the robot.
+     * @param Robot* robot: The instantiated robot object which attached the callback.
+     *
+     * @return int: Returns 0.
+     */
+    static int WifiUpdate(ModelWifi* wifi, Robot* robot)
+    {
+        // visualize wifi connections
+        wifi->DataVisualize(robot->cam);
+
+        // broadcast a test message
+        MyWifiMessage msg;
+        msg.gpose = robot->pos->GetGlobalPose();
+        WifiMessageBase* base_ptr = &msg;
+        wifi->comm.SendBroadcastMessage(base_ptr);
+
+        return 0; // run again
+    }
+
+    /**
+     * @todo
+     */
+    static void ProcessMessage(WifiMessageBase* incoming)
+    {
+        //printf("processing message\n");
+        MyWifiMessage * my_mesg = dynamic_cast<MyWifiMessage*>(incoming);
+        if ( my_mesg )
+        {
+            printf("Robot [%u]: Neighbor [%u] is at (%.2f %.2f) and heading (%.2f)\n",
+            my_mesg->GetRecipientId(), my_mesg->GetSenderId(), my_mesg->gpose.x, my_mesg->gpose.y, my_mesg->gpose.a );
+        }
+        delete incoming;
+    }
+
 public:
     /**
      * Constructor
      *
      * @param ModelPosition* pos: The instantiated position model of the robot.
      */
-    Robot( ModelPosition* pos ) : map(), pos(pos), cam(), prev_pose(pos->GetPose()), wpcolor(0,1,0), mode(MODE_IDLE)//, mapvis()
+    Robot(ModelPosition* pos) : map(), pos(pos), cam(), prev_pose(pos->GetPose()), wpcolor(0,1,0), mode(MODE_IDLE)//, mapvis()
     {
         cout << endl;
 
@@ -551,9 +626,15 @@ public:
         // create log file
         log = new LogOutput();
 
-        // PositionUpdate() checks to see if we reached source or sink
-        pos->AddCallback( Model::CB_UPDATE, (model_callback_t)PositionUpdate, this );
+        // register callback for position updates
+        pos->AddCallback(Model::CB_UPDATE, (model_callback_t)PositionUpdate, this );
         pos->Subscribe();
+
+        // initialize wifi adapter
+        wifi = (ModelWifi*)pos->GetChild("wifi:0");
+        wifi->AddCallback(Model::CB_UPDATE, (model_callback_t)WifiUpdate, this);
+        wifi->comm.SetReceiveMsgFn(ProcessMessage);
+        wifi->Subscribe();
 
         // store starting point for visualization
         pos->waypoints.push_back(ModelPosition::Waypoint(0, 0, 0, 0, wpcolor));
@@ -565,7 +646,6 @@ public:
 
         // distance traveled
         dist_travel = 0;
-
     }
 
     /**
@@ -734,9 +814,9 @@ public:
 /**
  * Initialization function that is called by Stage when the model starts up.
  */
-extern "C" int Init( Model* mod, CtrlArgs* args )
+extern "C" int Init(Model* mod, CtrlArgs* args)
 {
-    Robot* robot = new Robot( (ModelPosition*)mod );
+    Robot* robot = new Robot((ModelPosition*)mod);
 
     robot->Explore();
 

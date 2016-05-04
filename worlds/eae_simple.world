@@ -36,6 +36,22 @@ define autorob pioneer2dx
 (
     ctrl "eae_simple"
     trail_length 100
+
+    wifi
+    (
+        ip "192.168.0.4"
+        netmask "255.255.255.0"
+        mac "08:00:20:ae:ff:7e"
+        essid "test network"
+        #model "friis"
+        model "raytrace"
+        wall_factor 5
+        power 45
+        sensitivity -75
+        range_db -45
+        # link_success_rate 90
+        # random_seed 10
+    )
 )
 
 autorob( pose [0 0 0 0] kjoules 500 name "robot_0" )

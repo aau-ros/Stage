@@ -1,6 +1,5 @@
-
 SET( PLUGINS
-  eae_simple
+  eae/eae_simple
   fasr
   sink
   source
@@ -19,6 +18,8 @@ foreach( PLUGIN ${PLUGINS} )
 endforeach( PLUGIN )
 
 ADD_LIBRARY( fasr2 MODULE fasr2.cc astar/findpath.cpp )
+
+ADD_LIBRARY( eae/eae_simple MODULE eae/eae_coordination.cc eae/eae_gridmap.cc eae/eae_logoutput.cc eae/eae_robot.cc eae/eae_wifimessage.cc )
 
 # add extras to the list of plugins
 SET( PLUGINS ${PLUGINS} fasr2 )

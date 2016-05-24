@@ -10,7 +10,7 @@ include "pioneer.inc"
 include "map.inc"
 
 speedup 1
-paused 1
+paused 0
 
 
 # time at which to pause (in GUI mode) or quit (in headless mode) the simulation
@@ -32,26 +32,54 @@ window
     show_grid 1
 )
 
-define autorob pioneer2dx
+pioneer2dx
 (
-    ctrl "eae_simple"
-    trail_length 100
+    name "r0"
+    color "green"
 
-    wifi
-    (
-        ip "192.168.0.4"
+    kjoules 400
+    kjoules_capacity 400
+
+    pose [0 0 0 0]
+
+    ctrl "eae_simple"
+
+    # report error-free position in world coordinates
+    localization "gps"
+    localization_origin [ 0 0 0 0 ]
+
+    wifi(
+        ip "192.168.0.1"
         netmask "255.255.255.0"
         mac "08:00:20:ae:ff:7e"
         essid "test network"
-        #model "friis"
-        model "raytrace"
-        wall_factor 5
-        power 45
-        sensitivity -75
-        range_db -45
-        # link_success_rate 90
-        # random_seed 10
+        model "simple"
+        range 10
     )
 )
 
-autorob( pose [0 0 0 0] kjoules 500 name "robot_0" )
+pioneer2dx
+(
+    name "r1"
+    color "blue"
+
+    kjoules 400
+    kjoules_capacity 400
+
+    pose [0 2 0 0]
+
+    ctrl "eae_simple"
+
+    # report error-free position in world coordinates
+    localization "gps"
+    localization_origin [ 0 0 0 0 ]
+
+    wifi(
+        ip "192.168.0.2"
+        netmask "255.255.255.0"
+        mac "08:00:20:ae:ff:7f"
+        essid "test network"
+        model "simple"
+        range 10
+    )
+)

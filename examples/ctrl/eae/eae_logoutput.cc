@@ -1,11 +1,11 @@
-#include "eae.hh"
+#include "eae_logoutput.hh"
 
 using namespace Stg;
 using namespace std;
 
 namespace eae
 {
-    LogOutput::LogOutput()
+    LogOutput::LogOutput(int robot)
     {
         // get current time
         std::time_t now = time(NULL);
@@ -15,17 +15,21 @@ namespace eae
         // path to log file
         char dir[11];
         strftime(dir, 11, "%y-%m-%d/", timeinfo);
-        string path = log_path + string(dir);
+        string path = LOG_PATH + string(dir);
 
         // make directory if it doesn't exist
         mkdir(path.c_str(), 0777);
 
-        // file name
-        char filename[7];
-        strftime(filename, 7, "%H-%M", timeinfo);
+        // file name from time
+        char timestring[7];
+        strftime(timestring, 7, "%H-%M", timeinfo);
+
+        // add robot id to file name
+        ostringstream robot_ss;
+        robot_ss << robot;
 
         // complete path of file
-        string filepath = path + string(filename) + ".log";
+        string filepath = path + string(timestring) + "-" + robot_ss.str() + ".log";
         cout << "log file: " << filepath << endl;
 
         // open log file

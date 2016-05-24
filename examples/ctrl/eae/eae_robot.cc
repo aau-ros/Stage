@@ -1,4 +1,4 @@
-#include "eae.hh"
+#include "eae_robot.hh"
 
 using namespace Stg;
 using namespace std;
@@ -7,35 +7,33 @@ namespace eae
 {
     Robot::Robot(ModelPosition* pos) : pos(pos)
     {
+        // robot id
+        id = pos->GetId();
+
         // instantiate objects
-        map = new GridMap();
-        log = new LogOutput();
+        map = new GridMap(pos->GetPose(), pos->GetWorld());
+        log = new LogOutput(id);
+        cord = new Coordination(pos, this);
         cam = new OrthoCamera();
         wpcolor = Color(0,1,0); // waypoint color is green
 
         // robot is idle
         state = STATE_IDLE;
 
-        // at the start the previous position equals the current position
-        prev_pose = pos->GetPose();
-
         // register callback for position updates
         pos->AddCallback(Model::CB_UPDATE, (model_callback_t)PositionUpdate, this );
         pos->Subscribe();
 
-        // initialize wifi adapter
-        wifi = (ModelWifi*)pos->GetChild("wifi:0");
-        wifi->AddCallback(Model::CB_UPDATE, (model_callback_t)WifiUpdate, this);
-        wifi->comm.SetReceiveMsgFn(ProcessMessage);
-        wifi->Subscribe();
-
         // store starting point for visualization
-        pos->waypoints.push_back(ModelPosition::Waypoint(0, 0, 0, 0, wpcolor));
+        pos->waypoints.push_back(ModelPosition::Waypoint(pos->GetPose(), wpcolor));
 
         /*World* world_map = pos->GetWorld();
         Model* ground = world_map->GetGround();
-        pos->AddVisualizer(&mapvis, true);
+        Model::RasterVis* mapvis = new Model::RasterVis();
+        pos->AddVisualizer(mapvis, true);
         mapvis.Visualize(ground, cam);*/
+        //pos->AddBlockRect(3,3,1,1,1);
+        Gl::draw_vector(3, 2, 1);
 
         // distance traveled
         dist_travel = 0;
@@ -59,35 +57,13 @@ namespace eae
         Pose pose = pos->GetPose();
 
         // mark neighborhood as visited
-        map->clear(round(pose.x), round(pose.y));
-        //map->visualize();
+        map->Clear(round(pose.x), round(pose.y));
 
+        // visualize map progress
+        map->VisualizeGui(pose);
 
-        /*******************************
-         * estimate remaining distance *
-         *******************************/
-
-        double velocity; // average velocity
-        double power;    // power consumption at average velocity
-        double dist_rem; // remaining distance that the robot can drive with its current battery
-        World* world = pos->GetWorld();
-
-        // calculate average velocity
-        if(dist_travel > 0 && world->SimTimeNow() > 0){
-            velocity = dist_travel/world->SimTimeNow()*1000000;
-        }
-        // at beginning of simulation take max velocity
-        else{
-            velocity = pos->velocity_bounds->max;
-        }
-
-        // calculate power consumption (according to stage model: libstage/model_position:496)
-        power = velocity * WATTS_KGMS * pos->GetTotalMass() + WATTS;
-
-        // calculate remaining distance
-        dist_rem = pos->FindPowerPack()->GetStored() / power * velocity;
-
-        //printf("power: %.1f, dist: %.1f\n", power, dist_rem);
+        // share map with other robots in range
+        cord->BroadcastMap();
 
 
         /******************
@@ -97,16 +73,9 @@ namespace eae
         // initialize goal with current position
         goal = pose;
 
-        // parameters for cost function
-        double dg;    // distance to frontier
-        double dgb;   // distance from frontier to home base
-        double dgbe;  // energy-aware distance from frontier to home base
-        double theta; // required turning of robot to reach frontier
-        double cost;  // total cost
-        double min_cost = 200; // initialize cost
-
-        // frontier location
-        int x,y;
+        Pose frontier;
+        double max_bid = BID_INIT;
+        double bid;
 
         // get list of frontiers
         vector< vector <int> > frontiers = map->Frontiers();
@@ -114,47 +83,22 @@ namespace eae
         // iterate through all frontiers
         vector< vector<int> >::iterator it;
         for(it=frontiers.begin(); it<frontiers.end(); ++it){
-            // frontier location
-            x = it->at(0);
-            y = it->at(1);
+            // make pose of coordinates
+            frontier.x = it->at(0);
+            frontier.y = it->at(1);
+            frontier.a = Angle(pose.x, pose.y, frontier.x, frontier.y);
 
-            // compute distances
-            dg = Distance(x, y);
-            dgb = Distance(x, y, 0, 0);
+            // calculate bid (negative of cost)
+            bid = CalcBid(frontier);
 
-            // not enough energy to reach frontier
-            if(dist_rem <= dg + dgb)
+            // invalid bid, not enough energy to reach frontier
+            if(bid == BID_INV)
                 continue;
 
-            // energy-aware distance
-            if(pos->FindPowerPack()->ProportionRemaining() > 0.5)
-                dgbe = -dgb;
-            else
-                dgbe = dgb;
-
-            // compute required turning
-            theta = 1/pi * (pi - abs(abs(Angle(prev_pose.x, prev_pose.y, pose.x, pose.y) - Angle(pose.x, pose.y, x, y)) - pi));
-
-            // compute total cost
-            cost = w1*dg + w2*dgb + w3*dgbe + w4*theta;
-
-            // minimize cost
-            if(cost < min_cost){
-
-                /*printf("coordinate:\n");
-                printf("x: %d\n", x);
-                printf("y: %d\n\n", y);
-                printf("cost function:\n");
-                printf("dg:    %.2f\n", dg);
-                printf("dgb:   %.2f\n", dgb);
-                printf("dgbe:  %.2f\n", dgbe);
-                printf("theta: %.2f\n", theta);
-                printf("\n");*/
-
-                min_cost = cost;
-                goal.x = x;
-                goal.y = y;
-                goal.a = Angle(pose.x, pose.y, x, y);
+            // maximize bid, minimize cost
+            if(bid > max_bid){
+                max_bid = bid;
+                goal = frontier;
             }
         }
 
@@ -162,7 +106,7 @@ namespace eae
         if(goal == pose){
 
             // end of exploration
-            if(Distance(0, 0) < goal_tolerance){
+            if(Distance(0, 0) < GOAL_TOLERANCE){
                 state = STATE_FINISHED;
                 printf("exploration finished!\n");
                 return;
@@ -180,33 +124,83 @@ namespace eae
         /********************************
          * coordinate with other robots *
          *******************************/
+        cord->FrontierAuction(goal, max_bid);
+    }
 
-        if(cord->FrontierAuction(goal, min_cost) == false){
-            Explore();
-            return;
-        }
-
-
-        /****************
-         * move to goal *
-         ****************/
-
+    void Robot::Move(Pose to)
+    {
         // store goal for visualization
-        pos->waypoints.push_back(ModelPosition::Waypoint(goal, wpcolor));
+        pos->waypoints.push_back(ModelPosition::Waypoint(to, wpcolor));
 
         // store traveled distance
-        dist_travel += pose.Distance(goal);
-
-        // store previous position
-        prev_pose = pose;
+        dist_travel += pos->GetPose().Distance(to);
 
         // move robot
-        pos->GoTo(goal);
+        pos->GoTo(to);
 
         stringstream output;
-        output << goal.x << "\t" << goal.y << "\t" << goal.a << "\t" << dist_travel;
-        log->write(output.str());
-        //printf("move to (%.0f,%.0f,%.1f), cost %.1f\n\n\n", goal.x, goal.y, goal.a, min_cost);
+        output << to.x << "\t" << to.y << "\t" << to.a << "\t" << dist_travel;
+        log->Write(output.str());
+    }
+
+    double Robot::CalcBid(Pose frontier)
+    {
+        // calculate distances
+        Pose pose = pos->GetPose();
+        double dg = pose.Distance(frontier);
+        double dgb = Distance(frontier.x, frontier.y, 0, 0);
+
+        // check if frontier is reachable
+        if(RemainingDist() <= dg + dgb)
+            return BID_INV;
+
+        // calculate energy aware parameter
+        double dgbe;
+        if(pos->FindPowerPack()->ProportionRemaining() > 0.5)
+            dgbe = -dgb;
+        else
+            dgbe = dgb;
+
+        // calculate angular parameter
+        double theta = 1/PI * (PI - abs(abs(pose.a - Angle(pose.x, pose.y, frontier.x, frontier.y)) - PI));
+
+        // calculate bid
+        return -(W1*dg + W2*dgb + W3*dgbe + W4*theta);
+    }
+
+    OrthoCamera* Robot::GetCam()
+    {
+        return cam;
+    }
+
+    int Robot::GetId()
+    {
+        return id;
+    }
+
+    robot_state_t Robot::GetState()
+    {
+        return state;
+    }
+
+    void Robot::SetState(robot_state_t state)
+    {
+        this->state = state;
+    }
+
+    void Robot::SetPose(Pose pose)
+    {
+        pos->SetPose(pose);
+    }
+
+    GridMap* Robot::GetMap()
+    {
+        return map;
+    }
+
+    void Robot::UpdateMap(GridMap* map)
+    {
+        this->map->Update(map);
     }
 
     double Robot::Distance(double from_x, double from_y, double to_x, double to_y)
@@ -228,13 +222,34 @@ namespace eae
         return atan2(y,x);
     }
 
+    double Robot::RemainingDist()
+    {
+        double velocity; // average velocity
+        double power;    // power consumption at average velocity
+        World* world = pos->GetWorld();
+
+        // calculate average velocity
+        if(dist_travel > 0 && world->SimTimeNow() > 0){
+            velocity = dist_travel/world->SimTimeNow()*1000000;
+        }
+        // at beginning of simulation take max velocity
+        else{
+            velocity = pos->velocity_bounds->max;
+        }
+
+        // calculate power consumption (according to stage model: libstage/model_position:496)
+        power = velocity * WATTS_KGMS * pos->GetTotalMass() + WATTS;
+
+        // calculate remaining distance
+        return pos->FindPowerPack()->GetStored() / power * velocity;
+    }
+
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)
     {
         // robot reached goal, continue exploration
-        if(pos->GetPose().Distance(robot->goal) < goal_tolerance && robot->state == STATE_EXPLORE){
+        if(pos->GetPose().Distance(robot->goal) < GOAL_TOLERANCE && robot->state == STATE_EXPLORE){
             robot->Explore();
         }
-        //printf("velocity:  x=%.1f, y=%.1f, z=%.1f, a=%.1f\n", pos->GetVelocity().x, pos->GetVelocity().y, pos->GetVelocity().z, pos->GetVelocity().a);
 
         return 0; // run again
     }

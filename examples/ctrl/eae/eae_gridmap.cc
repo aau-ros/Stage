@@ -1,48 +1,126 @@
-#include "eae.hh"
+#include "eae_gridmap.hh"
 
 using namespace Stg;
 using namespace std;
 
 namespace eae
 {
-    GridMap::GridMap()
+    GridMap::GridMap(Pose pose, World* world)
     {
         // set dimension parameters
-        x_dim = 3;
-        y_dim = 3;
-        x_offset = 1;
-        y_offset = 1;
-        x_min = 0-x_offset;
-        x_max = 0+x_offset;
-        y_min = 0-y_offset;
-        y_max = 0+y_offset;
+        x_dim = 1 + 2 * (LASER_RANGE);
+        y_dim = 1 + 2 * (LASER_RANGE);
+        x_offset = LASER_RANGE - pose.x;
+        y_offset = LASER_RANGE - pose.y;
+        x_min = pose.x - (LASER_RANGE);
+        x_max = pose.x + (LASER_RANGE);
+        y_min = pose.y - (LASER_RANGE);
+        y_max = pose.y + (LASER_RANGE);
 
         // fill grid map with unknown values
-        vector<char> col(y_dim, unk);
+        vector<grid_cell_t> col(y_dim, CELL_UNKNOWN);
         for(int i=0; i<x_dim; ++i){
             grid.push_back(col);
         }
+
+        // initialize visualization model for free space
+        vis_free = new Model(world, NULL, "model", "free");
+        vis_free->SetObstacleReturn(0);
+        vis_free->SetColor(Color(1, 1, 1, 1));
+        vis_free->ClearBlocks();
+        vis_free->SetGuiMove(0);
+
+        // initialize visualization model for unknown space
+        vis_unknown = new Model(world, NULL, "model", "unknown");
+        vis_unknown->SetObstacleReturn(0);
+        vis_unknown->SetColor(Color(0, 0, 0, 0.5));
+        vis_unknown->ClearBlocks();
+        vis_unknown->SetGuiMove(0);
+
+        // initialize visualization model for occupied space
+        vis_occupied = new Model(world, NULL, "model", "occupied");
+        vis_occupied->SetObstacleReturn(0);
+        vis_occupied->SetColor(Color(0, 0, 0, 1));
+        vis_occupied->ClearBlocks();
+        vis_occupied->SetGuiMove(0);
     }
 
-    void GridMap::Visualize()
+    void GridMap::Visualize(Pose pose)
     {
-        for(unsigned int i=0; i<grid.at(0).size(); ++i){
+        int y = y_max;
+
+        for(int i=grid.at(0).size()-1; i>=0; --i){
+            int x = x_min;
+
             for(it = grid.begin(); it<grid.end(); ++it){
-                printf("%d ", it->at(i));
+                // robot position
+                if(abs(x - pose.x) < GOAL_TOLERANCE && abs(y - pose.y) < GOAL_TOLERANCE)
+                    printf("R ");
+
+                // origin
+                else if(abs(x) < GOAL_TOLERANCE  && abs(y) < GOAL_TOLERANCE)
+                    printf("O ");
+
+                // free
+                else if(it->at(i) == CELL_FREE)
+                    printf("_ ");
+
+                // occupied
+                else if(it->at(i) == CELL_OCCUPIED)
+                    printf("X ");
+
+                // unknown
+                else
+                    printf("? ");
+                ++x;
             }
             cout << endl;
+            --y;
         }
         cout << endl;
     }
 
-    void GridMap::Insert(int x, int y, char val)
+    void GridMap::VisualizeGui(Pose pose)
+    {
+        vis_free->ClearBlocks();
+        vis_unknown->ClearBlocks();
+        vis_occupied->ClearBlocks();
+
+        int y = y_max;
+
+        for(int i=grid.at(0).size()-1; i>=0; --i){
+            int x = x_min;
+
+            for(it = grid.begin(); it<grid.end(); ++it){
+                // free
+                if(it->at(i) == CELL_FREE)
+                    vis_free->AddBlockRect(x, y, 1, 1, 0);
+
+                // unknown
+                else if(it->at(i) == CELL_UNKNOWN)
+                    vis_unknown->AddBlockRect(x, y, 1, 1, 0);
+
+                // occupied
+                else if(it->at(i) == CELL_OCCUPIED)
+                    vis_occupied->AddBlockRect(x, y, 1, 1, 0);
+
+                // unknown
+                else
+                    printf("Could determine cell type at (%d,%d)!\n", x, y);
+                ++x;
+            }
+            --y;
+        }
+    }
+
+    void GridMap::Insert(int x, int y, grid_cell_t val)
     {
         // x index out of bounds, extend vector in x dimension
         if(x < x_min){
             // number of columns to add
             int add = x_min - x;
             // column containing unknown values
-            vector<char> col(y_dim, unk);
+            vector<grid_cell_t> col(y_dim, CELL_UNKNOWN);
             // add column
             for(int i=0; i<add; ++i){
                 grid.insert(grid.begin(), col);
@@ -58,7 +136,7 @@ namespace eae
             // number of columns to add
             int add = x - x_max;
             // column containing unknown values
-            vector<char> col(y_dim, unk);
+            vector<grid_cell_t> col(y_dim, CELL_UNKNOWN);
             // add column
             for(int i=0; i<add; ++i){
                 grid.push_back(col);
@@ -75,7 +153,7 @@ namespace eae
             // add elements to every column
             for(it=grid.begin(); it<grid.end(); ++it){
                 for(int i=0; i<add; ++i){
-                    it->insert(it->begin(), unk);
+                    it->insert(it->begin(), CELL_UNKNOWN);
                 }
             }
             // adjust dimension parameters
@@ -91,7 +169,7 @@ namespace eae
             // add elements to every column
             for(it=grid.begin(); it<grid.end(); ++it){
                 for(int i=0; i<add; ++i){
-                    it->push_back(unk);
+                    it->push_back(CELL_UNKNOWN);
                 }
             }
             // adjust dimension parameters
@@ -110,15 +188,11 @@ namespace eae
 
     void GridMap::Clear(int x, int y)
     {
-        insert(x-1, y-1, fre);
-        insert(x-1, y, fre);
-        insert(x-1, y+1, fre);
-        insert(x, y-1, fre);
-        insert(x, y, fre);
-        insert(x, y+1, fre);
-        insert(x+1, y-1, fre);
-        insert(x+1, y, fre);
-        insert(x+1, y+1, fre);
+        for(int i=x-LASER_RANGE; i<=x+LASER_RANGE; ++i){
+            for(int j=y-LASER_RANGE; j<=y+LASER_RANGE; ++j){
+                Insert(i,j,CELL_FREE);
+            }
+        }
     }
 
     vector< vector <int> > GridMap::Frontiers()
@@ -144,12 +218,45 @@ namespace eae
         return frontiers;
     }
 
-    char GridMap::Read(int x, int y)
+    void GridMap::Update(GridMap* map)
+    {
+        int x = map->x_min;
+
+        for(it = map->grid.begin(); it<map->grid.end(); ++it){
+            int y = map->y_min;
+            for(jt = it->begin(); jt<it->end(); ++jt){
+                /////// update my own map according to map parameter
+                /////// be careful about different offsets!!! //////
+                ++y;
+            }
+            ++x;
+        }
+    }
+
+    GridMap& GridMap::operator=(const GridMap& toCopy)
+    {
+        x_dim = toCopy.x_dim;
+        y_dim = toCopy.y_dim;
+        x_offset = toCopy.x_offset;
+        y_offset = toCopy.y_offset;
+        x_min = toCopy.x_min;
+        x_max = toCopy.x_max;
+        y_min = toCopy.y_min;
+        y_max = toCopy.y_max;
+
+        vis_free = toCopy.vis_free;
+        vis_unknown = toCopy.vis_unknown;
+        vis_occupied = toCopy.vis_occupied;
+
+        return *this;
+    }
+
+    grid_cell_t GridMap::Read(int x, int y)
     {
         return grid.at(x+x_offset).at(y+y_offset);
     }
 
-    void GridMap::Write(int x, int y, char val)
+    void GridMap::Write(int x, int y, grid_cell_t val)
     {
         grid.at(x+x_offset).at(y+y_offset) = val;
     }
@@ -159,31 +266,26 @@ namespace eae
         // check cell itself
         try{
             // cell is not free, cannot be frontier
-            if(read(x,y) != fre){
-                //printf("cell (%d,%d) is not free!\n", x, y);
+            if(Read(x,y) != CELL_FREE){
                 return false;
             }
         }
         catch(const out_of_range& e){
             // cell is unknown, cannot be frontier
-            //printf("cell (%d,%d) out of range!\n", x, y);
             return false;
         }
 
         // check neighboring cells
         try{
             // all neighbors are known, cannot be frontier
-            if(read(x-1,y-1) != unk && read(x-1,y) != unk && read(x-1,y+1) != unk && read(x,y-1) != unk && read(x,y+1) != unk && read(x+1,y-1) != unk && read(x+1,y) != unk && read(x+1,y+1) != unk){
-                //printf("neighbors of cell (%d,%d) are all NOT unknown!\n", x, y);
+            if(Read(x-1,y-1) != CELL_UNKNOWN && Read(x-1,y) != CELL_UNKNOWN && Read(x-1,y+1) != CELL_UNKNOWN && Read(x,y-1) != CELL_UNKNOWN && Read(x,y+1) != CELL_UNKNOWN && Read(x+1,y-1) != CELL_UNKNOWN && Read(x+1,y) != CELL_UNKNOWN && Read(x+1,y+1) != CELL_UNKNOWN){
                 return false;
             }
             // one of the neighboring cells is unknown, it is a frontier
-            //printf("at least one neighbor of cell(%d,%d) is unknown!\n", x, y);
             return true;
         }
         catch(const out_of_range& e){
             // one of the neighboring cells is unknown, it is a frontier
-            //printf("neighbor of cell (%d,%d) out of range!\n", x, y);
             return true;
         }
     }

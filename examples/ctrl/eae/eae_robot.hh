@@ -53,6 +53,11 @@ namespace eae
         void Explore();
 
         /**
+         * Move the robot to the pose stored in the private variable goal.
+         */
+        void Move();
+
+        /**
          * Move the robot to a given position.
          *
          * @param Pose to: The position where the robot should move to.
@@ -169,6 +174,16 @@ namespace eae
         static int PositionUpdate(ModelPosition* pos, Robot* robot);
 
         /**
+         * Callback function that is called when the fiducial sensor detects something.
+         *
+         * @param ModelFiducial* fid: The instantiated fiducial model of the robot.
+         * @param Robot* robot: The instantiated robot object which attached the callback.
+         *
+         * @return int: Returns 0.
+         */
+        static int FiducialUpdate(ModelFiducial* fid, Robot* robot);
+
+        /**
          * Identifier of the robot.
          */
         int id;
@@ -182,6 +197,11 @@ namespace eae
          * LogOutput object for logging of data to log files.
          */
         LogOutput* log;
+
+        /**
+         * The fiducial sensor of the robot for detecting docking stations.
+         */
+        ModelFiducial* fid;
 
         /**
          * The position model of the robot.

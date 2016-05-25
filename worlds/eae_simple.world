@@ -42,12 +42,12 @@ define charging_bump model
 define robot pioneer2dx
 (
     ctrl "eae_simple"
-    kjoules 50
-    kjoules_capacity 50
+    kjoules 5
+    kjoules_capacity 5
     localization "gps"
     localization_origin [ 0 0 0 0 ]
     fiducial_return 0
-    charging_bump
+    charging_bump()
     wifi(
         netmask "255.255.255.0"
         essid "robotnet"
@@ -62,8 +62,11 @@ define docking_station model
     size [ 0.100 0.100 0.300 ]
     color "purple"
 
+    #model( color "purple" size [0.100 0.050 0.250] pose [ 0 0.100 0 0 ] )
+    #model( color "purple" size [0.100 0.050 0.250] pose [ 0 -0.100 0 0 ] )
+
     ranger_return 0
-    obstacle_return 0
+    obstacle_return 1
     fiducial_return 2 # look for this in the fiducial sensor
 
     kjoules -1  # provides infinite energy
@@ -73,11 +76,38 @@ define docking_station model
 
 robot
 (
-    pose [ 0 2 0 0 ]
+    pose [ 2 0 0 0 ]
     wifi(
-        ip "192.168.0.2"
-        mac "08:00:20:ae:ff:7f"
+        ip "192.168.0.1"
+        mac "08:00:20:ae:ff:7a"
     )
 )
 
-docking_station( pose [ 0 0 0 0 ] )
+#robot
+#(
+    #pose [ 0 2 0 90 ]
+    #wifi(
+        #ip "192.168.0.2"
+        #mac "08:00:20:ae:ff:7b"
+    #)
+#)
+
+#robot
+#(
+    #pose [ -2 0 0 180 ]
+    #wifi(
+        #ip "192.168.0.3"
+        #mac "08:00:20:ae:ff:7c"
+    #)
+#)
+
+#robot
+#(
+    #pose [ 0 -2 0 270 ]
+    #wifi(
+        #ip "192.168.0.4"
+        #mac "08:00:20:ae:ff:7d"
+    #)
+#)
+
+docking_station( pose [ 0 0 0 90 ] )

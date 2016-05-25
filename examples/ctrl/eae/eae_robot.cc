@@ -5,12 +5,14 @@ using namespace std;
 
 namespace eae
 {
-    Robot::Robot(ModelPosition* pos) : pos(pos)
+    Robot::Robot(ModelPosition* pos)
     {
         // robot id
         id = pos->GetId();
 
         // instantiate objects
+        this->pos = pos;
+        fid = (ModelFiducial*)pos->GetUnusedModelOfType("fiducial");
         map = new GridMap(pos->GetPose(), pos->GetWorld());
         log = new LogOutput(id);
         cord = new Coordination(pos, this);
@@ -21,8 +23,12 @@ namespace eae
         state = STATE_IDLE;
 
         // register callback for position updates
-        pos->AddCallback(Model::CB_UPDATE, (model_callback_t)PositionUpdate, this );
+        pos->AddCallback(Model::CB_UPDATE, (model_callback_t)PositionUpdate, this);
         pos->Subscribe();
+
+        // register callback for fiducial updates
+        fid->AddCallback(Model::CB_UPDATE, (model_callback_t)FiducialUpdate, this);
+        fid->Subscribe();
 
         // store starting point for visualization
         pos->waypoints.push_back(ModelPosition::Waypoint(pos->GetPose(), wpcolor));
@@ -114,6 +120,7 @@ namespace eae
 
             // go recharging
             else{
+                state = STATE_PRECHARGE;
                 goal.x = 0;
                 goal.y = 0;
                 goal.a = Angle(pose.x, pose.y, 0, 0);
@@ -127,20 +134,53 @@ namespace eae
         cord->FrontierAuction(goal, max_bid);
     }
 
-    void Robot::Move(Pose to)
+    void Robot::Move()
     {
         // store goal for visualization
-        pos->waypoints.push_back(ModelPosition::Waypoint(to, wpcolor));
+        pos->waypoints.push_back(ModelPosition::Waypoint(goal, wpcolor));
 
         // store traveled distance
-        dist_travel += pos->GetPose().Distance(to);
+        dist_travel += pos->GetPose().Distance(goal);
 
-        // move robot
-        pos->GoTo(to);
+        // move robot to goal
+        if(state == STATE_EXPLORE)
+            pos->GoTo(goal);
+
+        // move robot to docking station
+        else if(state == STATE_PRECHARGE){
+            // move to docking station
+            if(pos->GetPose().Distance(goal) > 0.5)
+                pos->GoTo(goal);
+
+            // very close to docking station
+            else if(pos->GetPose().Distance(goal) < 0.08){
+                printf("almost there...\n");
+                // touching, back off a bit
+                if(pos->Stalled())
+                    pos->SetXSpeed(-0.01);
+
+                // close enough
+                else
+                    pos->Stop();
+            }
+
+            // creep towards docking station
+            else{
+                printf("creeping\n");
+                pos->SetXSpeed(0.02);
+                pos->SetTurnSpeed(goal.a);
+            }
+        }
 
         stringstream output;
-        output << to.x << "\t" << to.y << "\t" << to.a << "\t" << dist_travel;
+        output << goal.x << "\t" << goal.y << "\t" << goal.a << "\t" << dist_travel;
         log->Write(output.str());
+    }
+
+    void Robot::Move(Pose to)
+    {
+        goal = to;
+        Move();
     }
 
     double Robot::CalcBid(Pose frontier)
@@ -246,9 +286,41 @@ namespace eae
 
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)
     {
-        // robot reached goal, continue exploration
+        // robot reached goal
         if(pos->GetPose().Distance(robot->goal) < GOAL_TOLERANCE && robot->state == STATE_EXPLORE){
-            robot->Explore();
+            // continue exploration
+            if(robot->state == STATE_EXPLORE)
+                robot->Explore();
+
+            // start charging
+            else if(robot->state == STATE_PRECHARGE){
+                robot->state = STATE_CHARGE;
+                printf("now in state charging\n");
+            }
+        }
+
+        return 0; // run again
+    }
+
+    int Robot::FiducialUpdate(ModelFiducial* fid, Robot* robot)
+    {
+        // make sure robots is on its way for recharging
+        if(robot->state != STATE_PRECHARGE)
+            return 0;
+
+        // get all fiducials
+        std::vector<ModelFiducial::Fiducial>& fids = fid->GetFiducials();
+        std::vector<ModelFiducial::Fiducial>::iterator it;
+
+        for(it = fids.begin(); it<fids.end(); ++it){
+            // fiducial is docking station
+            if(it->id == 2){
+                robot->goal.x = it->geom.x;
+                robot->goal.y = it->geom.y;
+                //robot->goal.a = it->geom.a;
+                robot->goal.a = it->bearing;
+                robot->Move();
+            }
         }
 
         return 0; // run again

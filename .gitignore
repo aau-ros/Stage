@@ -16,3 +16,6 @@ install_manifest.txt
 stage.pc
 libstage/stage
 libstage/libstage.so.*
+html
+latex
+docu

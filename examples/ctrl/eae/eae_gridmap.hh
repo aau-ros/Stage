@@ -76,7 +76,7 @@ namespace eae
          *
          * @param GridMap* map: A GridMap object to take the data from.
          */
-        void Update(GridMap* map);
+        void Update(GridMap* map, Pose pose);
 
         /**
          * Assignment operator.
@@ -136,12 +136,6 @@ namespace eae
         int x_max;    // maximum x-coordinate in map
         int y_min;    // ...
         int y_max;    // ...
-
-        /**
-         * Map iterators.
-         */
-        vector< vector<grid_cell_t> >::iterator it;
-        vector<grid_cell_t>::iterator jt;
 
         /**
          * Visualizer objects.

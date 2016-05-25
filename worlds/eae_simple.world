@@ -7,79 +7,77 @@
 # $Id: eae_simple.world,v 1.0 2016-04-22$
 
 include "pioneer.inc"
-include "map.inc"
 
 speedup 1
-paused 0
-
-
-# time at which to pause (in GUI mode) or quit (in headless mode) the simulation
-quit_time 1800 # 30 mins of simulated time
-
+paused 1
+quit_time 1800
 resolution 1
 
-# configure the GUI window
 window
 (
     size [ 800 600 ]
-
     center [ 0 0 ]
     rotate [ 0 0 ]
-    scale 50
-
+    scale 20
     show_data 1
     show_flags 1
     show_grid 1
 )
 
-pioneer2dx
+define charging_bump model
 (
-    name "r0"
-    color "green"
-
-    kjoules 400
-    kjoules_capacity 400
-
-    pose [0 0 0 0]
-
-    ctrl "eae_simple"
-
-    # report error-free position in world coordinates
-    localization "gps"
-    localization_origin [ 0 0 0 0 ]
-
-    wifi(
-        ip "192.168.0.1"
-        netmask "255.255.255.0"
-        mac "08:00:20:ae:ff:7e"
-        essid "test network"
-        model "simple"
-        range 10
+    pose [0.240 0 -0.100 0 ]
+    size [0.120 0.050 0.100]
+    take_watts 1000.0
+    color "orange"
+    obstacle_return 0
+    fiducial(
+        range_max_id 9
+        range_max 9
+        fov 180
+        pose [ 0 0 -0.050 0 ]
     )
 )
 
-pioneer2dx
+define robot pioneer2dx
 (
-    name "r1"
-    color "blue"
-
-    kjoules 400
-    kjoules_capacity 400
-
-    pose [0 2 0 0]
-
     ctrl "eae_simple"
-
-    # report error-free position in world coordinates
+    kjoules 50
+    kjoules_capacity 50
     localization "gps"
     localization_origin [ 0 0 0 0 ]
+    fiducial_return 0
+    charging_bump
+    wifi(
+        netmask "255.255.255.0"
+        essid "robotnet"
+        model "friis"
+        power 30
+        sensitivity -80
+    )
+)
 
+define docking_station model
+(
+    size [ 0.100 0.100 0.300 ]
+    color "purple"
+
+    ranger_return 0
+    obstacle_return 0
+    fiducial_return 2 # look for this in the fiducial sensor
+
+    kjoules -1  # provides infinite energy
+    give_watts 1000
+    alwayson 1 # so we give charge without any explicit subscriber
+)
+
+robot
+(
+    pose [ 0 2 0 0 ]
     wifi(
         ip "192.168.0.2"
-        netmask "255.255.255.0"
         mac "08:00:20:ae:ff:7f"
-        essid "test network"
-        model "simple"
-        range 10
     )
 )
+
+docking_station( pose [ 0 0 0 0 ] )

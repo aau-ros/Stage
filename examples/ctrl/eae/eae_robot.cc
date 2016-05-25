@@ -200,7 +200,7 @@ namespace eae
 
     void Robot::UpdateMap(GridMap* map)
     {
-        this->map->Update(map);
+        this->map->Update(map, pos->GetPose());
     }
 
     double Robot::Distance(double from_x, double from_y, double to_x, double to_y)

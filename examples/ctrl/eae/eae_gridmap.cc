@@ -51,6 +51,7 @@ namespace eae
 
         for(int i=grid.at(0).size()-1; i>=0; --i){
             int x = x_min;
+            vector< vector<grid_cell_t> >::iterator it;
 
             for(it = grid.begin(); it<grid.end(); ++it){
                 // robot position
@@ -90,6 +91,7 @@ namespace eae
 
         for(int i=grid.at(0).size()-1; i>=0; --i){
             int x = x_min;
+            vector< vector<grid_cell_t> >::iterator it;
 
             for(it = grid.begin(); it<grid.end(); ++it){
                 // free
@@ -115,6 +117,9 @@ namespace eae
 
     void GridMap::Insert(int x, int y, grid_cell_t val)
     {
+        // iterators
+        vector< vector<grid_cell_t> >::iterator it;
+
         // x index out of bounds, extend vector in x dimension
         if(x < x_min){
             // number of columns to add
@@ -200,6 +205,8 @@ namespace eae
         vector< vector <int> > frontiers;
 
         int x = x_min;
+        vector< vector<grid_cell_t> >::iterator it;
+        vector<grid_cell_t>::iterator jt;
 
         for(it = grid.begin(); it<grid.end(); ++it){
             int y = y_min;
@@ -218,15 +225,25 @@ namespace eae
         return frontiers;
     }
 
-    void GridMap::Update(GridMap* map)
+    void GridMap::Update(GridMap* map, Pose pose)
     {
         int x = map->x_min;
+        vector< vector<grid_cell_t> >::iterator it;
+        vector<grid_cell_t>::iterator jt;
 
         for(it = map->grid.begin(); it<map->grid.end(); ++it){
             int y = map->y_min;
             for(jt = it->begin(); jt<it->end(); ++jt){
-                /////// update my own map according to map parameter
-                /////// be careful about different offsets!!! //////
+                // write new value if cell is unknown
+                try{
+                    if(Read(x,y) == CELL_UNKNOWN){
+                        Write(x,y,*jt);
+                    }
+                }
+                // extend map and insert new value if coordinates are out of range
+                catch(const out_of_range& e){
+                    Insert(x,y,*jt);
+                }
                 ++y;
             }
             ++x;
@@ -235,6 +252,8 @@ namespace eae
 
     GridMap& GridMap::operator=(const GridMap& toCopy)
     {
+        grid = toCopy.grid;
+
         x_dim = toCopy.x_dim;
         y_dim = toCopy.y_dim;
         x_offset = toCopy.x_offset;

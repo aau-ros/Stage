@@ -112,7 +112,7 @@ namespace eae
         if(goal == pose){
 
             // end of exploration
-            if(Distance(0, 0) < GOAL_TOLERANCE){
+            if(pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL){
                 state = STATE_FINISHED;
                 printf("exploration finished!\n");
                 return;
@@ -149,26 +149,19 @@ namespace eae
         // move robot to docking station
         else if(state == STATE_PRECHARGE){
             // move to docking station
-            if(pos->GetPose().Distance(goal) > 0.5)
+            if(pos->GetPose().Distance(goal) > 0.25)
                 pos->GoTo(goal);
-
-            // very close to docking station
-            else if(pos->GetPose().Distance(goal) < 0.08){
-                printf("almost there...\n");
-                // touching, back off a bit
-                if(pos->Stalled())
-                    pos->SetXSpeed(-0.01);
-
-                // close enough
-                else
-                    pos->Stop();
-            }
 
             // creep towards docking station
             else{
-                printf("creeping\n");
-                pos->SetXSpeed(0.02);
+                pos->SetXSpeed(0.05);
                 pos->SetTurnSpeed(goal.a);
+            }
+
+            // stop moving once the recharging starts
+            if(pos->FindPowerPack()->GetCharging()){
+                pos->Stop();
+                state = STATE_CHARGE;
             }
         }
 
@@ -196,7 +189,7 @@ namespace eae
 
         // calculate energy aware parameter
         double dgbe;
-        if(pos->FindPowerPack()->ProportionRemaining() > 0.5)
+        if(pos->FindPowerPack()->ProportionRemaining() > CHARGE_TURN)
             dgbe = -dgb;
         else
             dgbe = dgb;
@@ -291,12 +284,6 @@ namespace eae
             // continue exploration
             if(robot->state == STATE_EXPLORE)
                 robot->Explore();
-
-            // start charging
-            else if(robot->state == STATE_PRECHARGE){
-                robot->state = STATE_CHARGE;
-                printf("now in state charging\n");
-            }
         }
 
         return 0; // run again
@@ -304,22 +291,32 @@ namespace eae
 
     int Robot::FiducialUpdate(ModelFiducial* fid, Robot* robot)
     {
-        // make sure robots is on its way for recharging
-        if(robot->state != STATE_PRECHARGE)
-            return 0;
+        // robots is on its way for recharging
+        if(robot->state == STATE_PRECHARGE){
+            // get all fiducials
+            std::vector<ModelFiducial::Fiducial>& fids = fid->GetFiducials();
+            std::vector<ModelFiducial::Fiducial>::iterator it;
 
-        // get all fiducials
-        std::vector<ModelFiducial::Fiducial>& fids = fid->GetFiducials();
-        std::vector<ModelFiducial::Fiducial>::iterator it;
+            // check fiducial return signal
+            for(it = fids.begin(); it<fids.end(); ++it){
+                // fiducial is docking station
+                if(it->id == 2){
+                    // move robot to docking station
+                    robot->goal.x = it->geom.x;
+                    robot->goal.y = it->geom.y;
+                    robot->goal.a = it->bearing;
+                    robot->Move();
+                }
+            }
+        }
 
-        for(it = fids.begin(); it<fids.end(); ++it){
-            // fiducial is docking station
-            if(it->id == 2){
-                robot->goal.x = it->geom.x;
-                robot->goal.y = it->geom.y;
-                //robot->goal.a = it->geom.a;
-                robot->goal.a = it->bearing;
-                robot->Move();
+        // robot is currently recharging
+        else if(robot->state == STATE_CHARGE){
+            // robot is done charging
+            if(robot->pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL){
+                // continue exploration
+                robot->state = STATE_EXPLORE;
+                robot->Explore();
             }
         }
 

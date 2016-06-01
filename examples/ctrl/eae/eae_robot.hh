@@ -23,6 +23,16 @@ namespace eae
     const int W4 = 20;
 
     /**
+     * SOC at which the battery is considered as full.
+     */
+    const double CHARGE_FULL = 0.99;
+
+    /**
+     * SOC at which the robot will head home.
+     */
+    const double CHARGE_TURN = 0.45;
+
+    /**
      * Power consumption in watts per (meter per second) per kg.
      * Copied from libstage/model_position.cc line 88.
      */

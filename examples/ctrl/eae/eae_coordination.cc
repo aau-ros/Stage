@@ -48,6 +48,18 @@ namespace eae
         wifi->comm.SendBroadcastMessage(base_ptr);
     }
 
+    double Coordination::DistRobot(Pose pose)
+    {
+        double dist = 0;
+        double dist_temp;
+        for(i_r=robots.begin(); i_r<robots.end(); ++i_r){
+            dist_temp = pose.Distance(i_r->pose);
+            if(dist_temp < dist || dist == 0)
+                dist = dist_temp;
+        }
+        return dist;
+    }
+
     void Coordination::UpdateRobots(int id, robot_state_t state, Pose pose)
     {
         //  i don't need to be on the list

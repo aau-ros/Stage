@@ -21,6 +21,7 @@ namespace eae
     const int W2 = 0;
     const int W3 = 9;
     const int W4 = 20;
+    const int W5 = 10; /* TODO find optimal weight */
 
     /**
      * SOC at which the battery is considered as full.

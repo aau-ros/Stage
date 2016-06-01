@@ -73,6 +73,14 @@ namespace eae
         void BroadcastMap();
 
         /**
+         * Returns the distance from a given pose to the closest robot.
+         *
+         * @param Pose pose: The pose to calculate the distance from.
+         * @return double: The distance to the closest robot.
+         */
+        double DistRobot(Pose pose);
+
+        /**
          * ID of auction.
          */
         static int auction_id;

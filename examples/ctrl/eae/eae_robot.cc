@@ -197,8 +197,11 @@ namespace eae
         // calculate angular parameter
         double theta = 1/PI * (PI - abs(abs(pose.a - Angle(pose.x, pose.y, frontier.x, frontier.y)) - PI));
 
+        // calculate distance to other robots
+        double dr = cord->DistRobot(frontier);
+
         // calculate bid
-        return -(W1*dg + W2*dgb + W3*dgbe + W4*theta);
+        return -(W1*dg + W2*dgb + W3*dgbe + W4*theta + W5*dr);
     }
 
     OrthoCamera* Robot::GetCam()

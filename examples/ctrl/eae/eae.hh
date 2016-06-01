@@ -52,6 +52,7 @@ namespace eae
      */
     typedef enum{
         STATE_UNDEFINED_ROBOT = 0,
+        STATE_INIT,
         STATE_IDLE,
         STATE_EXPLORE,
         STATE_PRECHARGE,

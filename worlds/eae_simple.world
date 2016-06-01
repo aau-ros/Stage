@@ -80,6 +80,15 @@ robot
     )
 )
 
+robot
+(
+    pose [ -2 0 0 0 ]
+    wifi(
+        ip "192.168.0.2"
+        mac "08:00:20:ae:ff:7b"
+    )
+)
+
 #robot
 #(
     #pose [ 0 2 0 90 ]

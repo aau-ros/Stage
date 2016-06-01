@@ -19,8 +19,8 @@ namespace eae
         cam = new OrthoCamera();
         wpcolor = Color(0,1,0); // waypoint color is green
 
-        // robot is idle
-        state = STATE_IDLE;
+        // robot still needs to be initialized
+        state = STATE_INIT;
 
         // register callback for position updates
         pos->AddCallback(Model::CB_UPDATE, (model_callback_t)PositionUpdate, this);
@@ -33,16 +33,17 @@ namespace eae
         // store starting point for visualization
         pos->waypoints.push_back(ModelPosition::Waypoint(pos->GetPose(), wpcolor));
 
-        /*World* world_map = pos->GetWorld();
-        Model* ground = world_map->GetGround();
-        Model::RasterVis* mapvis = new Model::RasterVis();
-        pos->AddVisualizer(mapvis, true);
-        mapvis.Visualize(ground, cam);*/
-        //pos->AddBlockRect(3,3,1,1,1);
-        Gl::draw_vector(3, 2, 1);
-
         // distance traveled
         dist_travel = 0;
+    }
+
+    void Robot::Init()
+    {
+        // do an initial map update
+        UpdateMap();
+
+        // init done
+        state = STATE_IDLE;
     }
 
     void Robot::Explore()
@@ -54,22 +55,15 @@ namespace eae
             state = STATE_EXPLORE;
         }
 
+        // get current position
+        Pose pose = pos->GetPose();
+
 
         /**************
          * update map *
          **************/
 
-        // get current position
-        Pose pose = pos->GetPose();
-
-        // mark neighborhood as visited
-        map->Clear(round(pose.x), round(pose.y));
-
-        // visualize map progress
-        map->VisualizeGui(pose);
-
-        // share map with other robots in range
-        cord->BroadcastMap();
+        UpdateMap();
 
 
         /******************
@@ -236,7 +230,26 @@ namespace eae
 
     void Robot::UpdateMap(GridMap* map)
     {
+        // apply map updates
         this->map->Update(map, pos->GetPose());
+
+        // visualize map progress
+        map->VisualizeGui(pos->GetPose());
+    }
+
+    void Robot::UpdateMap()
+    {
+        // get current position
+        Pose pose = pos->GetPose();
+
+        // mark neighborhood as visited
+        map->Clear(round(pose.x), round(pose.y));
+
+        // visualize map progress
+        map->VisualizeGui(pose);
+
+        // share map with other robots in range
+        cord->BroadcastMap();
     }
 
     double Robot::Distance(double from_x, double from_y, double to_x, double to_y)
@@ -282,11 +295,21 @@ namespace eae
 
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)
     {
-        // robot reached goal
-        if(pos->GetPose().Distance(robot->goal) < GOAL_TOLERANCE && robot->state == STATE_EXPLORE){
-            // continue exploration
-            if(robot->state == STATE_EXPLORE)
-                robot->Explore();
+        // initialize robot
+        if(robot->state == STATE_INIT){
+            //if(pos->GetWorld()->SimTimeNow() > 1000000)
+            robot->Init();
+        }
+
+        // start exploration
+        if(robot->state == STATE_IDLE){
+            //if(pos->GetWorld()->SimTimeNow() > 3000000)
+            robot->Explore();
+        }
+
+        // robot reached goal, continue exploration
+        if(robot->state == STATE_EXPLORE && pos->GetPose().Distance(robot->goal) < GOAL_TOLERANCE){
+            robot->Explore();
         }
 
         return 0; // run again

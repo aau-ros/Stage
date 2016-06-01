@@ -59,6 +59,11 @@ namespace eae
         Robot(ModelPosition* pos);
 
         /**
+         * Initialize the robot.
+         */
+        void Init();
+
+        /**
          * Exploration routine, drives the robots towards unknown space.
          */
         void Explore();
@@ -125,13 +130,19 @@ namespace eae
         GridMap* GetMap();
 
         /**
-         * Update the grid map. Only non existent or unknown cells will be written.
+         * Update the local grid map with a given map.
+         * Only non existent or unknown cells in the local map will be written.
          *
          * @param GridMap* map: The grid map.
          */
         void UpdateMap(GridMap* map);
 
     private:
+        /**
+         * Update the map with local sensor readings.
+         */
+        void UpdateMap();
+
         /**
          * Compute distance between two points.
          *

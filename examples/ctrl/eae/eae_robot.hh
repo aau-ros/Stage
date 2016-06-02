@@ -74,11 +74,12 @@ namespace eae
         void Move();
 
         /**
-         * Move the robot to a given position.
+         * Move the robot to a given goal.
          *
-         * @param Pose to: The position where the robot should move to.
+         * @param Pose to: The goal where the robot should move to.
+         * @param double bid: The bid the robot submitted for that goal.
          */
-        void Move(Pose to);
+        void Move(Pose to, double bid);
 
         /**
          * Calculate the bid for a frontier.
@@ -121,6 +122,13 @@ namespace eae
          * @param Pose pose: The position of the robot.
          */
         void SetPose(Pose pose);
+
+        /**
+         * Check whether there is still a goal in the queue.
+         *
+         * @return bool: True if there is still a valid goal in the queue, false otherwise.
+         */
+        bool GoalQueue();
 
         /**
          * Get the grid map.
@@ -244,6 +252,18 @@ namespace eae
          * The goal where the robot navigates to.
          */
         Pose goal;
+
+        /**
+         * The next goal that the robot navigates to, once it reaches the current goal.
+         * This gets set when the robot wins an auction but is currently still navigating.
+         */
+        Pose goal_next;
+
+        /**
+         * The bid the robot submitted for the next goal.
+         * This makes sure the robot stores the next goal where it submitted its highest bid.
+         */
+        double goal_next_bid;
 
         /**
          * The color for visualizing the waypoints.

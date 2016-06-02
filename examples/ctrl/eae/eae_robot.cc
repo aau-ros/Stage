@@ -35,6 +35,9 @@ namespace eae
 
         // distance traveled
         dist_travel = 0;
+
+        // goal queue is empty
+        goal_next_bid = BID_INV;
     }
 
     void Robot::Init()
@@ -130,6 +133,22 @@ namespace eae
 
     void Robot::Move()
     {
+        // robot already at current goal
+        if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE){
+            // check if there is a valid goal in the queue
+            if(goal_next_bid != BID_INV){
+                // set goal and invalidate next goal
+                goal = goal_next;
+                goal_next_bid = BID_INV;
+            }
+
+            // no valid goal
+            else{
+                printf("invalid goal\n");
+                return;
+            }
+        }
+
         // store goal for visualization
         pos->waypoints.push_back(ModelPosition::Waypoint(goal, wpcolor));
 
@@ -164,10 +183,23 @@ namespace eae
         log->Write(output.str());
     }
 
-    void Robot::Move(Pose to)
+    void Robot::Move(Pose to, double bid)
     {
-        goal = to;
-        Move();
+        // robot is at goal, move to next goal
+        if(to == goal || pos->GetPose().Distance(goal) < GOAL_TOLERANCE){
+            goal = to;
+            Move();
+        }
+
+        // store as next goal only if my bid is higher than for the other goal already stored
+        else if(goal_next_bid == BID_INV || goal_next_bid < bid){
+            goal_next = to;
+            goal_next_bid = bid;
+        }
+
+        else{
+            printf("invalid goal or bid!\n");
+        }
     }
 
     double Robot::CalcBid(Pose frontier)
@@ -192,7 +224,7 @@ namespace eae
         double theta = 1/PI * (PI - abs(abs(pose.a - Angle(pose.x, pose.y, frontier.x, frontier.y)) - PI));
 
         // calculate distance to other robots
-        double dr = cord->DistRobot(frontier);
+        double dr = -cord->DistRobot(frontier);
 
         // calculate bid
         return -(W1*dg + W2*dgb + W3*dgbe + W4*theta + W5*dr);
@@ -221,6 +253,11 @@ namespace eae
     void Robot::SetPose(Pose pose)
     {
         pos->SetPose(pose);
+    }
+
+    bool Robot::GoalQueue()
+    {
+        return goal_next_bid != BID_INV;
     }
 
     GridMap* Robot::GetMap()
@@ -309,7 +346,13 @@ namespace eae
 
         // robot reached goal, continue exploration
         if(robot->state == STATE_EXPLORE && pos->GetPose().Distance(robot->goal) < GOAL_TOLERANCE){
-            robot->Explore();
+            // there is still a goal in the queue
+            if(robot->GoalQueue())
+                robot->Move();
+
+            // otherwise just find a new goal
+            else
+                robot->Explore();
         }
 
         return 0; // run again

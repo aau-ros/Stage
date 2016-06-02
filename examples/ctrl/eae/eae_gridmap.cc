@@ -108,7 +108,7 @@ namespace eae
 
                 // unknown
                 else
-                    printf("Could determine cell type at (%d,%d)!\n", x, y);
+                    printf("[%s:%d]: Could determine cell type at (%d,%d)!\n", __FILE__, __LINE__, x, y);
                 ++x;
             }
             --y;
@@ -187,7 +187,7 @@ namespace eae
             Write(x, y, val);
         }
         catch(const out_of_range& e){
-            printf("Could not write '%d' to (%d,%d)! Something went wrong when extending the map!\n", val, x, y);
+            printf("[%s:%d]: Could not write '%d' to (%d,%d)! Something went wrong when extending the map!\n", __FILE__, __LINE__, val, x, y);
         }
     }
 

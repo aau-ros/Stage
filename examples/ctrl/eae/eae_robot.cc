@@ -105,30 +105,34 @@ namespace eae
             }
         }
 
+
+        /********************************
+         * coordinate with other robots *
+         *******************************/
+
         // no new goal was found
         if(goal == pose){
-
             // end of exploration
             if(pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL){
                 state = STATE_FINISHED;
-                printf("exploration finished!\n");
+                printf("[%s:%d]: exploration finished\n", __FILE__, __LINE__);
                 return;
             }
 
-            // go recharging
+            // needs recharging, coordinate with other robots
             else{
                 state = STATE_PRECHARGE;
                 goal.x = 0;
                 goal.y = 0;
                 goal.a = Angle(pose.x, pose.y, 0, 0);
+                //cord->DockingAuction();
             }
         }
 
-
-        /********************************
-         * coordinate with other robots *
-         *******************************/
-        cord->FrontierAuction(goal, max_bid);
+        // goal found, coordinate with other robots
+        else{
+            cord->FrontierAuction(goal, max_bid);
+        }
     }
 
     void Robot::Move()
@@ -144,7 +148,7 @@ namespace eae
 
             // no valid goal
             else{
-                printf("invalid goal\n");
+                printf("[%s:%d]: invalid goal\n", __FILE__, __LINE__);
                 return;
             }
         }
@@ -198,7 +202,7 @@ namespace eae
         }
 
         else{
-            printf("invalid goal or bid!\n");
+            printf("[%s:%d]: invalid goal or bid!\n", __FILE__, __LINE__);
         }
     }
 
@@ -383,6 +387,7 @@ namespace eae
         else if(robot->state == STATE_CHARGE){
             // robot is done charging
             if(robot->pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL){
+                printf("[%s:%d]: fully charged\n", __FILE__, __LINE__);
                 // continue exploration
                 robot->state = STATE_EXPLORE;
                 robot->Explore();

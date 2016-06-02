@@ -108,24 +108,24 @@ namespace eae
 
         /********************************
          * coordinate with other robots *
-         *******************************/
+         ********************************/
 
         // no new goal was found
         if(goal == pose){
             // end of exploration
             if(pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL){
                 state = STATE_FINISHED;
-                printf("[%s:%d]: exploration finished\n", __FILE__, __LINE__);
+                printf("[%s:%d]: exploration finished\n", StripPath(__FILE__), __LINE__);
                 return;
             }
 
             // needs recharging, coordinate with other robots
             else{
                 state = STATE_PRECHARGE;
-                goal.x = 0;
-                goal.y = 0;
-                goal.a = Angle(pose.x, pose.y, 0, 0);
-                //cord->DockingAuction();
+//                 goal.x = 0;
+//                 goal.y = 0;
+//                 goal.a = Angle(pose.x, pose.y, 0, 0);
+                cord->DockingAuction(pos->GetPose());
             }
         }
 
@@ -148,7 +148,7 @@ namespace eae
 
             // no valid goal
             else{
-                printf("[%s:%d]: invalid goal\n", __FILE__, __LINE__);
+                printf("[%s:%d]: invalid goal\n", StripPath(__FILE__), __LINE__);
                 return;
             }
         }
@@ -195,14 +195,16 @@ namespace eae
             Move();
         }
 
-        // store as next goal only if my bid is higher than for the other goal already stored
-        else if(goal_next_bid == BID_INV || goal_next_bid < bid){
+        // store as next goal only
+        // - if my bid is higher than for the other goal already stored
+        // - if robot needs recharging (goal should be a docking station)
+        else if(goal_next_bid == BID_INV || goal_next_bid < bid || state == STATE_PRECHARGE){
             goal_next = to;
             goal_next_bid = bid;
         }
 
         else{
-            printf("[%s:%d]: invalid goal or bid!\n", __FILE__, __LINE__);
+            printf("[%s:%d]: invalid goal or bid!\n", StripPath(__FILE__), __LINE__);
         }
     }
 
@@ -262,6 +264,12 @@ namespace eae
     bool Robot::GoalQueue()
     {
         return goal_next_bid != BID_INV;
+    }
+
+    void Robot::Dock(ds_t ds)
+    {
+        this->ds = ds;
+        Move(ds.pose, BID_INV);
     }
 
     GridMap* Robot::GetMap()
@@ -364,16 +372,17 @@ namespace eae
 
     int Robot::FiducialUpdate(ModelFiducial* fid, Robot* robot)
     {
+        // get all fiducials
+        std::vector<ModelFiducial::Fiducial>& fids = fid->GetFiducials();
+        std::vector<ModelFiducial::Fiducial>::iterator it;
+
         // robots is on its way for recharging
         if(robot->state == STATE_PRECHARGE){
-            // get all fiducials
-            std::vector<ModelFiducial::Fiducial>& fids = fid->GetFiducials();
-            std::vector<ModelFiducial::Fiducial>::iterator it;
 
             // check fiducial return signal
             for(it = fids.begin(); it<fids.end(); ++it){
-                // fiducial is docking station
-                if(it->id == 2){
+                // fiducial is my docking station
+                if(it->id == robot->ds.id){
                     // move robot to docking station
                     robot->goal.x = it->geom.x;
                     robot->goal.y = it->geom.y;
@@ -387,10 +396,17 @@ namespace eae
         else if(robot->state == STATE_CHARGE){
             // robot is done charging
             if(robot->pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL){
-                printf("[%s:%d]: fully charged\n", __FILE__, __LINE__);
+                printf("[%s:%d]: fully charged\n", StripPath(__FILE__), __LINE__);
                 // continue exploration
                 robot->state = STATE_EXPLORE;
                 robot->Explore();
+            }
+        }
+
+        // store docking stations
+        else{
+            for(it = fids.begin(); it<fids.end(); ++it){
+                robot->cord->AddDs(it->id, it->geom.x, it->geom.y, it->geom.a);
             }
         }
 

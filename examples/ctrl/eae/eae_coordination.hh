@@ -14,6 +14,16 @@ using namespace std;
 namespace eae
 {
     /**
+     * Weights for the cost function.
+     *
+     * @todo: Find optimal weights.
+     */
+    const int L1 = 1;
+    const int L2 = 1;
+    const int L3 = 1;
+    const int L4 = 1;
+
+    /**
      * Timeout for auctions.
      * When it expires the current highest bidder will win.
      */
@@ -26,7 +36,7 @@ namespace eae
     const usec_t TO_BEACON = 1000000;
 
     /**
-     * Auction type.
+     * Auction type for frontiers.
      */
     typedef struct{
         int id;
@@ -35,7 +45,19 @@ namespace eae
         usec_t time;
         bool open;
         Pose pose;
-    } auction_t;
+    } fr_auction_t;
+
+    /**
+     * Auction type for docking stations.
+     */
+    typedef struct{
+        int id;
+        double highest_bid;
+        int winner;
+        usec_t time;
+        bool open;
+        int ds_id;
+    } ds_auction_t;
 
     /**
      * Robot type.
@@ -68,6 +90,13 @@ namespace eae
         void FrontierAuction(Pose frontier, double bid);
 
         /**
+         * Initiate an auction for assigning robots to docking stations.
+         *
+         * @param Pose pose: The position of the robot.
+         */
+        void DockingAuction(Pose pose);
+
+        /**
          * Send a map update to the other robots.
          */
         void BroadcastMap();
@@ -81,6 +110,16 @@ namespace eae
         double DistRobot(Pose pose);
 
         /**
+         * Add a docking station to the private vector.
+         *
+         * @param int id: The ID of the docking station (as returned by the fiducial).
+         * @param double x: The x-coordinate of the docking station.
+         * @param double y: The y-coordinate of the docking station.
+         * @param double a: Rotation about the z axis.
+         */
+        void AddDs(int id, double x, double y, double a);
+
+        /**
          * ID of auction.
          */
         static int auction_id;
@@ -89,7 +128,7 @@ namespace eae
         /**
          * Update the vector of robots.
          *
-         * @param int id: The id of the robot to update.
+         * @param int id: The ID of the robot to update.
          * @param robot_state_t state: The state of the robot.
          * @param Pose pose: The pose of the robot.
          */
@@ -119,16 +158,28 @@ namespace eae
         void CheckAuctions();
 
         /**
-         * Store a new auction in the private vector.
+         * Store a new frontier auction in the private vector.
          */
-        void StoreNewAuction(int id, double bid, int winner, usec_t time, bool open, Pose pose);
+        void StoreNewFrAuction(int id, double bid, int winner, usec_t time, bool open, Pose pose);
 
         /**
-         * Send a broadcast message for an auction.
+         * Store a new docking station auction in the private vector.
+         */
+        void StoreNewDsAuction(int id, double bid, int winner, usec_t time, bool open, int ds_id);
+
+        /**
+         * Send a broadcast message for a frontier auction.
          *
          * @param int id: ID of the auction.
          */
-        void BroadcastAuction(int id);
+        void BroadcastFrAuction(int id);
+
+        /**
+         * Send a broadcast message for a docking station auction.
+         *
+         * @param int id: ID of the auction.
+         */
+        void BroadcastDsAuction(int id);
 
         /**
          * Send a beacon message about the robot.
@@ -154,6 +205,51 @@ namespace eae
         static void ProcessMessage(WifiMessageBase* incoming, void* coordination);
 
         /**
+         * Get the docking station object from the private vector.
+         *
+         * @param int id: The ID of the docking station
+         */
+        ds_t GetDs(int id);
+
+        /**
+         * Get the state of a docking station.
+         *
+         * @param int id: The ID of the docking station.
+         * @return ds_state_t: The state of the docking station.
+         */
+        ds_state_t DsState(int id);
+
+        /**
+         * Get the position of a docking station.
+         *
+         * @param int id: The ID of the docking station.
+         * @return Pose: The position of the docking station.
+         */
+        Pose DsPose(int id);
+
+        /**
+         * Set a docking station to the state occupied.
+         *
+         * @param int id: The ID of the docking station.
+         */
+        void DsOccupied(int id);
+
+        /**
+         * Get the docking station that is closest to the robots current location.
+         *
+         * @param Pose pose: The robots current location.
+         * @return int: The ID of the docking station.
+         */
+        int ClosestDs(Pose pose);
+
+        /**
+         * Calculate the bid for a docking station.
+         *
+         * @return double: The bid.
+         */
+        double DockingBid();
+
+        /**
          * The wifi model of the robot.
          */
         ModelWifi* wifi;
@@ -174,19 +270,19 @@ namespace eae
         vector<robot_t> robots;
 
         /**
-         * Iterator for for robots vector.
+         * Vector containing all docking stations.
          */
-        vector<robot_t>::iterator i_r;
+        vector<ds_t> dss;
 
         /**
-         * Vector containing all auctions this robot participated in.
+         * Vector containing all frontier auctions this robot participated in.
          */
-        vector<auction_t> auctions;
+        vector<fr_auction_t> fr_auctions;
 
         /**
-         * Iterator for auctions vector.
+         * Vector containing all docking station auctions this robot participated in.
          */
-        vector<auction_t>::iterator i_a;
+        vector<ds_auction_t> ds_auctions;
 
         /**
          * Timeout for sending beacons. A beacon will only be send, after this timeout expired.

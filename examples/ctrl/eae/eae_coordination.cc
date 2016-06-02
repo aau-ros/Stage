@@ -27,7 +27,7 @@ namespace eae
     {
         // invalid bid
         if(bid == BID_INV){
-            printf("invalid bid\n");
+            printf("[%s:%d]: invalid bid\n", StripPath(__FILE__), __LINE__);
             return;
         }
 
@@ -35,10 +35,28 @@ namespace eae
         int id = ++auction_id;
 
         // create and store auction
-        StoreNewAuction(id, bid, robot->GetId(), pos->GetWorld()->SimTimeNow(), true, frontier);
+        StoreNewFrAuction(id, bid, robot->GetId(), pos->GetWorld()->SimTimeNow(), true, frontier);
 
         // notify other robots
-        BroadcastAuction(id);
+        BroadcastFrAuction(id);
+    }
+
+    void Coordination::DockingAuction(Pose pose)
+    {
+        // increment auction id
+        int id = ++auction_id;
+
+        // get closest docking station
+        int ds = ClosestDs(pose);
+
+        // calculate bid
+        double bid = DockingBid();
+
+        // create and store auction
+        StoreNewDsAuction(id, bid, robot->GetId(), pos->GetWorld()->SimTimeNow(), true, ds);
+
+        // notify other robots
+        BroadcastDsAuction(id);
     }
 
     void Coordination::BroadcastMap()
@@ -52,12 +70,29 @@ namespace eae
     {
         double dist = 0;
         double dist_temp;
-        for(i_r=robots.begin(); i_r<robots.end(); ++i_r){
-            dist_temp = pose.Distance(i_r->pose);
+        vector<robot_t>::iterator it;
+        for(it=robots.begin(); it<robots.end(); ++it){
+            dist_temp = pose.Distance(it->pose);
             if(dist_temp < dist || dist == 0)
                 dist = dist_temp;
         }
         return dist;
+    }
+
+    void Coordination::AddDs(int id, double x, double y, double a)
+    {
+        // check if docking station is already in vector
+        vector<ds_t>::iterator it;
+        for(it=dss.begin(); it<dss.end(); ++it){
+            if(it->id == id)
+                return;
+        }
+
+        // add new docking station
+        ds_t ds;
+        ds.id = id;
+        ds.state = STATE_VACANT;
+        ds.pose = Pose(x, y, 0, a);
     }
 
     void Coordination::UpdateRobots(int id, robot_state_t state, Pose pose)
@@ -66,19 +101,22 @@ namespace eae
         if(id == robot->GetId())
             return;
 
+        // iterator
+        vector<robot_t>::iterator it;
+
         // iterate through all robots
-        for(i_r=robots.begin(); i_r<robots.end(); ++i_r){
+        for(it=robots.begin(); it<robots.end(); ++it){
             // found robot
-            if(i_r->id == id){
+            if(it->id == id){
                 // update state and pose
-                i_r->state = state;
-                i_r->pose = pose;
+                it->state = state;
+                it->pose = pose;
                 break;
             }
         }
 
         // robot not found
-        if(i_r == robots.end()){
+        if(it == robots.end()){
             // insert new robot into list
             robot_t robot;
             robot.id = id;
@@ -97,89 +135,134 @@ namespace eae
     {
         // invalid bid
         if(bid == BID_INV){
-            printf("invalid bid\n");
+            printf("[%s:%d]: invalid bid\n", StripPath(__FILE__), __LINE__);
             return;
         }
 
+        // iterator
+        vector<fr_auction_t>::iterator it;
+
         // iterate through all auctions
-        for(i_a=auctions.begin(); i_a<auctions.end(); ++i_a){
+        for(it=fr_auctions.begin(); it<fr_auctions.end(); ++it){
             // found auction
-            if(i_a->id == id){
+            if(it->id == id){
                 // check if auction is still open and if bid is higher
-                if(i_a->open && i_a->highest_bid < bid){
-                    i_a->highest_bid = bid;
-                    i_a->winner = robot;
+                if(it->open && it->highest_bid < bid){
+                    it->highest_bid = bid;
+                    it->winner = robot;
                 }
                 break;
             }
         }
 
         // auction not found
-        if(i_a == auctions.end()){
+        if(it == fr_auctions.end()){
             // calculate bid
             double my_bid = this->robot->CalcBid(frontier);
 
             // invalid bid
             if(my_bid == BID_INV){
-                printf("invalid bid\n");
+                printf("[%s:%d]: invalid bid\n", StripPath(__FILE__), __LINE__);
                 return;
             }
 
             // my bid is higher
             if(my_bid > bid){
                 // store auction
-                StoreNewAuction(id, my_bid, this->robot->GetId(), pos->GetWorld()->SimTimeNow(), true, frontier);
+                StoreNewFrAuction(id, my_bid, this->robot->GetId(), pos->GetWorld()->SimTimeNow(), true, frontier);
 
                 // notify other robots
-                BroadcastAuction(id);
+                BroadcastFrAuction(id);
             }
 
             // my bid is lower, just store auction
             else{
-                StoreNewAuction(id, bid, robot, pos->GetWorld()->SimTimeNow(), true, frontier);
+                StoreNewFrAuction(id, bid, robot, pos->GetWorld()->SimTimeNow(), true, frontier);
             }
         }
     }
 
     void Coordination::CheckAuctions()
     {
-        // iterate through all auctions
-        for(i_a=auctions.begin(); i_a<auctions.end(); ++i_a){
+        // iterators
+        vector<fr_auction_t>::iterator it;
+        vector<ds_auction_t>::iterator jt;
+
+        // iterate through all frontier auctions
+        for(it=fr_auctions.begin(); it<fr_auctions.end(); ++it){
             // check if auction is open and timeout expired
-            if(i_a->open && pos->GetWorld()->SimTimeNow()-i_a->time > TO_AUCTION){
+            if(it->open && pos->GetWorld()->SimTimeNow()-it->time > TO_AUCTION){
                 // close auction
-                i_a->open = false;
+                it->open = false;
 
                 // i won, move to frontier
-                if(i_a->winner == robot->GetId())
-                    robot->Move(i_a->pose);
+                if(it->winner == robot->GetId())
+                    robot->Move(it->pose, it->highest_bid);
+            }
+        }
+
+        // iterate through all docking station auctions
+        for(jt=ds_auctions.begin(); jt<ds_auctions.end(); ++jt){
+            // check if auction is open and timeout expired
+            if(jt->open && pos->GetWorld()->SimTimeNow()-jt->time > TO_AUCTION){
+                // close auction
+                jt->open = false;
+
+                // mark docking station as occupied
+                DsOccupied(jt->ds_id);
+
+                // i won, move to docking station
+                if(jt->winner == robot->GetId())
+                    robot->Dock(GetDs(jt->ds_id));
             }
         }
     }
 
-    void Coordination::StoreNewAuction(int id, double bid, int winner, usec_t time, bool open, Pose pose)
+    void Coordination::StoreNewFrAuction(int id, double bid, int winner, usec_t time, bool open, Pose pose)
     {
         // invalid bid
         if(bid == BID_INV){
-            printf("invalid bid\n");
+            printf("[%s:%d]: invalid bid\n", StripPath(__FILE__), __LINE__);
             return;
         }
 
-        auction_t auction;
+        fr_auction_t auction;
         auction.id = id;
         auction.highest_bid = bid;
         auction.winner = winner;
         auction.time = time;
         auction.open = open;
         auction.pose = pose;
-        auctions.push_back(auction);
+        fr_auctions.push_back(auction);
     }
 
-    void Coordination::BroadcastAuction(int id)
+    void Coordination::StoreNewDsAuction(int id, double bid, int winner, usec_t time, bool open, int ds_id)
     {
-        for(i_a=auctions.begin(); i_a<auctions.end(); ++i_a){
-            if(i_a->id == id){
-                WifiMessageFrontierAuction* msg = new WifiMessageFrontierAuction(id, robot->GetId(), i_a->highest_bid, i_a->pose);
+        // invalid bid
+        if(bid == BID_INV){
+            printf("[%s:%d]: invalid bid\n", StripPath(__FILE__), __LINE__);
+            return;
+        }
+
+        ds_auction_t auction;
+        auction.id = id;
+        auction.highest_bid = bid;
+        auction.winner = winner;
+        auction.time = time;
+        auction.open = open;
+        auction.ds_id = ds_id;
+        ds_auctions.push_back(auction);
+    }
+
+    void Coordination::BroadcastFrAuction(int id)
+    {
+        // iterator
+        vector<fr_auction_t>::iterator it;
+
+        // iterate through all auctions
+        for(it=fr_auctions.begin(); it<fr_auctions.end(); ++it){
+            if(it->id == id){
+                WifiMessageFrontierAuction* msg = new WifiMessageFrontierAuction(id, robot->GetId(), it->highest_bid, it->pose);
                 WifiMessageBase* base_ptr = msg;
                 wifi->comm.SendBroadcastMessage(base_ptr);
                 break;
@@ -187,8 +270,29 @@ namespace eae
         }
 
         // auction not found
-        if(i_a == auctions.end()){
-            printf("Could not participate in auction %d because it was not found!\n", id);
+        if(it == fr_auctions.end()){
+            printf("[%s:%d]: Could not participate in auction %d because it was not found!\n", StripPath(__FILE__), __LINE__, id);
+        }
+    }
+
+    void Coordination::BroadcastDsAuction(int id)
+    {
+        // iterator
+        vector<ds_auction_t>::iterator it;
+
+        // iterate through all auctions
+        for(it=ds_auctions.begin(); it<ds_auctions.end(); ++it){
+            if(it->id == id){
+                WifiMessageDsAuction* msg = new WifiMessageDsAuction(id, robot->GetId(), robot->GetState(), it->ds_id, DsState(it->ds_id), it->highest_bid, DsPose(it->ds_id));
+                WifiMessageBase* base_ptr = msg;
+                wifi->comm.SendBroadcastMessage(base_ptr);
+                break;
+            }
+        }
+
+        // auction not found
+        if(it == ds_auctions.end()){
+            printf("[%s:%d]: Could not participate in auction %d because it was not found!\n", StripPath(__FILE__), __LINE__, id);
         }
     }
 
@@ -228,7 +332,7 @@ namespace eae
                 break;
 
             case MSG_DS:
-                printf("got ds message\n");
+                printf("[%s:%d]: got ds message\n", StripPath(__FILE__), __LINE__);
                 break;
 
             case MSG_FRONTIER_AUCTION:
@@ -237,7 +341,7 @@ namespace eae
                 break;
 
             case MSG_DS_AUCTION:
-                printf("got ds auction message\n");
+                printf("[%s:%d]: got ds auction message\n", StripPath(__FILE__), __LINE__);
                 break;
 
             case MSG_MAP:
@@ -245,9 +349,146 @@ namespace eae
                 break;
 
             default:
-                printf("unknown message type: %d\n", msg->type);
+                printf("[%s:%d]: unknown message type: %d\n", StripPath(__FILE__), __LINE__, msg->type);
         }
 
         delete incoming;
+    }
+
+    ds_t Coordination::GetDs(int id)
+    {
+        vector<ds_t>::iterator it;
+        for(it=dss.begin(); it<dss.end(); ++it){
+            if(it->id == id)
+                return *it;
+        }
+        return ds_t();
+    }
+
+    ds_state_t Coordination::DsState(int id)
+    {
+        vector<ds_t>::iterator it;
+        for(it=dss.begin(); it<dss.end(); ++it){
+            if(it->id == id)
+                return it->state;
+        }
+        return STATE_UNDEFINED_DS;
+    }
+
+    Pose Coordination::DsPose(int id)
+    {
+        vector<ds_t>::iterator it;
+        for(it=dss.begin(); it<dss.end(); ++it){
+            if(it->id == id)
+                return it->pose;
+        }
+        return Pose();
+    }
+
+    void Coordination::DsOccupied(int id)
+    {
+        vector<ds_t>::iterator it;
+        for(it=dss.begin(); it<dss.end(); ++it){
+            if(it->id == id)
+                it->state = STATE_OCCUPIED;
+        }
+    }
+
+    int Coordination::ClosestDs(Pose pose)
+    {
+        int ds = 0;
+        double dist = 0;
+        double dist_temp;
+        vector<ds_t>::iterator it;
+        for(it=dss.begin(); it<dss.end(); ++it){
+            dist_temp = pose.Distance(it->pose);
+            if(dist_temp < dist || dist == 0){
+                ds = it->id;
+                dist = dist_temp;
+            }
+        }
+        return ds;
+    }
+
+    double Coordination::DockingBid()
+    {
+        double l1, l2, l3, l4;
+
+
+        /*******************
+         * first parameter *
+         *******************/
+
+        // number of vacant docking stations
+        vector<ds_t>::iterator it;
+        int num_dss = 0;
+        for(it=dss.begin(); it<dss.end(); ++it)
+            if(it->state == STATE_VACANT)
+                ++num_dss;
+
+        // number of active robots
+        vector<robot_t>::iterator jt;
+        int num_robs = 0;
+        for(jt=robots.begin(); jt<robots.end(); ++jt)
+            if(jt->state == STATE_EXPLORE || jt->state == STATE_IDLE)
+                ++num_robs;
+
+        // calculate first parameter
+        if(num_dss > num_robs)
+            l1 = 1;
+        else
+            l1 = (double)num_dss / (num_robs + 1); // +1 since this robot is not in the vector
+
+
+        /********************
+         * second parameter *
+         ********************/
+
+        // charge time
+        int time_charge = 1;
+
+        // remaining run time
+        int time_run = 0;
+
+        // calculate second parameter
+        l2 = (double)time_charge / (time_charge + time_run);
+
+
+        /*******************
+         * third parameter *
+         *******************/
+
+        // number of frontiers (jobs)
+        int num_jobs = 1;
+
+        // number of frontiers in range
+        int num_jobs_close = 0;
+
+        // calculate third parameter
+        if(num_jobs == 0)
+            l3 = 1;
+        else
+            l3 = (num_jobs - num_jobs_close) / num_jobs;
+
+
+        /********************
+         * fourth parameter *
+         ********************/
+
+        // distance to docking station
+        double dist_ds = 1;
+
+        // distance to closest frontier (job)
+        double dist_job = 0;
+
+        // calculate fourth parameter
+        l4 = dist_job / (dist_job + dist_ds);
+
+
+        /*****************
+         * calculate bid *
+         *****************/
+
+        return L1*l1 + L2*l2 + L3*l3 + L4*l4;
     }
 }

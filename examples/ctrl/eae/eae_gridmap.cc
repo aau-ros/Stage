@@ -108,7 +108,7 @@ namespace eae
 
                 // unknown
                 else
-                    printf("[%s:%d]: Could determine cell type at (%d,%d)!\n", __FILE__, __LINE__, x, y);
+                    printf("[%s:%d]: Could determine cell type at (%d,%d)!\n", StripPath(__FILE__), __LINE__, x, y);
                 ++x;
             }
             --y;
@@ -117,7 +117,7 @@ namespace eae
 
     void GridMap::Insert(int x, int y, grid_cell_t val)
     {
-        // iterators
+        // iterator
         vector< vector<grid_cell_t> >::iterator it;
 
         // x index out of bounds, extend vector in x dimension
@@ -187,7 +187,7 @@ namespace eae
             Write(x, y, val);
         }
         catch(const out_of_range& e){
-            printf("[%s:%d]: Could not write '%d' to (%d,%d)! Something went wrong when extending the map!\n", __FILE__, __LINE__, val, x, y);
+            printf("[%s:%d]: Could not write '%d' to (%d,%d)! Something went wrong when extending the map!\n", StripPath(__FILE__), __LINE__, val, x, y);
         }
     }
 

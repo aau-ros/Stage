@@ -16,12 +16,14 @@ namespace eae
 {
     /**
      * Weights for the cost function.
+     *
+     * @todo: Find optimal weight W5.
      */
     const int W1 = 10;
     const int W2 = 0;
     const int W3 = 9;
     const int W4 = 20;
-    const int W5 = 10; /* TODO find optimal weight */
+    const int W5 = 10;
 
     /**
      * SOC at which the battery is considered as full.
@@ -129,6 +131,13 @@ namespace eae
          * @return bool: True if there is still a valid goal in the queue, false otherwise.
          */
         bool GoalQueue();
+
+        /**
+         * Start a docking procedure.
+         *
+         * @param ds_t ds: The docking station to dock at.
+         */
+        void Dock(ds_t ds);
 
         /**
          * Get the grid map.
@@ -264,6 +273,11 @@ namespace eae
          * This makes sure the robot stores the next goal where it submitted its highest bid.
          */
         double goal_next_bid;
+
+        /**
+         * The docking station that the robot selected for recharging.
+         */
+        ds_t ds;
 
         /**
          * The color for visualizing the waypoints.

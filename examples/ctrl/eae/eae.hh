@@ -71,6 +71,15 @@ namespace eae
     } ds_state_t;
 
     /**
+     * Docking station type.
+     */
+    typedef struct{
+        int id;
+        ds_state_t state;
+        Pose pose;
+    } ds_t;
+
+    /**
      * Wifi message types.
      */
     typedef enum{
@@ -93,6 +102,17 @@ namespace eae
     class WifiMessageDs;
     class WifiMessageFrontierAuction;
     class WifiMessageDsAuction;
+
+    /**
+     * Remove the path from a file name.
+     *
+     * @param string file: The complete file name including path.
+     * @return const char*: The file name without path.
+     */
+    inline const char* StripPath(string file)
+    {
+        return file.substr(file.find_last_of("/")+1).c_str();
+    }
 }
 
 #endif

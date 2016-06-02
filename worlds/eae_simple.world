@@ -32,9 +32,8 @@ define charging_bump model
     color "orange"
     obstacle_return 0
     fiducial(
-        #range_max_id 3
         range_max 3
-        fov 270
+        fov 360
         pose [ 0 0 -0.050 0 ]
     )
 )
@@ -64,7 +63,6 @@ define docking_station model
 
     ranger_return 0
     obstacle_return 0
-    fiducial_return 2 # look for this in the fiducial sensor
 
     kjoules -1  # provides infinite energy
     give_watts 1000
@@ -116,4 +114,4 @@ robot
     #)
 #)
 
-docking_station( pose [ 0 0 0 90 ] )
+docking_station( pose [ 0 0 0 90 ] fiducial_return 2 )

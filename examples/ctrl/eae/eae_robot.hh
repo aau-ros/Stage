@@ -36,6 +36,13 @@ namespace eae
     const double CHARGE_TURN = 0.45;
 
     /**
+     * The power provided by the charger in watts.
+     *
+     * @todo: Read from world file instead.
+     */
+    const int WATTS_CHARGE = 1000;
+
+    /**
      * Power consumption in watts per (meter per second) per kg.
      * Copied from libstage/model_position.cc line 88.
      */
@@ -126,6 +133,13 @@ namespace eae
         void SetPose(Pose pose);
 
         /**
+         * Get the position of the robot.
+         *
+         * @return Pose: The position of the robot.
+         */
+        Pose GetPose();
+
+        /**
          * Check whether there is still a goal in the queue.
          *
          * @return bool: True if there is still a valid goal in the queue, false otherwise.
@@ -140,11 +154,32 @@ namespace eae
         void Dock(ds_t ds);
 
         /**
+         * Estimate the remaining time that the robot can drive with its current battery.
+         *
+         * @return double: The remaining time in seconds.
+         */
+        double RemainingTime();
+
+        /**
+         * Estimate the remaining time the robot would need from now on to fully charge its battery.
+         *
+         * @return double: The remaining charge time in seconds.
+         */
+        double RemainingChargeTime();
+
+        /**
          * Get the grid map.
          *
          * @return GridMap*: The grid map.
          */
         GridMap* GetMap();
+
+        /**
+         * Get a list of all frontiers the robot can reach with its current battery level.
+         *
+         * @return vector< vector <int> >: A vector containing an element for every frontier. Each element ist a vector with the two coordinates of that frontier.
+         */
+        vector< vector <int> > FrontiersReachable();
 
         /**
          * Update the local grid map with a given map.
@@ -197,7 +232,7 @@ namespace eae
         /**
          * Estimate the remaining distance that the robot can drive with its current battery.
          *
-         * @return double: The remaining distance.
+         * @return double: The remaining distance in meters.
          */
         double RemainingDist();
 

@@ -41,22 +41,24 @@ namespace eae
         BroadcastFrAuction(id);
     }
 
-    void Coordination::DockingAuction(Pose pose)
+    ds_t Coordination::DockingAuction(Pose pose)
     {
         // increment auction id
         int id = ++auction_id;
 
         // get closest docking station
-        int ds = ClosestDs(pose);
+        int ds = ClosestDsId(pose);
 
         // calculate bid
-        double bid = DockingBid();
+        double bid = DockingBid(ds, pose);
 
         // create and store auction
         StoreNewDsAuction(id, bid, robot->GetId(), pos->GetWorld()->SimTimeNow(), true, ds);
 
         // notify other robots
         BroadcastDsAuction(id);
+
+        return GetDs(ds);
     }
 
     void Coordination::BroadcastMap()
@@ -79,20 +81,48 @@ namespace eae
         return dist;
     }
 
-    void Coordination::AddDs(int id, double x, double y, double a)
+    void Coordination::AddDs(int id, Pose pose, ds_state_t state)
     {
         // check if docking station is already in vector
         vector<ds_t>::iterator it;
         for(it=dss.begin(); it<dss.end(); ++it){
-            if(it->id == id)
+            // docking station already in vector, update state
+            if(it->id == id){
+                it->state = state;
                 return;
+            }
         }
 
         // add new docking station
         ds_t ds;
         ds.id = id;
-        ds.state = STATE_VACANT;
-        ds.pose = Pose(x, y, 0, a);
+        ds.state = state;
+        ds.pose = pose;
+        dss.push_back(ds);
+
+        // broadcast docking station information
+        WifiMessageDs* msg = new WifiMessageDs(id, state, pose);
+        WifiMessageBase* base_ptr = msg;
+        wifi->comm.SendBroadcastMessage(base_ptr);
+    }
+
+    ds_t Coordination::ClosestDs(Pose pose)
+    {
+        ds_t ds;
+        double dist = 0;
+        double dist_temp;
+        vector<ds_t>::iterator it;
+        for(it=dss.begin(); it<dss.end(); ++it){
+            // make sure docking station is not occupied
+            if(it->state != STATE_OCCUPIED){
+                dist_temp = pose.Distance(it->pose);
+                if(dist_temp < dist || dist == 0){
+                    ds = *it;
+                    dist = dist_temp;
+                }
+            }
+        }
+        return ds;
     }
 
     void Coordination::UpdateRobots(int id, robot_state_t state, Pose pose)
@@ -131,7 +161,7 @@ namespace eae
         robot->UpdateMap(map);
     }
 
-    void Coordination::UpdateAuction(int id, int robot, double bid, Pose frontier)
+    void Coordination::UpdateFrAuction(int id, int robot, double bid, Pose frontier)
     {
         // invalid bid
         if(bid == BID_INV){
@@ -160,9 +190,8 @@ namespace eae
             // calculate bid
             double my_bid = this->robot->CalcBid(frontier);
 
-            // invalid bid
+            // invalid bid, robot cannot reach frontier
             if(my_bid == BID_INV){
-                printf("[%s:%d]: invalid bid\n", StripPath(__FILE__), __LINE__);
                 return;
             }
 
@@ -178,6 +207,57 @@ namespace eae
             // my bid is lower, just store auction
             else{
                 StoreNewFrAuction(id, bid, robot, pos->GetWorld()->SimTimeNow(), true, frontier);
+            }
+        }
+    }
+
+    void Coordination::UpdateDsAuction(int id, int robot, int ds, ds_state_t state, double bid, Pose pose)
+    {
+        // invalid bid
+        if(bid == BID_INV){
+            printf("[%s:%d]: invalid bid\n", StripPath(__FILE__), __LINE__);
+            return;
+        }
+
+        // iterator
+        vector<ds_auction_t>::iterator it;
+
+        // iterate through all auctions
+        for(it=ds_auctions.begin(); it<ds_auctions.end(); ++it){
+            // found auction
+            if(it->id == id){
+                // check if auction is still open and if bid is higher
+                if(it->open && it->highest_bid < bid){
+                    it->highest_bid = bid;
+                    it->winner = robot;
+                }
+                break;
+            }
+        }
+
+        // auction not found
+        if(it == ds_auctions.end()){
+            // calculate bid
+            double my_bid = DockingBid(ds, this->robot->GetPose());
+
+            // invalid bid
+            if(my_bid == BID_INV){
+                printf("[%s:%d]: invalid bid\n", StripPath(__FILE__), __LINE__);
+                return;
+            }
+
+            // my bid is higher
+            if(my_bid > bid){
+                // store auction
+                StoreNewDsAuction(id, my_bid, this->robot->GetId(), pos->GetWorld()->SimTimeNow(), true, ds);
+
+                // notify other robots
+                BroadcastDsAuction(id);
+            }
+
+            // my bid is lower, just store auction
+            else{
+                StoreNewDsAuction(id, bid, robot, pos->GetWorld()->SimTimeNow(), true, ds);
             }
         }
     }
@@ -324,7 +404,6 @@ namespace eae
     {
         WifiMessage* msg = dynamic_cast<WifiMessage*>(incoming);
         Coordination* cord = static_cast<Coordination*>(coordination);
-        //cout << "received message:" << endl << msg->ToString() << endl;
 
         switch(msg->type){
             case MSG_ROBOT:
@@ -332,16 +411,16 @@ namespace eae
                 break;
 
             case MSG_DS:
-                printf("[%s:%d]: got ds message\n", StripPath(__FILE__), __LINE__);
+                cord->AddDs(msg->id_ds, msg->pose, msg->state_ds);
                 break;
 
             case MSG_FRONTIER_AUCTION:
                 // update auction information
-                cord->UpdateAuction(msg->id_auction, msg->id_robot, msg->bid, msg->pose);
+                cord->UpdateFrAuction(msg->id_auction, msg->id_robot, msg->bid, msg->pose);
                 break;
 
             case MSG_DS_AUCTION:
-                printf("[%s:%d]: got ds auction message\n", StripPath(__FILE__), __LINE__);
+                cord->UpdateDsAuction(msg->id_auction, msg->id_robot, msg->id_ds, msg->state_ds, msg->bid, msg->pose);
                 break;
 
             case MSG_MAP:
@@ -394,43 +473,49 @@ namespace eae
         }
     }
 
-    int Coordination::ClosestDs(Pose pose)
+    int Coordination::ClosestDsId(Pose pose)
     {
         int ds = 0;
         double dist = 0;
         double dist_temp;
         vector<ds_t>::iterator it;
         for(it=dss.begin(); it<dss.end(); ++it){
-            dist_temp = pose.Distance(it->pose);
-            if(dist_temp < dist || dist == 0){
-                ds = it->id;
-                dist = dist_temp;
+            // make sure docking station is not occupied
+            if(it->state != STATE_OCCUPIED){
+                dist_temp = pose.Distance(it->pose);
+                if(dist_temp < dist || dist == 0){
+                    ds = it->id;
+                    dist = dist_temp;
+                }
             }
         }
         return ds;
     }
 
-    double Coordination::DockingBid()
+    double Coordination::DockingBid(int ds, Pose pose)
     {
         double l1, l2, l3, l4;
+        vector<ds_t>::iterator itd;
+        vector<robot_t>::iterator itr;
+        vector< vector <int> >::iterator itf;
+        vector< vector <int> > frontiers = robot->GetMap()->Frontiers();
+        vector< vector <int> > frontiers_close = robot->FrontiersReachable();
 
 
         /*******************
          * first parameter *
          *******************/
 
-        // number of vacant docking stations
-        vector<ds_t>::iterator it;
+        // number of not occupied docking stations
         int num_dss = 0;
-        for(it=dss.begin(); it<dss.end(); ++it)
-            if(it->state == STATE_VACANT)
+        for(itd=dss.begin(); itd<dss.end(); ++itd)
+            if(itd->state !=  STATE_OCCUPIED)
                 ++num_dss;
 
         // number of active robots
-        vector<robot_t>::iterator jt;
         int num_robs = 0;
-        for(jt=robots.begin(); jt<robots.end(); ++jt)
-            if(jt->state == STATE_EXPLORE || jt->state == STATE_IDLE)
+        for(itr=robots.begin(); itr<robots.end(); ++itr)
+            if(itr->state == STATE_EXPLORE || itr->state == STATE_IDLE)
                 ++num_robs;
 
         // calculate first parameter
@@ -445,10 +530,10 @@ namespace eae
          ********************/
 
         // charge time
-        int time_charge = 1;
+        double time_charge = robot->RemainingChargeTime();
 
         // remaining run time
-        int time_run = 0;
+        double time_run = robot->RemainingTime();
 
         // calculate second parameter
         l2 = (double)time_charge / (time_charge + time_run);
@@ -459,10 +544,10 @@ namespace eae
          *******************/
 
         // number of frontiers (jobs)
-        int num_jobs = 1;
+        int num_jobs = frontiers.size();
 
         // number of frontiers in range
-        int num_jobs_close = 0;
+        int num_jobs_close = frontiers_close.size();
 
         // calculate third parameter
         if(num_jobs == 0)
@@ -476,13 +561,33 @@ namespace eae
          ********************/
 
         // distance to docking station
-        double dist_ds = 1;
+        double dist_ds = 0;
+        for(itd=dss.begin(); itd<dss.end(); ++itd){
+            if(itd->id == ds)
+                dist_ds = pose.Distance(itd->pose);
+        }
 
-        // distance to closest frontier (job)
-        double dist_job = 0;
+        // docking station not found
+        if(itd == dss.end()){
+            printf("[%s:%d]: invalid docking station id: %d\n", StripPath(__FILE__), __LINE__, ds);
+            l4 = 0.5;
+        }
 
-        // calculate fourth parameter
-        l4 = dist_job / (dist_job + dist_ds);
+        // docking station found
+        else{
+            // distance to closest frontier (job)
+            double dist_job = 0;
+            double dist_temp;
+            for(itf=frontiers_close.begin(); itf<frontiers_close.end(); ++itf){
+                dist_temp = pose.Distance(Pose(itf->at(0), itf->at(1), 0, 0));
+                if(dist_temp < dist_job || dist_job == 0){
+                    dist_job = dist_temp;
+                }
+            }
+
+            // calculate fourth parameter
+            l4 = dist_job / (dist_job + dist_ds);
+        }
 
 
         /*****************

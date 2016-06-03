@@ -122,10 +122,9 @@ namespace eae
             // needs recharging, coordinate with other robots
             else{
                 state = STATE_PRECHARGE;
-//                 goal.x = 0;
-//                 goal.y = 0;
-//                 goal.a = Angle(pose.x, pose.y, 0, 0);
-                cord->DockingAuction(pos->GetPose());
+                // start docking station auction
+                // and store selected docking station in private variable
+                ds = cord->DockingAuction(pos->GetPose());
             }
         }
 
@@ -210,10 +209,14 @@ namespace eae
 
     double Robot::CalcBid(Pose frontier)
     {
-        // calculate distances
         Pose pose = pos->GetPose();
+
+        // find closest free docking station and store in private variable
+        ds = cord->ClosestDs(pose);
+
+        // calculate distances
         double dg = pose.Distance(frontier);
-        double dgb = Distance(frontier.x, frontier.y, 0, 0);
+        double dgb = Distance(frontier.x, frontier.y, ds.pose.x, ds.pose.y);
 
         // check if frontier is reachable
         if(RemainingDist() <= dg + dgb)
@@ -261,6 +264,11 @@ namespace eae
         pos->SetPose(pose);
     }
 
+    Pose Robot::GetPose()
+    {
+        return pos->GetPose();
+    }
+
     bool Robot::GoalQueue()
     {
         return goal_next_bid != BID_INV;
@@ -272,9 +280,55 @@ namespace eae
         Move(ds.pose, BID_INV);
     }
 
+    double Robot::RemainingTime()
+    {
+        double velocity; // average velocity
+        double power;    // power consumption at average velocity
+        World* world = pos->GetWorld();
+
+        // calculate average velocity
+        if(dist_travel > 0 && world->SimTimeNow() > 0){
+            velocity = dist_travel/world->SimTimeNow()*1000000;
+        }
+        // at beginning of simulation take max velocity
+        else{
+            velocity = pos->velocity_bounds->max;
+        }
+
+        // calculate power consumption (according to stage model: libstage/model_position:496)
+        power = velocity * WATTS_KGMS * pos->GetTotalMass() + WATTS;
+
+        // calculate remaining distance
+        return pos->FindPowerPack()->GetStored() / power;
+    }
+
+    double Robot::RemainingChargeTime()
+    {
+        return pos->FindPowerPack()->RemainingCapacity() / WATTS_CHARGE;
+    }
+
     GridMap* Robot::GetMap()
     {
         return map;
+    }
+
+    vector< vector <int> > Robot::FrontiersReachable()
+    {
+        // get all frontiers
+        vector< vector <int> > frontiers = map->Frontiers();
+
+        // iterate through all frontiers
+        vector< vector<int> >::iterator it;
+        for(it=frontiers.begin(); it<frontiers.end(); ++it){
+            // calculate distance
+            double dist = Distance(it->at(0), it->at(1)) + Distance(it->at(0), it->at(1), ds.pose.x, ds.pose.y);
+
+            // remove frontier if it is not reachable
+            if(RemainingDist() <= dist)
+                frontiers.erase(it);
+        }
+
+        return frontiers;
     }
 
     void Robot::UpdateMap(GridMap* map)
@@ -406,7 +460,7 @@ namespace eae
         // store docking stations
         else{
             for(it = fids.begin(); it<fids.end(); ++it){
-                robot->cord->AddDs(it->id, it->geom.x, it->geom.y, it->geom.a);
+                robot->cord->AddDs(it->id, it->geom);
             }
         }
 

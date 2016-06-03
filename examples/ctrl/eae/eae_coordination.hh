@@ -93,8 +93,9 @@ namespace eae
          * Initiate an auction for assigning robots to docking stations.
          *
          * @param Pose pose: The position of the robot.
+         * @return ds_t: The docking station a bid was made for.
          */
-        void DockingAuction(Pose pose);
+        ds_t DockingAuction(Pose pose);
 
         /**
          * Send a map update to the other robots.
@@ -113,11 +114,28 @@ namespace eae
          * Add a docking station to the private vector.
          *
          * @param int id: The ID of the docking station (as returned by the fiducial).
+         * @param Pose pose: The position of the docking station.
+         * @param ds_state_t state: The state of the docking station, default is undefined.
+         */
+        void AddDs(int id, Pose pose, ds_state_t state=STATE_UNDEFINED_DS);
+
+        /**
+         * Add or update a docking station to the private vector.
+         *
+         * @param int id: The ID of the docking station (as returned by the fiducial).
          * @param double x: The x-coordinate of the docking station.
          * @param double y: The y-coordinate of the docking station.
          * @param double a: Rotation about the z axis.
          */
-        void AddDs(int id, double x, double y, double a);
+        void UpdateDs(int id, double x, double y, double a);
+
+        /**
+         * Get the docking station that is closest to the robots current location and that is vacant.
+         *
+         * @param Pose pose: The robots current location.
+         * @return ds_t: The docking station.
+         */
+        ds_t ClosestDs(Pose pose);
 
         /**
          * ID of auction.
@@ -142,14 +160,26 @@ namespace eae
         void UpdateMap(GridMap* map);
 
         /**
-         * Update the information of an auction in the private vector.
+         * Update the information of a frontier auction in the private vector.
          *
          * @param int id: ID of the auction.
          * @param int robot: ID of robot giving a bid.
          * @param double bid: Bid of the robot.
          * @param Pose frontier: Frontier that is at auction.
          */
-        void UpdateAuction(int id, int robot, double bid, Pose frontier);
+        void UpdateFrAuction(int id, int robot, double bid, Pose frontier);
+
+        /**
+         * Update the information of a docking station auction in the private vector.
+         *
+         * @param int id: ID of the auction.
+         * @param int robot: ID of robot giving a bid.
+         * @param int ds: ID of the docking station.
+         * @param ds_state_t state: State of the docking station.
+         * @param double bid: Bid of the robot.
+         * @param Pose pose: Position of docking station.
+         */
+        void UpdateDsAuction(int id, int robot, int ds, ds_state_t state, double bid, Pose pose);
 
         /**
          * Check all auctions.
@@ -235,19 +265,21 @@ namespace eae
         void DsOccupied(int id);
 
         /**
-         * Get the docking station that is closest to the robots current location.
+         * Get the docking station that is closest to the robots current location and that is vacant.
          *
          * @param Pose pose: The robots current location.
          * @return int: The ID of the docking station.
          */
-        int ClosestDs(Pose pose);
+        int ClosestDsId(Pose pose);
 
         /**
          * Calculate the bid for a docking station.
          *
+         * @param int ds: The ID of the docking station.
+         * @param Pose pose: The position of the robot.
          * @return double: The bid.
          */
-        double DockingBid();
+        double DockingBid(int ds, Pose pose);
 
         /**
          * The wifi model of the robot.

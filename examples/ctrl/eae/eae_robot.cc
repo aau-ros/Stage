@@ -105,6 +105,8 @@ namespace eae
             }
         }
 
+        printf("robot %d explore (%.0f,%.0f)\n", id, goal.x, goal.y);
+
 
         /********************************
          * coordinate with other robots *
@@ -158,7 +160,7 @@ namespace eae
         // store traveled distance
         dist_travel += pos->GetPose().Distance(goal);
 
-        // move robot to goal
+        // move robot to frontier
         if(state == STATE_EXPLORE)
             pos->GoTo(goal);
 
@@ -274,10 +276,12 @@ namespace eae
         return goal_next_bid != BID_INV;
     }
 
-    void Robot::Dock(ds_t ds)
+    void Robot::Dock(ds_t ds, double bid)
     {
+        printf("robot %d dock\n", id);
         this->ds = ds;
-        Move(ds.pose, BID_INV);
+        state = STATE_PRECHARGE;
+        Move(ds.pose, bid);
     }
 
     double Robot::RemainingTime()
@@ -410,15 +414,43 @@ namespace eae
             robot->Explore();
         }
 
-        // robot reached goal, continue exploration
-        if(robot->state == STATE_EXPLORE && pos->GetPose().Distance(robot->goal) < GOAL_TOLERANCE){
-            // there is still a goal in the queue
-            if(robot->GoalQueue())
-                robot->Move();
+        // robot reached goal
+        if(pos->GetPose().Distance(robot->goal) < GOAL_TOLERANCE){
+            // continue exploration
+            if(robot->state == STATE_EXPLORE){
+                // there is still a goal in the queue
+                if(robot->GoalQueue()){
+                    printf("robot %d move to (%.0f,%0.f)\n", robot->id, robot->goal_next.x, robot->goal_next.y);
+                    robot->Move();
+                }
 
-            // otherwise just find a new goal
-            else
-                robot->Explore();
+                // otherwise just find a new goal
+                else{
+                    robot->Explore();
+                }
+            }
+
+            // robot needs recharging
+            else if(robot->state == STATE_PRECHARGE){
+                // robot already at docking station, continue docking
+                // or robot just finished exploring and will now go to docking station
+                if(robot->goal == robot->ds.pose || robot->GoalQueue()){
+                    robot->Move();
+                }
+
+                // robot is waiting for docking station, start new auction
+                else{
+                    ds_t ds = robot->cord->DockingAuction(pos->GetPose());
+
+                    // ds is only valid if there was enough time since last auction
+                    if(ds.id > 0)
+                        robot->ds = ds;
+                }
+            }
+
+            else{
+                printf("[%s:%d]: invalid state: %d\n", StripPath(__FILE__), __LINE__, robot->state);
+            }
         }
 
         return 0; // run again
@@ -432,7 +464,6 @@ namespace eae
 
         // robots is on its way for recharging
         if(robot->state == STATE_PRECHARGE){
-
             // check fiducial return signal
             for(it = fids.begin(); it<fids.end(); ++it){
                 // fiducial is my docking station
@@ -451,6 +482,12 @@ namespace eae
             // robot is done charging
             if(robot->pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL){
                 printf("[%s:%d]: fully charged\n", StripPath(__FILE__), __LINE__);
+                // docking station is free now
+                robot->cord->DsVacant(robot->ds.id);
+
+                // invalidate any previous goals
+                robot->goal_next_bid = BID_INV;
+
                 // continue exploration
                 robot->state = STATE_EXPLORE;
                 robot->Explore();

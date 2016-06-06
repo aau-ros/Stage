@@ -150,8 +150,9 @@ namespace eae
          * Start a docking procedure.
          *
          * @param ds_t ds: The docking station to dock at.
+         * @param double bid: The bid that was made for that docking station.
          */
-        void Dock(ds_t ds);
+        void Dock(ds_t ds, double bid);
 
         /**
          * Estimate the remaining time that the robot can drive with its current battery.

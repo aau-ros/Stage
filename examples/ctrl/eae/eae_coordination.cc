@@ -31,6 +31,10 @@ namespace eae
             return;
         }
 
+        // not enough time between auctions
+//         if(fr_auctions.size() > 0 && pos->GetWorld()->SimTimeNow() < fr_auctions.back().time + TO_NEXT_AUCTION)
+//             return;
+
         // increment auction id
         int id = ++auction_id;
 
@@ -43,6 +47,15 @@ namespace eae
 
     ds_t Coordination::DockingAuction(Pose pose)
     {
+        // not enough time between auctions
+        if(ds_auctions.size() > 0 && pos->GetWorld()->SimTimeNow() < ds_auctions.back().time + TO_NEXT_AUCTION){
+            ds_t inv_ds;
+            inv_ds.id = 0;
+            inv_ds.state = STATE_UNDEFINED_DS;
+            inv_ds.pose = Pose();
+            return inv_ds;
+        }
+
         // increment auction id
         int id = ++auction_id;
 
@@ -123,6 +136,24 @@ namespace eae
             }
         }
         return ds;
+    }
+
+    void Coordination::DsVacant(int id)
+    {
+        vector<ds_t>::iterator it;
+        for(it=dss.begin(); it<dss.end(); ++it){
+            if(it->id == id){
+                // set local state
+                it->state = STATE_VACANT;
+
+                // inform other robots
+                WifiMessageDs* msg = new WifiMessageDs(id, STATE_VACANT, DsPose(id));
+                WifiMessageBase* base_ptr = msg;
+                wifi->comm.SendBroadcastMessage(base_ptr);
+
+                break;
+            }
+        }
     }
 
     void Coordination::UpdateRobots(int id, robot_state_t state, Pose pose)
@@ -292,8 +323,9 @@ namespace eae
                 DsOccupied(jt->ds_id);
 
                 // i won, move to docking station
-                if(jt->winner == robot->GetId())
-                    robot->Dock(GetDs(jt->ds_id));
+                if(jt->winner == robot->GetId()){
+                    robot->Dock(GetDs(jt->ds_id), jt->highest_bid);
+                }
             }
         }
     }
@@ -468,28 +500,50 @@ namespace eae
     {
         vector<ds_t>::iterator it;
         for(it=dss.begin(); it<dss.end(); ++it){
-            if(it->id == id)
+            if(it->id == id){
                 it->state = STATE_OCCUPIED;
+                break;
+            }
         }
     }
 
     int Coordination::ClosestDsId(Pose pose)
     {
-        int ds = 0;
-        double dist = 0;
+        int ds_free = 0;
+        int ds_occu = 0;
+        double dist_free = 0;
+        double dist_occu = 0;
         double dist_temp;
         vector<ds_t>::iterator it;
+
+        // iterate over all docking stations
         for(it=dss.begin(); it<dss.end(); ++it){
-            // make sure docking station is not occupied
-            if(it->state != STATE_OCCUPIED){
-                dist_temp = pose.Distance(it->pose);
-                if(dist_temp < dist || dist == 0){
-                    ds = it->id;
-                    dist = dist_temp;
+            dist_temp = pose.Distance(it->pose);
+
+            // docking station is occupied
+            if(it->state == STATE_OCCUPIED){
+                if(dist_temp < dist_occu || dist_occu == 0){
+                    ds_occu = it->id;
+                    dist_occu = dist_temp;
+                }
+            }
+
+            // docking station is free
+            else{
+                if(dist_temp < dist_free || dist_free == 0){
+                    ds_free = it->id;
+                    dist_free = dist_temp;
                 }
             }
         }
-        return ds;
+
+        // select free docking station if possible
+        if(ds_free != 0)
+            return ds_free;
+
+        // return occupied docking station
+        else
+            return ds_occu;
     }
 
     double Coordination::DockingBid(int ds, Pose pose)
@@ -500,6 +554,8 @@ namespace eae
         vector< vector <int> >::iterator itf;
         vector< vector <int> > frontiers = robot->GetMap()->Frontiers();
         vector< vector <int> > frontiers_close = robot->FrontiersReachable();
+
+        //printf("frontiers: %lu > %lu\n", frontiers.size(), frontiers_close.size());
 
 
         /*******************
@@ -515,7 +571,7 @@ namespace eae
         // number of active robots
         int num_robs = 0;
         for(itr=robots.begin(); itr<robots.end(); ++itr)
-            if(itr->state == STATE_EXPLORE || itr->state == STATE_IDLE)
+            if(itr->state == STATE_EXPLORE || itr->state == STATE_IDLE || itr->state == STATE_PRECHARGE)
                 ++num_robs;
 
         // calculate first parameter
@@ -523,7 +579,6 @@ namespace eae
             l1 = 1;
         else
             l1 = (double)num_dss / (num_robs + 1); // +1 since this robot is not in the vector
-
 
         /********************
          * second parameter *
@@ -563,8 +618,10 @@ namespace eae
         // distance to docking station
         double dist_ds = 0;
         for(itd=dss.begin(); itd<dss.end(); ++itd){
-            if(itd->id == ds)
+            if(itd->id == ds){
                 dist_ds = pose.Distance(itd->pose);
+                break;
+            }
         }
 
         // docking station not found
@@ -593,7 +650,8 @@ namespace eae
         /*****************
          * calculate bid *
          *****************/
-
-        return L1*l1 + L2*l2 + L3*l3 + L4*l4;
+        double bid = L1*l1 + L2*l2 + L3*l3 + L4*l4;
+        printf("robot %d bid: %.2f = %d*%.2f + %d*%.2f + %d*%.2f + %d*%.2f\n", robot->GetId(),bid,L1,l1,L2,l2,L3,l3,L4,l4);
+        return bid;
     }
 }

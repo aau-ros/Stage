@@ -19,7 +19,7 @@ namespace eae
      * @todo: Find optimal weights.
      */
     const int L1 = 1;
-    const int L2 = 1;
+    const int L2 = 3;
     const int L3 = 1;
     const int L4 = 1;
 
@@ -28,6 +28,11 @@ namespace eae
      * When it expires the current highest bidder will win.
      */
     const usec_t TO_AUCTION = 1000000;
+
+    /**
+     * Minimum time between auctions.
+     */
+    const usec_t TO_NEXT_AUCTION = 2500000;
 
     /**
      * Timeout for beacons.
@@ -136,6 +141,13 @@ namespace eae
          * @return ds_t: The docking station.
          */
         ds_t ClosestDs(Pose pose);
+
+        /**
+         * Set a docking station to the state vacant.
+         *
+         * @param int id: The ID of the docking station.
+         */
+        void DsVacant(int id);
 
         /**
          * ID of auction.
@@ -265,7 +277,7 @@ namespace eae
         void DsOccupied(int id);
 
         /**
-         * Get the docking station that is closest to the robots current location and that is vacant.
+         * Get the docking station that is closest to the robots current location (preferably vacant).
          *
          * @param Pose pose: The robots current location.
          * @return int: The ID of the docking station.

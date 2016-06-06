@@ -114,7 +114,7 @@ namespace eae
             if(pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL){
                 state = STATE_FINISHED;
                 printf("[%s:%d]: exploration finished\n", StripPath(__FILE__), __LINE__);
-                return;
+                exit(0);
             }
 
             // needs recharging, coordinate with other robots

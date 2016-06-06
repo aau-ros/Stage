@@ -45,6 +45,9 @@ namespace eae
         // do an initial map update
         UpdateMap();
 
+        // pose at last map update
+        last_pose = pos->GetPose();
+
         // init done
         state = STATE_IDLE;
     }
@@ -60,13 +63,6 @@ namespace eae
 
         // get current position
         Pose pose = pos->GetPose();
-
-
-        /**************
-         * update map *
-         **************/
-
-        UpdateMap();
 
 
         /******************
@@ -404,14 +400,19 @@ namespace eae
     {
         // initialize robot
         if(robot->state == STATE_INIT){
-            //if(pos->GetWorld()->SimTimeNow() > 1000000)
             robot->Init();
         }
 
         // start exploration
         if(robot->state == STATE_IDLE){
-            //if(pos->GetWorld()->SimTimeNow() > 3000000)
             robot->Explore();
+        }
+
+        // clear map while traveling (not too often)
+        Pose pose = pos->GetPose();
+        if(pose.Distance(robot->last_pose) > MAP_UPDATE_DIST){
+            robot->UpdateMap();
+            robot->last_pose = pose;
         }
 
         // robot reached goal

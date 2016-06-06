@@ -55,6 +55,11 @@ namespace eae
     static const double WATTS = 1.0;
 
     /**
+     * Distance that the robot has to travel until another map update is performed.
+     */
+    const double MAP_UPDATE_DIST = 1.41;
+
+    /**
      * A class that defines the behavior of a robot.
      */
     class Robot
@@ -329,6 +334,12 @@ namespace eae
          * The total distance the robot traveled.
          */
         double dist_travel;
+
+        /**
+         * Store position when last map update was made.
+         * This helps to reduce the map update frequency to improve performance.
+         */
+        Pose last_pose;
     };
 }
 

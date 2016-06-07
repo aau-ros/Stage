@@ -608,7 +608,7 @@ namespace eae
         if(num_jobs == 0)
             l3 = 1;
         else
-            l3 = (num_jobs - num_jobs_close) / num_jobs;
+            l3 = (num_jobs - num_jobs_close) / (double)num_jobs;
 
 
         /********************

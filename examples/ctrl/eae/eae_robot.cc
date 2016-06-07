@@ -282,21 +282,8 @@ namespace eae
 
     double Robot::RemainingTime()
     {
-        double velocity; // average velocity
-        double power;    // power consumption at average velocity
-        World* world = pos->GetWorld();
-
-        // calculate average velocity
-        if(dist_travel > 0 && world->SimTimeNow() > 0){
-            velocity = dist_travel/world->SimTimeNow()*1000000;
-        }
-        // at beginning of simulation take max velocity
-        else{
-            velocity = pos->velocity_bounds->max;
-        }
-
         // calculate power consumption (according to stage model: libstage/model_position:496)
-        power = velocity * WATTS_KGMS * pos->GetTotalMass() + WATTS;
+        double power = pos->velocity_bounds->max * WATTS_KGMS * pos->GetTotalMass() + WATTS;
 
         // calculate remaining distance
         return pos->FindPowerPack()->GetStored() / power;

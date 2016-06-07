@@ -111,7 +111,7 @@ namespace eae
         // no new goal was found
         if(goal == pose){
             // end of exploration
-            if(pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL){
+            if(FullyCharged()){
                 state = STATE_FINISHED;
                 printf("[%s:%d]: exploration finished\n", StripPath(__FILE__), __LINE__);
                 exit(0);
@@ -294,6 +294,11 @@ namespace eae
         return pos->FindPowerPack()->RemainingCapacity() / WATTS_CHARGE;
     }
 
+    bool Robot::FullyCharged()
+    {
+        return pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL;
+    }
+
     GridMap* Robot::GetMap()
     {
         return map;
@@ -468,7 +473,7 @@ namespace eae
         // robot is currently recharging
         else if(robot->state == STATE_CHARGE){
             // robot is done charging
-            if(robot->pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL){
+            if(robot->FullyCharged()){
                 printf("[%s:%d]: fully charged\n", StripPath(__FILE__), __LINE__);
                 // docking station is free now
                 robot->cord->DsVacant(robot->ds.id);

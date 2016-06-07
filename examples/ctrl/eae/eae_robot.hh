@@ -174,6 +174,13 @@ namespace eae
         double RemainingChargeTime();
 
         /**
+         * Check whether the robot's battery is fully charged or not.
+         *
+         * @return bool: True if the robot's battery charge is above or equal to CHARGE_FULL.
+         */
+        bool FullyCharged();
+
+        /**
          * Get the grid map.
          *
          * @return GridMap*: The grid map.

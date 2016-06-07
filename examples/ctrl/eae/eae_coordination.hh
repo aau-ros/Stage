@@ -229,24 +229,6 @@ namespace eae
         void BroadcastBeacon();
 
         /**
-         * Callback function that is called when @todo
-         *
-         * @param ModelWifi* wifi: The instantiated wifi model of the robot.
-         * @param Robot* robot: The instantiated robot object which attached the callback.
-         *
-         * @return int: Returns 0.
-         */
-        static int WifiUpdate(ModelWifi* wifi, Coordination* cord);
-
-        /**
-         * Callback function for incoming messages.
-         *
-         * @param WifiMessageBase* incoming: Pointer to the incoming message.
-         * @param void* coordination: Pointer to the coordination class.
-         */
-        static void ProcessMessage(WifiMessageBase* incoming, void* coordination);
-
-        /**
          * Get the docking station object from the private vector.
          *
          * @param int id: The ID of the docking station
@@ -292,6 +274,24 @@ namespace eae
          * @return double: The bid.
          */
         double DockingBid(int ds, Pose pose);
+
+        /**
+         * Callback function that is called when @todo
+         *
+         * @param ModelWifi* wifi: The instantiated wifi model of the robot.
+         * @param Robot* robot: The instantiated robot object which attached the callback.
+         *
+         * @return int: Returns 0.
+         */
+        static int WifiUpdate(ModelWifi* wifi, Coordination* cord);
+
+        /**
+         * Callback function for incoming messages.
+         *
+         * @param WifiMessageBase* incoming: Pointer to the incoming message.
+         * @param void* coordination: Pointer to the coordination class.
+         */
+        static void ProcessMessage(WifiMessageBase* incoming, void* coordination);
 
         /**
          * The wifi model of the robot.

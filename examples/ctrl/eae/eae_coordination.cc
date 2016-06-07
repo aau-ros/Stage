@@ -266,8 +266,8 @@ namespace eae
             }
         }
 
-        // auction not found
-        if(it == ds_auctions.end()){
+        // auction not found, don't respond if just done charging
+        if(it == ds_auctions.end() && this->robot->FullyCharged() == false){
             // calculate bid
             double my_bid = DockingBid(ds, this->robot->GetPose());
 
@@ -416,54 +416,6 @@ namespace eae
             wifi->comm.SendBroadcastMessage(base_ptr);
             to_beacon = pos->GetWorld()->SimTimeNow() + TO_BEACON;
         }
-    }
-
-    int Coordination::WifiUpdate(ModelWifi* wifi, Coordination* cord)
-    {
-        // visualize wifi connections
-        wifi->DataVisualize(cord->robot->GetCam());
-
-        // check if auctions expired and notify winner
-        cord->CheckAuctions();
-
-        // send beacon
-        cord->BroadcastBeacon();
-
-        return 0; // run again
-    }
-
-    void Coordination::ProcessMessage(WifiMessageBase* incoming, void* coordination)
-    {
-        WifiMessage* msg = dynamic_cast<WifiMessage*>(incoming);
-        Coordination* cord = static_cast<Coordination*>(coordination);
-
-        switch(msg->type){
-            case MSG_ROBOT:
-                cord->UpdateRobots(msg->id_robot, msg->state_robot, msg->pose);
-                break;
-
-            case MSG_DS:
-                cord->AddDs(msg->id_ds, msg->pose, msg->state_ds);
-                break;
-
-            case MSG_FRONTIER_AUCTION:
-                // update auction information
-                cord->UpdateFrAuction(msg->id_auction, msg->id_robot, msg->bid, msg->pose);
-                break;
-
-            case MSG_DS_AUCTION:
-                cord->UpdateDsAuction(msg->id_auction, msg->id_robot, msg->id_ds, msg->state_ds, msg->bid, msg->pose);
-                break;
-
-            case MSG_MAP:
-                cord->UpdateMap(msg->map);
-                break;
-
-            default:
-                printf("[%s:%d]: unknown message type: %d\n", StripPath(__FILE__), __LINE__, msg->type);
-        }
-
-        delete incoming;
     }
 
     ds_t Coordination::GetDs(int id)
@@ -653,5 +605,57 @@ namespace eae
         double bid = L1*l1 + L2*l2 + L3*l3 + L4*l4;
         printf("robot %d bid: %.2f = %d*%.2f + %d*%.2f + %d*%.2f + %d*%.2f\n", robot->GetId(),bid,L1,l1,L2,l2,L3,l3,L4,l4);
         return bid;
+    }
+
+    int Coordination::WifiUpdate(ModelWifi* wifi, Coordination* cord)
+    {
+        // visualize wifi connections
+        wifi->DataVisualize(cord->robot->GetCam());
+
+        // check if auctions expired and notify winner
+        cord->CheckAuctions();
+
+        // send beacon
+        cord->BroadcastBeacon();
+
+        return 0; // run again
+    }
+
+    void Coordination::ProcessMessage(WifiMessageBase* incoming, void* coordination)
+    {
+        WifiMessage* msg = dynamic_cast<WifiMessage*>(incoming);
+        Coordination* cord = static_cast<Coordination*>(coordination);
+
+        switch(msg->type){
+            case MSG_ROBOT:
+                // add/update robot in the private vector of robots
+                cord->UpdateRobots(msg->id_robot, msg->state_robot, msg->pose);
+                break;
+
+            case MSG_DS:
+                // add/update docking station in the private vector of docking stations
+                cord->AddDs(msg->id_ds, msg->pose, msg->state_ds);
+                break;
+
+            case MSG_FRONTIER_AUCTION:
+                // update auction information and respond if necessary
+                cord->UpdateFrAuction(msg->id_auction, msg->id_robot, msg->bid, msg->pose);
+                break;
+
+            case MSG_DS_AUCTION:
+                // update auction information and respond if necessary
+                cord->UpdateDsAuction(msg->id_auction, msg->id_robot, msg->id_ds, msg->state_ds, msg->bid, msg->pose);
+                break;
+
+            case MSG_MAP:
+                // update local map
+                cord->UpdateMap(msg->map);
+                break;
+
+            default:
+                printf("[%s:%d]: unknown message type: %d\n", StripPath(__FILE__), __LINE__, msg->type);
+        }
+
+        delete incoming;
     }
 }

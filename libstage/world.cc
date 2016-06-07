@@ -451,7 +451,7 @@ void World::Load( const std::string& worldfile_path )
     }
 
   if( worker_threads > 1 )
-    printf( "[threads %u]", worker_threads );
+    printf( "[threads %u]\n", worker_threads );
 
   // Iterate through entitys and create objects of the appropriate type
   for( int entity(1); entity < wf->GetEntityCount(); ++entity )

@@ -140,6 +140,7 @@ namespace eae
         /**
          * Visualizer objects.
          */
+        Model* vis_frontier;
         Model* vis_free;
         Model* vis_unknown;
         Model* vis_occupied;

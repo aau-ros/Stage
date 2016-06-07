@@ -23,6 +23,13 @@ namespace eae
             grid.push_back(col);
         }
 
+        // initialize visualization model for frontiers
+        vis_frontier = new Model(world, NULL, "model", "frontier");
+        vis_frontier->SetObstacleReturn(0);
+        vis_frontier->SetColor(Color(0, 1, 0, 0.5));
+        vis_frontier->ClearBlocks();
+        vis_frontier->SetGuiMove(0);
+
         // initialize visualization model for free space
         vis_free = new Model(world, NULL, "model", "free");
         vis_free->SetObstacleReturn(0);
@@ -83,6 +90,7 @@ namespace eae
 
     void GridMap::VisualizeGui(Pose pose)
     {
+        vis_frontier->ClearBlocks();
         vis_free->ClearBlocks();
         vis_unknown->ClearBlocks();
         vis_occupied->ClearBlocks();
@@ -94,8 +102,12 @@ namespace eae
             vector< vector<grid_cell_t> >::iterator it;
 
             for(it = grid.begin(); it<grid.end(); ++it){
+                // frontier
+                if(Frontier(x,y))
+                    vis_frontier->AddBlockRect(x, y, 1, 1, 0);
+
                 // free
-                if(it->at(i) == CELL_FREE)
+                else if(it->at(i) == CELL_FREE)
                     vis_free->AddBlockRect(x, y, 1, 1, 0);
 
                 // unknown
@@ -263,6 +275,7 @@ namespace eae
         y_min = toCopy.y_min;
         y_max = toCopy.y_max;
 
+        vis_frontier = toCopy.vis_frontier;
         vis_free = toCopy.vis_free;
         vis_unknown = toCopy.vis_unknown;
         vis_occupied = toCopy.vis_occupied;

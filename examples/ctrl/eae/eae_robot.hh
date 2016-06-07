@@ -181,6 +181,14 @@ namespace eae
         bool FullyCharged();
 
         /**
+         * Check whether the robot is currently on its way for recharging.
+         *
+         * @param ds_t& at: The docking station where the robot is docking at. It is set only if the robot is currently on its way for recharging.
+         * @return bool: True if the robot is on its way for recharging, false otherwise.
+         */
+        bool Docking(ds_t& at);
+
+        /**
          * Get the grid map.
          *
          * @return GridMap*: The grid map.

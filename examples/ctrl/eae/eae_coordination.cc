@@ -216,6 +216,12 @@ namespace eae
             }
         }
 
+        // don't respond to frontier auctions if robot is charging or on the way
+        ds_t ds_dock;
+        if(this->robot->Docking(ds_dock)){
+            return;
+        }
+
         // auction not found
         if(it == fr_auctions.end()){
             // calculate bid
@@ -266,8 +272,19 @@ namespace eae
             }
         }
 
-        // auction not found, don't respond if just done charging
-        if(it == ds_auctions.end() && this->robot->FullyCharged() == false){
+        // don't respond to auctions for other docking stations if robot is charging or on the way
+        ds_t ds_dock;
+        if(this->robot->Docking(ds_dock)){
+            if(ds_dock.id != ds)
+                return;
+        }
+
+        // don't respond if just done charging
+        if(this->robot->FullyCharged())
+            return;
+
+        // auction not found, respond
+        if(it == ds_auctions.end()){
             // calculate bid
             double my_bid = DockingBid(ds, this->robot->GetPose());
 
@@ -602,9 +619,7 @@ namespace eae
         /*****************
          * calculate bid *
          *****************/
-        double bid = L1*l1 + L2*l2 + L3*l3 + L4*l4;
-        printf("robot %d bid: %.2f = %d*%.2f + %d*%.2f + %d*%.2f + %d*%.2f\n", robot->GetId(),bid,L1,l1,L2,l2,L3,l3,L4,l4);
-        return bid;
+        return L1*l1 + L2*l2 + L3*l3 + L4*l4;
     }
 
     int Coordination::WifiUpdate(ModelWifi* wifi, Coordination* cord)

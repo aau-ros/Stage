@@ -101,8 +101,6 @@ namespace eae
             }
         }
 
-        printf("robot %d explore (%.0f,%.0f)\n", id, goal.x, goal.y);
-
 
         /********************************
          * coordinate with other robots *
@@ -157,25 +155,21 @@ namespace eae
         dist_travel += pos->GetPose().Distance(goal);
 
         // move robot to frontier
-        if(state == STATE_EXPLORE)
+        if(state == STATE_EXPLORE){
             pos->GoTo(goal);
+        }
 
         // move robot to docking station
         else if(state == STATE_PRECHARGE){
-            // move to docking station
-            if(pos->GetPose().Distance(goal) > 0.25)
-                pos->GoTo(goal);
-
-            // creep towards docking station
-            else{
-                pos->SetXSpeed(0.05);
-                pos->SetTurnSpeed(goal.a);
-            }
-
             // stop moving once the recharging starts
             if(pos->FindPowerPack()->GetCharging()){
                 pos->Stop();
                 state = STATE_CHARGE;
+            }
+
+            // move to docking station
+            else{
+                pos->GoTo(goal);
             }
         }
 
@@ -274,7 +268,6 @@ namespace eae
 
     void Robot::Dock(ds_t ds, double bid)
     {
-        printf("robot %d dock\n", id);
         this->ds = ds;
         state = STATE_PRECHARGE;
         Move(ds.pose, bid);
@@ -297,6 +290,16 @@ namespace eae
     bool Robot::FullyCharged()
     {
         return pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL;
+    }
+
+    bool Robot::Docking(ds_t& at)
+    {
+        if(state == STATE_PRECHARGE || state == STATE_CHARGE){
+            at = ds;
+            return true;
+        }
+
+        return false;
     }
 
     GridMap* Robot::GetMap()
@@ -413,7 +416,6 @@ namespace eae
             if(robot->state == STATE_EXPLORE){
                 // there is still a goal in the queue
                 if(robot->GoalQueue()){
-                    printf("robot %d move to (%.0f,%0.f)\n", robot->id, robot->goal_next.x, robot->goal_next.y);
                     robot->Move();
                 }
 
@@ -462,8 +464,8 @@ namespace eae
                 // fiducial is my docking station
                 if(it->id == robot->ds.id){
                     // move robot to docking station
-                    robot->goal.x = it->geom.x;
-                    robot->goal.y = it->geom.y;
+                    robot->goal.x = it->pose.x;
+                    robot->goal.y = it->pose.y;
                     robot->goal.a = it->bearing;
                     robot->Move();
                 }
@@ -474,7 +476,6 @@ namespace eae
         else if(robot->state == STATE_CHARGE){
             // robot is done charging
             if(robot->FullyCharged()){
-                printf("[%s:%d]: fully charged\n", StripPath(__FILE__), __LINE__);
                 // docking station is free now
                 robot->cord->DsVacant(robot->ds.id);
 
@@ -490,7 +491,7 @@ namespace eae
         // store docking stations
         else{
             for(it = fids.begin(); it<fids.end(); ++it){
-                robot->cord->AddDs(it->id, it->geom);
+                robot->cord->AddDs(it->id, it->pose);
             }
         }
 

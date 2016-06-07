@@ -12,6 +12,7 @@ speedup 1
 paused 1
 quit_time 18000
 resolution 1
+threads 4
 
 window
 (
@@ -32,7 +33,7 @@ define charging_bump model
     color "orange"
     obstacle_return 0
     fiducial(
-        range_max 3
+        range_max 5
         fov 360
         pose [ 0 0 -0.050 0 ]
     )
@@ -71,7 +72,7 @@ define docking_station model
 
 robot
 (
-    pose [ 2 0 0 0 ]
+    pose [ 1 1 0 0 ]
     wifi(
         ip "192.168.0.1"
         mac "08:00:20:ae:ff:7a"
@@ -80,38 +81,30 @@ robot
 
 robot
 (
-    pose [ -2 0 0 0 ]
+    pose [ -1 1 0 0 ]
     wifi(
         ip "192.168.0.2"
         mac "08:00:20:ae:ff:7b"
     )
 )
 
-#robot
-#(
-    #pose [ 0 2 0 90 ]
-    #wifi(
-        #ip "192.168.0.2"
-        #mac "08:00:20:ae:ff:7b"
-    #)
-#)
+robot
+(
+    pose [ -1 -1 0 0 ]
+    wifi(
+        ip "192.168.0.3"
+        mac "08:00:20:ae:ff:7c"
+    )
+)
 
-#robot
-#(
-    #pose [ -2 0 0 180 ]
-    #wifi(
-        #ip "192.168.0.3"
-        #mac "08:00:20:ae:ff:7c"
-    #)
-#)
+robot
+(
+    pose [ 1 -1 0 0 ]
+    wifi(
+        ip "192.168.0.4"
+        mac "08:00:20:ae:ff:7d"
+    )
+)
 
-#robot
-#(
-    #pose [ 0 -2 0 270 ]
-    #wifi(
-        #ip "192.168.0.4"
-        #mac "08:00:20:ae:ff:7d"
-    #)
-#)
-
-docking_station( pose [ 0 0 0 90 ] fiducial_return 2 )
+docking_station( pose [ 0 2 0 90 ] fiducial_return 2 )
+docking_station( pose [ 0 10 0 -90 ] fiducial_return 3 )

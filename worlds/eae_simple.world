@@ -4,7 +4,6 @@
 #  - robots move from cell to cell
 #  - laser can see neighboring cells
 # Authors: Micha Rappaport
-# $Id: eae_simple.world,v 1.0 2016-04-22$
 
 include "pioneer.inc"
 
@@ -47,6 +46,7 @@ define robot pioneer2dx
     localization "gps"
     localization_origin [ 0 0 0 0 ]
     fiducial_return 0
+    obstacle_return 0
     charging_bump()
     wifi(
         netmask "255.255.255.0"

@@ -112,7 +112,13 @@ namespace eae
             if(FullyCharged()){
                 state = STATE_FINISHED;
                 printf("[%s:%d]: exploration finished\n", StripPath(__FILE__), __LINE__);
-                exit(0);
+
+                // share map with other robots in range
+                cord->BroadcastMap();
+
+                // pause if all other robots finished already
+                if(cord->Finished())
+                    pos->GetWorld()->Stop();
             }
 
             // needs recharging, coordinate with other robots
@@ -393,6 +399,10 @@ namespace eae
 
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)
     {
+        if(robot->state == STATE_FINISHED){
+            return -1; // no more updates
+        }
+
         // initialize robot
         if(robot->state == STATE_INIT){
             robot->Init();

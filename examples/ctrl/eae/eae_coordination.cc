@@ -194,6 +194,22 @@ namespace eae
         }
     }
 
+    bool Coordination::Finished()
+    {
+        // iterator
+        vector<robot_t>::iterator it;
+
+        // iterate through all robots
+        for(it=robots.begin(); it<robots.end(); ++it){
+            // not all robots are done
+            if(it->state != STATE_FINISHED)
+                return false;
+        }
+
+        // all robots are done
+        return true;
+    }
+
     void Coordination::UpdateRobots(int id, robot_state_t state, Pose pose)
     {
         //  i don't need to be on the list

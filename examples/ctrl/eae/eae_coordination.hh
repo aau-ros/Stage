@@ -165,6 +165,13 @@ namespace eae
         void DsVacant(int id);
 
         /**
+         * Check if all other robots finished the exploration already.
+         *
+         * @return bool: True if all other robots are in state STATE_FINISHED.
+         */
+        bool Finished();
+
+        /**
          * ID of auction.
          */
         static int auction_id;

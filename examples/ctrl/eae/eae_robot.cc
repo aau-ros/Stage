@@ -113,6 +113,9 @@ namespace eae
                 state = STATE_FINISHED;
                 printf("[%s:%d] [robot %d]: exploration finished\n", StripPath(__FILE__), __LINE__, id);
 
+                // log data
+                Log();
+
                 // share map with other robots in range
                 cord->BroadcastMap();
 
@@ -178,10 +181,6 @@ namespace eae
                 pos->GoTo(goal);
             }
         }
-
-        stringstream output;
-        output << goal.x << "\t" << goal.y << "\t" << goal.a << "\t" << dist_travel;
-        log->Write(output.str());
     }
 
     void Robot::Move(Pose to, double bid)
@@ -397,6 +396,11 @@ namespace eae
         return pos->FindPowerPack()->GetStored() / power * velocity;
     }
 
+    void Robot::Log()
+    {
+        log->Log(pos->GetWorld()->SimTimeNow(), dist_travel, goal.x, goal.y, state);
+    }
+
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)
     {
         if(robot->state == STATE_FINISHED){
@@ -424,6 +428,9 @@ namespace eae
         if(pos->GetPose().Distance(robot->goal) < GOAL_TOLERANCE){
             // continue exploration
             if(robot->state == STATE_EXPLORE){
+                // log data
+                robot->Log();
+
                 // there is still a goal in the queue
                 if(robot->GoalQueue()){
                     robot->Move();
@@ -486,6 +493,9 @@ namespace eae
         else if(robot->state == STATE_CHARGE){
             // robot is done charging
             if(robot->FullyCharged()){
+                // log data
+                robot->Log();
+
                 // docking station is free now
                 robot->cord->DsVacant(robot->ds.id);
 

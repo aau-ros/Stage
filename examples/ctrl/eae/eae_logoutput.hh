@@ -37,6 +37,17 @@ namespace eae
         ~LogOutput();
 
         /**
+         * Write a line with the current status to the log file.
+         *
+         * @param usec_t time: The current simulation time.
+         * @param double distance: The total distance traveled by the robot so far.
+         * @param double x: The current location of the robot (x-coordinate).
+         * @param double y: The current location of the robot (y-coordinate).
+         * @param robot_state_t state: The current state of the robot.
+         */
+        void Log(usec_t time, double distance, double x, double y, robot_state_t state);
+
+        /**
          * Write a string as one line to the log file.
          */
         void Write(string text);

@@ -36,12 +36,19 @@ namespace eae
         file.open(filepath.c_str());
 
         // write header
-        Write("x position\ty position\tangle\tdistance");
+        Write("time\tdistance\tx position\ty position\tstate");
     }
 
     LogOutput::~LogOutput()
     {
         file.close();
+    }
+
+    void LogOutput::Log(usec_t time, double distance, double x, double y, robot_state_t state)
+    {
+        stringstream output;
+        output << time/1000000 << "\t" << distance << "\t" << x << "\t" << y << "\t" << state;
+        Write(output.str());
     }
 
     void LogOutput::Write(string text)

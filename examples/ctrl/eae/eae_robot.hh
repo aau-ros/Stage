@@ -258,6 +258,11 @@ namespace eae
         double RemainingDist();
 
         /**
+         * Write a line with the current status to the log file.
+         */
+        void Log();
+
+        /**
          * Callback function that is called when the robot changes position.
          * When the robot reached it's goal, it directs the robot to continue exploration.
          *

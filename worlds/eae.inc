@@ -49,7 +49,6 @@ define robot pioneer2dx
     obstacle_return 0
     charging_bump()
     wifi(
-        netmask "255.255.255.0"
         essid "robotnet"
         model "friis"
         power 30
@@ -69,42 +68,3 @@ define docking_station model
     give_watts 1000
     alwayson 1 # so we give charge without any explicit subscriber
 )
-
-robot
-(
-    pose [ 1 1 0 0 ]
-    wifi(
-        ip "192.168.0.1"
-        mac "08:00:20:ae:ff:7a"
-    )
-)
-
-robot
-(
-    pose [ -1 1 0 0 ]
-    wifi(
-        ip "192.168.0.2"
-        mac "08:00:20:ae:ff:7b"
-    )
-)
-
-robot
-(
-    pose [ -1 -1 0 0 ]
-    wifi(
-        ip "192.168.0.3"
-        mac "08:00:20:ae:ff:7c"
-    )
-)
-
-robot
-(
-    pose [ 1 -1 0 0 ]
-    wifi(
-        ip "192.168.0.4"
-        mac "08:00:20:ae:ff:7d"
-    )
-)
-
-docking_station( pose [ 0 2 0 90 ] fiducial_return 2 )
-docking_station( pose [ 0 10 0 -90 ] fiducial_return 3 )

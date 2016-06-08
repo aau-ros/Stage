@@ -156,7 +156,7 @@ World::World( const std::string& name,
   updates( 0 ),
   wf( NULL ),
   paused( false ),
-  event_queues(1), // use 1 thread by default
+  event_queues(10), // use 1 thread by default // changed to 10 so no reallocation is needed
   pending_update_callbacks(),
   active_energy(),
   active_velocity(),

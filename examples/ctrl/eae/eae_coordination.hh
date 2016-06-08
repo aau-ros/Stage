@@ -14,6 +14,15 @@ using namespace std;
 namespace eae
 {
     /**
+     * Possible optimization goals.
+     */
+    typedef enum{
+        OPT_ENERGY = 0,
+        OPT_TIME,
+        OPT_STABILITY
+    } opt_t;
+
+    /**
      * Weights for the cost function.
      *
      * @todo: Find optimal weights.
@@ -39,6 +48,12 @@ namespace eae
      * It defines the interval at which robot beacons are send.
      */
     const usec_t TO_BEACON = 1000000;
+
+    /**
+     * Optimization goal.
+     * Some decisions are made e.g. to either have a fast exploration or an energy efficient optimization.
+     */
+    const opt_t OPT = OPT_ENERGY;
 
     /**
      * Auction type for frontiers.
@@ -257,14 +272,6 @@ namespace eae
          * @param int id: The ID of the docking station.
          */
         void DsOccupied(int id);
-
-        /**
-         * Get the docking station that is closest to the robots current location (preferably vacant).
-         *
-         * @param Pose pose: The robots current location.
-         * @return int: The ID of the docking station.
-         */
-        int ClosestDsId(Pose pose);
 
         /**
          * Calculate the bid for a docking station.

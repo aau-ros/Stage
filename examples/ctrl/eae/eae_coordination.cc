@@ -60,7 +60,7 @@ namespace eae
         int id = ++auction_id;
 
         // get closest docking station
-        int ds = ClosestDsId(pose);
+        int ds = ClosestDs(pose).id;
 
         // calculate bid
         double bid = DockingBid(ds, pose);
@@ -121,21 +121,59 @@ namespace eae
 
     ds_t Coordination::ClosestDs(Pose pose)
     {
-        ds_t ds;
-        double dist = 0;
+        ds_t ds_free = ds_t();
+        ds_t ds_occu = ds_t();
+        double dist_free = 0;
+        double dist_occu = 0;
         double dist_temp;
         vector<ds_t>::iterator it;
+
+        // iterate over all docking stations
         for(it=dss.begin(); it<dss.end(); ++it){
-            // make sure docking station is not occupied
-            if(it->state != STATE_OCCUPIED){
                 dist_temp = pose.Distance(it->pose);
-                if(dist_temp < dist || dist == 0){
-                    ds = *it;
-                    dist = dist_temp;
+
+            //  docking station is occupied
+            if(it->state == STATE_OCCUPIED){
+                if(dist_temp < dist_occu || dist_occu == 0){
+                    ds_occu = *it;
+                    dist_occu = dist_temp;
+                }
+            }
+
+            // docking station is vacant
+            else{
+                if(dist_temp < dist_free || dist_free == 0){
+                    ds_free = *it;
+                    dist_free = dist_temp;
                 }
             }
         }
-        return ds;
+
+        // if energy is optimized, select closest docking station
+        if(OPT == OPT_ENERGY){
+            if(dist_free != 0 && dist_occu != 0){
+                if(dist_free <= dist_occu)
+                    return ds_free;
+                else
+                    return ds_occu;
+            }
+            else if(dist_free != 0)
+                return ds_free;
+            else if(dist_occu != 0)
+                return ds_occu;
+            else
+                return ds_t();
+        }
+
+        // otherwise prefer vacant docking stations
+        else{
+            if(dist_free != 0)
+                return ds_free;
+            else if(dist_occu != 0)
+                return ds_occu;
+            else
+                return ds_t();
+        }
     }
 
     void Coordination::DsVacant(int id)
@@ -282,6 +320,12 @@ namespace eae
         // don't respond if just done charging
         if(this->robot->FullyCharged())
             return;
+
+        // for energy optimization, only respond to auctions for closest docking station
+        if(OPT == OPT_ENERGY){
+            if(ds != ClosestDs(this->robot->GetPose()).id)
+                return;
+        }
 
         // auction not found, respond
         if(it == ds_auctions.end()){
@@ -476,45 +520,6 @@ namespace eae
         }
     }
 
-    int Coordination::ClosestDsId(Pose pose)
-    {
-        int ds_free = 0;
-        int ds_occu = 0;
-        double dist_free = 0;
-        double dist_occu = 0;
-        double dist_temp;
-        vector<ds_t>::iterator it;
-
-        // iterate over all docking stations
-        for(it=dss.begin(); it<dss.end(); ++it){
-            dist_temp = pose.Distance(it->pose);
-
-            // docking station is occupied
-            if(it->state == STATE_OCCUPIED){
-                if(dist_temp < dist_occu || dist_occu == 0){
-                    ds_occu = it->id;
-                    dist_occu = dist_temp;
-                }
-            }
-
-            // docking station is free
-            else{
-                if(dist_temp < dist_free || dist_free == 0){
-                    ds_free = it->id;
-                    dist_free = dist_temp;
-                }
-            }
-        }
-
-        // select free docking station if possible
-        if(ds_free != 0)
-            return ds_free;
-
-        // return occupied docking station
-        else
-            return ds_occu;
-    }
-
     double Coordination::DockingBid(int ds, Pose pose)
     {
         double l1, l2, l3, l4;
@@ -523,8 +528,6 @@ namespace eae
         vector< vector <int> >::iterator itf;
         vector< vector <int> > frontiers = robot->GetMap()->Frontiers();
         vector< vector <int> > frontiers_close = robot->FrontiersReachable();
-
-        //printf("frontiers: %lu > %lu\n", frontiers.size(), frontiers_close.size());
 
 
         /*******************

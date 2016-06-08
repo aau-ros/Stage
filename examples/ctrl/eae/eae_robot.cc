@@ -13,7 +13,7 @@ namespace eae
         // instantiate objects
         this->pos = pos;
         fid = (ModelFiducial*)pos->GetUnusedModelOfType("fiducial");
-        map = new GridMap(pos->GetPose(), pos->GetWorld());
+        map = new GridMap(pos->GetPose(), pos->GetWorld(), id);
         log = new LogOutput(id);
         cord = new Coordination(pos, this);
         cam = new OrthoCamera();
@@ -111,7 +111,7 @@ namespace eae
             // end of exploration
             if(FullyCharged()){
                 state = STATE_FINISHED;
-                printf("[%s:%d]: exploration finished\n", StripPath(__FILE__), __LINE__);
+                printf("[%s:%d] [robot %d]: exploration finished\n", StripPath(__FILE__), __LINE__, id);
 
                 // share map with other robots in range
                 cord->BroadcastMap();
@@ -149,7 +149,7 @@ namespace eae
 
             // no valid goal
             else{
-                printf("[%s:%d]: invalid goal\n", StripPath(__FILE__), __LINE__);
+                printf("[%s:%d] [robot %d]: invalid goal\n", StripPath(__FILE__), __LINE__, id);
                 return;
             }
         }
@@ -201,7 +201,7 @@ namespace eae
         }
 
         else{
-            printf("[%s:%d]: invalid goal or bid!\n", StripPath(__FILE__), __LINE__);
+            printf("[%s:%d] [robot %d]: invalid goal or bid!\n", StripPath(__FILE__), __LINE__, id);
         }
     }
 
@@ -454,7 +454,7 @@ namespace eae
             }
 
             else{
-                printf("[%s:%d]: invalid state: %d\n", StripPath(__FILE__), __LINE__, robot->state);
+                printf("[%s:%d] [robot %d]: invalid state: %d\n", StripPath(__FILE__), __LINE__, robot->id, robot->state);
             }
         }
 

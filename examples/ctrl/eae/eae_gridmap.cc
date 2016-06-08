@@ -5,7 +5,7 @@ using namespace std;
 
 namespace eae
 {
-    GridMap::GridMap(Pose pose, World* world)
+    GridMap::GridMap(Pose pose, World* world, int robot)
     {
         // set dimension parameters
         x_dim = 1 + 2 * (LASER_RANGE);
@@ -50,6 +50,9 @@ namespace eae
         vis_occupied->SetColor(Color(0, 0, 0, 1));
         vis_occupied->ClearBlocks();
         vis_occupied->SetGuiMove(0);
+
+        // robot id
+        this->robot = robot;
     }
 
     void GridMap::Visualize(Pose pose)
@@ -120,7 +123,7 @@ namespace eae
 
                 // unknown
                 else
-                    printf("[%s:%d]: Could determine cell type at (%d,%d)!\n", StripPath(__FILE__), __LINE__, x, y);
+                    printf("[%s:%d] [robot %d]: Could determine cell type at (%d,%d)!\n", StripPath(__FILE__), __LINE__, robot, x, y);
                 ++x;
             }
             --y;
@@ -199,7 +202,7 @@ namespace eae
             Write(x, y, val);
         }
         catch(const out_of_range& e){
-            printf("[%s:%d]: Could not write '%d' to (%d,%d)! Something went wrong when extending the map!\n", StripPath(__FILE__), __LINE__, val, x, y);
+            printf("[%s:%d] [robot %d]: Could not write '%d' to (%d,%d)! Something went wrong when extending the map!\n", StripPath(__FILE__), __LINE__, robot, val, x, y);
         }
     }
 

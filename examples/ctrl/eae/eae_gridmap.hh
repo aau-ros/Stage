@@ -27,8 +27,9 @@ namespace eae
          *
          * @param Pose pose: The initial position of the robot.
          * @param World* world: The world used for visualization.
+         * @param int robot: The ID of the robot.
          */
-        GridMap(Pose pose, World* world);
+        GridMap(Pose pose, World* world, int robot);
 
         /**
          * Visualize the map in the command line.
@@ -144,6 +145,11 @@ namespace eae
         Model* vis_free;
         Model* vis_unknown;
         Model* vis_occupied;
+
+        /**
+         * Robot ID.
+         */
+        int robot;
     };
 }
 

@@ -27,7 +27,7 @@ namespace eae
     {
         // invalid bid
         if(bid == BID_INV){
-            printf("[%s:%d]: invalid bid\n", StripPath(__FILE__), __LINE__);
+            printf("[%s:%d] [robot %d]: invalid bid\n", StripPath(__FILE__), __LINE__, robot->GetId());
             return;
         }
 
@@ -250,7 +250,7 @@ namespace eae
     {
         // invalid bid
         if(bid == BID_INV){
-            printf("[%s:%d]: invalid bid\n", StripPath(__FILE__), __LINE__);
+            printf("[%s:%d] [robot %d]: invalid bid\n", StripPath(__FILE__), __LINE__, this->robot->GetId());
             return;
         }
 
@@ -306,7 +306,7 @@ namespace eae
     {
         // invalid bid
         if(bid == BID_INV){
-            printf("[%s:%d]: invalid bid\n", StripPath(__FILE__), __LINE__);
+            printf("[%s:%d] [robot %d]: invalid bid\n", StripPath(__FILE__), __LINE__, this->robot->GetId());
             return;
         }
 
@@ -350,7 +350,7 @@ namespace eae
 
             // invalid bid
             if(my_bid == BID_INV){
-                printf("[%s:%d]: invalid bid\n", StripPath(__FILE__), __LINE__);
+                printf("[%s:%d] [robot %d]: invalid bid\n", StripPath(__FILE__), __LINE__, this->robot->GetId());
                 return;
             }
 
@@ -411,7 +411,7 @@ namespace eae
     {
         // invalid bid
         if(bid == BID_INV){
-            printf("[%s:%d]: invalid bid\n", StripPath(__FILE__), __LINE__);
+            printf("[%s:%d] [robot %d]: invalid bid\n", StripPath(__FILE__), __LINE__, robot->GetId());
             return;
         }
 
@@ -429,7 +429,7 @@ namespace eae
     {
         // invalid bid
         if(bid == BID_INV){
-            printf("[%s:%d]: invalid bid\n", StripPath(__FILE__), __LINE__);
+            printf("[%s:%d] [robot %d]: invalid bid\n", StripPath(__FILE__), __LINE__, robot->GetId());
             return;
         }
 
@@ -460,7 +460,7 @@ namespace eae
 
         // auction not found
         if(it == fr_auctions.end()){
-            printf("[%s:%d]: Could not participate in auction %d because it was not found!\n", StripPath(__FILE__), __LINE__, id);
+            printf("[%s:%d] [robot %d]: Could not participate in auction %d because it was not found!\n", StripPath(__FILE__), __LINE__, robot->GetId(), id);
         }
     }
 
@@ -481,7 +481,7 @@ namespace eae
 
         // auction not found
         if(it == ds_auctions.end()){
-            printf("[%s:%d]: Could not participate in auction %d because it was not found!\n", StripPath(__FILE__), __LINE__, id);
+            printf("[%s:%d] [robot %d]: Could not participate in auction %d because it was not found!\n", StripPath(__FILE__), __LINE__, robot->GetId(), id);
         }
     }
 
@@ -614,7 +614,7 @@ namespace eae
 
         // docking station not found
         if(itd == dss.end()){
-            printf("[%s:%d]: invalid docking station id: %d\n", StripPath(__FILE__), __LINE__, ds);
+            printf("[%s:%d] [robot %d]: invalid docking station id: %d\n", StripPath(__FILE__), __LINE__, robot->GetId(), ds);
             l4 = 0.5;
         }
 
@@ -687,7 +687,7 @@ namespace eae
                 break;
 
             default:
-                printf("[%s:%d]: unknown message type: %d\n", StripPath(__FILE__), __LINE__, msg->type);
+                printf("[%s:%d] [robot %d]: unknown message type: %d\n", StripPath(__FILE__), __LINE__, cord->robot->GetId(), msg->type);
         }
 
         delete incoming;

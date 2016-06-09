@@ -398,7 +398,7 @@ namespace eae
 
     void Robot::Log()
     {
-        log->Log(pos->GetWorld()->SimTimeNow(), dist_travel, goal.x, goal.y, state);
+        log->Log(pos->GetWorld()->SimTimeNow(), dist_travel, map->Explored(), goal.x, goal.y, state);
     }
 
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)

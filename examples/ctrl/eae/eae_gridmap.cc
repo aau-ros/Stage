@@ -265,6 +265,22 @@ namespace eae
         }
     }
 
+    int GridMap::Explored()
+    {
+        int explored = 0;
+        vector< vector<grid_cell_t> >::iterator it;
+        vector<grid_cell_t>::iterator jt;
+
+        for(it = grid.begin(); it<grid.end(); ++it){
+            for(jt = it->begin(); jt<it->end(); ++jt){
+                if(*jt != CELL_UNKNOWN){
+                    ++explored;
+                }
+            }
+        }
+        return explored;
+    }
+
     GridMap& GridMap::operator=(const GridMap& toCopy)
     {
         grid = toCopy.grid;

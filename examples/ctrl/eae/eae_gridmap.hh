@@ -80,6 +80,13 @@ namespace eae
         void Update(GridMap* map, Pose pose);
 
         /**
+         * Get the amount of explored area combined from all robots.
+         *
+         * @return int: The number of explored grid cells.
+         */
+        int Explored();
+
+        /**
          * Assignment operator.
          *
          * @param GridMap& toCopy: The object that should be copied.

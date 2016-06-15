@@ -23,6 +23,23 @@ namespace eae
     } opt_t;
 
     /**
+     * Possible coordination strategies for recharging at docking stations.
+     *
+     * @todo: Implement optimal coordination strategy.
+     */
+    typedef enum{
+        CORD_MARKET = 0,
+        CORD_GREEDY,
+        CORD_OPT
+    } cord_t;
+
+    /**
+     * Strings describing the coordination strategy.
+     * Make sure they match the cord_t enum!
+     */
+    const string CORD_STRING[] = {"market", "greedy", "opt"};
+
+    /**
      * Weights for the cost function.
      *
      * @todo: Find optimal weights.
@@ -54,6 +71,11 @@ namespace eae
      * Some decisions are made e.g. to either have a fast exploration or an energy efficient optimization.
      */
     const opt_t OPT = OPT_ENERGY;
+
+    /**
+     * Coordination strategy for coordinating the recharging at docking stations.
+     */
+    const cord_t COORDINATION = CORD_MARKET;
 
     /**
      * Auction type for frontiers.
@@ -131,23 +153,13 @@ namespace eae
         double DistRobot(Pose pose);
 
         /**
-         * Add a docking station to the private vector.
+         * Update or add a docking station to the private vector.
          *
          * @param int id: The ID of the docking station (as returned by the fiducial).
          * @param Pose pose: The position of the docking station.
          * @param ds_state_t state: The state of the docking station, default is undefined.
          */
-        void AddDs(int id, Pose pose, ds_state_t state=STATE_UNDEFINED_DS);
-
-        /**
-         * Add or update a docking station to the private vector.
-         *
-         * @param int id: The ID of the docking station (as returned by the fiducial).
-         * @param double x: The x-coordinate of the docking station.
-         * @param double y: The y-coordinate of the docking station.
-         * @param double a: Rotation about the z axis.
-         */
-        void UpdateDs(int id, double x, double y, double a);
+        void UpdateDs(int id, Pose pose, ds_state_t state=STATE_UNDEFINED_DS);
 
         /**
          * Get the docking station that is closest to the robots current location and that is vacant.
@@ -170,6 +182,13 @@ namespace eae
          * @return bool: True if all other robots are in state STATE_FINISHED.
          */
         bool Finished();
+
+        /**
+         * Get the wifi model.
+         *
+         * @return string: The name of the wifi model.
+         */
+        string GetWifiModel();
 
         /**
          * ID of auction.
@@ -209,11 +228,9 @@ namespace eae
          * @param int id: ID of the auction.
          * @param int robot: ID of robot giving a bid.
          * @param int ds: ID of the docking station.
-         * @param ds_state_t state: State of the docking station.
          * @param double bid: Bid of the robot.
-         * @param Pose pose: Position of docking station.
          */
-        void UpdateDsAuction(int id, int robot, int ds, ds_state_t state, double bid, Pose pose);
+        void UpdateDsAuction(int id, int robot, int ds, double bid);
 
         /**
          * Check all auctions.

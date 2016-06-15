@@ -34,11 +34,6 @@ namespace eae
     const double BID_INV = 0;
 
     /**
-     * Value for initial bid.
-     */
-    const double BID_INIT = -200;
-
-    /**
      * Map grid cell values.
      */
     typedef enum{
@@ -60,6 +55,12 @@ namespace eae
         STATE_DEAD,
         STATE_FINISHED
     } robot_state_t;
+
+    /**
+     * Strings describing the robot state.
+     * Make sure they match the robot_state_t enum!
+     */
+    const string STATE_STRING[] = {"undefined", "init", "idle", "explore", "precharge", "charge", "dead", "finished"};
 
     /**
      * The current state of a docking station.

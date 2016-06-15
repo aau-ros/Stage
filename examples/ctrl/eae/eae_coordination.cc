@@ -61,9 +61,19 @@ namespace eae
 
         // get closest docking station
         int ds = ClosestDs(pose).id;
+        if(ds == 0){
+            return ds_t();
+        }
 
         // calculate bid
-        double bid = DockingBid(ds, pose);
+        double bid = BID_INV;
+        if(COORDINATION == CORD_MARKET)
+            bid = DockingBid(ds, pose);
+        else if(COORDINATION == CORD_GREEDY)
+            bid = DBL_MAX;
+        else
+            printf("[%s:%d] [robot %d]: invalid coordination strategy: %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), COORDINATION);
+
 
         // create and store auction
         StoreNewDsAuction(id, bid, robot->GetId(), pos->GetWorld()->SimTimeNow(), true, ds);
@@ -94,7 +104,7 @@ namespace eae
         return dist;
     }
 
-    void Coordination::AddDs(int id, Pose pose, ds_state_t state)
+    void Coordination::UpdateDs(int id, Pose pose, ds_state_t state)
     {
         // check if docking station is already in vector
         vector<ds_t>::iterator it;
@@ -154,12 +164,14 @@ namespace eae
             if(dist_free != 0 && dist_occu != 0){
                 if(dist_free <= dist_occu)
                     return ds_free;
-                else
+                else if(COORDINATION == CORD_MARKET) // return occupied only when auctioning takes place
                     return ds_occu;
+                else
+                    return ds_t();
             }
             else if(dist_free != 0)
                 return ds_free;
-            else if(dist_occu != 0)
+            else if(dist_occu != 0 && COORDINATION == CORD_MARKET)
                 return ds_occu;
             else
                 return ds_t();
@@ -169,7 +181,7 @@ namespace eae
         else{
             if(dist_free != 0)
                 return ds_free;
-            else if(dist_occu != 0)
+            else if(dist_occu != 0 && COORDINATION == CORD_MARKET)
                 return ds_occu;
             else
                 return ds_t();
@@ -208,6 +220,11 @@ namespace eae
 
         // all robots are done
         return true;
+    }
+
+    string Coordination::GetWifiModel()
+    {
+        return wifi->GetConfig()->GetModelString();
     }
 
     void Coordination::UpdateRobots(int id, robot_state_t state, Pose pose)
@@ -302,7 +319,7 @@ namespace eae
         }
     }
 
-    void Coordination::UpdateDsAuction(int id, int robot, int ds, ds_state_t state, double bid, Pose pose)
+    void Coordination::UpdateDsAuction(int id, int robot, int ds, double bid)
     {
         // invalid bid
         if(bid == BID_INV){
@@ -313,7 +330,7 @@ namespace eae
         // iterator
         vector<ds_auction_t>::iterator it;
 
-        // iterate through all auctions
+        // iterate through all auctions and update information
         for(it=ds_auctions.begin(); it<ds_auctions.end(); ++it){
             // found auction
             if(it->id == id){
@@ -322,9 +339,20 @@ namespace eae
                     it->highest_bid = bid;
                     it->winner = robot;
                 }
-                break;
+                return;
             }
         }
+
+        // new auction, store in vector
+        StoreNewDsAuction(id, bid, robot, pos->GetWorld()->SimTimeNow(), true, ds);
+
+        // don't respond to auctions with greedy strategy
+        if(bid == DBL_MAX)
+            return;
+
+        // don't respond if just done charging
+        if(this->robot->FullyCharged())
+            return;
 
         // don't respond to auctions for other docking stations if robot is charging or on the way
         ds_t ds_dock;
@@ -333,40 +361,29 @@ namespace eae
                 return;
         }
 
-        // don't respond if just done charging
-        if(this->robot->FullyCharged())
-            return;
-
         // for energy optimization, only respond to auctions for closest docking station
         if(OPT == OPT_ENERGY){
             if(ds != ClosestDs(this->robot->GetPose()).id)
                 return;
         }
 
-        // auction not found, respond
-        if(it == ds_auctions.end()){
-            // calculate bid
-            double my_bid = DockingBid(ds, this->robot->GetPose());
+        // respond to auction
+        // calculate bid
+        double my_bid = DockingBid(ds, this->robot->GetPose());
 
-            // invalid bid
-            if(my_bid == BID_INV){
-                printf("[%s:%d] [robot %d]: invalid bid\n", StripPath(__FILE__), __LINE__, this->robot->GetId());
-                return;
-            }
+        // invalid bid
+        if(my_bid == BID_INV){
+            printf("[%s:%d] [robot %d]: invalid bid\n", StripPath(__FILE__), __LINE__, this->robot->GetId());
+            return;
+        }
 
-            // my bid is higher
-            if(my_bid > bid){
-                // store auction
-                StoreNewDsAuction(id, my_bid, this->robot->GetId(), pos->GetWorld()->SimTimeNow(), true, ds);
+        // my bid is higher
+        if(my_bid > bid){
+            // update auction information
+            UpdateDsAuction(id, this->robot->GetId(), ds, my_bid);
 
-                // notify other robots
-                BroadcastDsAuction(id);
-            }
-
-            // my bid is lower, just store auction
-            else{
-                StoreNewDsAuction(id, bid, robot, pos->GetWorld()->SimTimeNow(), true, ds);
-            }
+            // notify other robots
+            BroadcastDsAuction(id);
         }
     }
 
@@ -668,7 +685,7 @@ namespace eae
 
             case MSG_DS:
                 // add/update docking station in the private vector of docking stations
-                cord->AddDs(msg->id_ds, msg->pose, msg->state_ds);
+                cord->UpdateDs(msg->id_ds, msg->pose, msg->state_ds);
                 break;
 
             case MSG_FRONTIER_AUCTION:
@@ -678,7 +695,7 @@ namespace eae
 
             case MSG_DS_AUCTION:
                 // update auction information and respond if necessary
-                cord->UpdateDsAuction(msg->id_auction, msg->id_robot, msg->id_ds, msg->state_ds, msg->bid, msg->pose);
+                cord->UpdateDsAuction(msg->id_auction, msg->id_robot, msg->id_ds, msg->bid);
                 break;
 
             case MSG_MAP:

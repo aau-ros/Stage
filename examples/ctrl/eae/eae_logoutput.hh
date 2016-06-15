@@ -27,8 +27,11 @@ namespace eae
          * Creates a subdirectory in the LOG_PATH directory, according to current date.
          *
          * @param int robot: Id of robot owning this object, used for log file name.
+         * @param string comm: The communication model used for the wifi connections.
+         * @param string cord: The coordination strategy
+         * @param double battery: The battery capacity.
          */
-        LogOutput(int robot);
+        LogOutput(int robot, string comm, string cord, double battery);
 
         /**
          * Destructor.
@@ -44,9 +47,9 @@ namespace eae
          * @param int area: The area explored collectively by all robots so far.
          * @param double x: The current location of the robot (x-coordinate).
          * @param double y: The current location of the robot (y-coordinate).
-         * @param robot_state_t state: The current state of the robot.
+         * @param string state: The current state of the robot.
          */
-        void Log(usec_t time, double distance, int area, double x, double y, robot_state_t state);
+        void Log(usec_t time, double distance, int area, double x, double y, string state);
 
         /**
          * Write a string as one line to the log file.

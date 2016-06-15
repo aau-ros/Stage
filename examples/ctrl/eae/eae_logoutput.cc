@@ -5,7 +5,7 @@ using namespace std;
 
 namespace eae
 {
-    LogOutput::LogOutput(int robot)
+    LogOutput::LogOutput(int robot, string comm, string cord, double battery)
     {
         // get current time
         std::time_t now = time(NULL);
@@ -36,6 +36,9 @@ namespace eae
         file.open(filepath.c_str());
 
         // write header
+        stringstream output;
+        output << "# robot\t" << robot << endl << "# number of robots\t" << "0" << endl << "# number of docking stations\t" << "0" << endl <<"# communication type\t" <<  comm << endl << "# coordination type\t" << cord << endl << "# battery capacity\t" << battery << endl;
+        Write(output.str());
         Write("time\tdistance\tarea\tx position\ty position\tstate");
     }
 
@@ -44,7 +47,7 @@ namespace eae
         file.close();
     }
 
-    void LogOutput::Log(usec_t time, double distance, int area, double x, double y, robot_state_t state)
+    void LogOutput::Log(usec_t time, double distance, int area, double x, double y, string state)
     {
         stringstream output;
         output << time/1000000 << "\t" << distance << "\t" << area << "\t" << x << "\t" << y << "\t" << state;

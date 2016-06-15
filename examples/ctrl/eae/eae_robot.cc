@@ -14,8 +14,8 @@ namespace eae
         this->pos = pos;
         fid = (ModelFiducial*)pos->GetUnusedModelOfType("fiducial");
         map = new GridMap(pos->GetPose(), pos->GetWorld(), id);
-        log = new LogOutput(id);
         cord = new Coordination(pos, this);
+        log = new LogOutput(id, cord->GetWifiModel(), CORD_STRING[COORDINATION], pos->FindPowerPack()->GetCapacity());
         cam = new OrthoCamera();
         wpcolor = Color(0,1,0); // waypoint color is green
 
@@ -73,7 +73,7 @@ namespace eae
         goal = pose;
 
         Pose frontier;
-        double max_bid = BID_INIT;
+        double max_bid = 0;
         double bid;
 
         // get list of frontiers
@@ -95,7 +95,7 @@ namespace eae
                 continue;
 
             // maximize bid, minimize cost
-            if(bid > max_bid){
+            if(bid > max_bid || max_bid == 0){
                 max_bid = bid;
                 goal = frontier;
             }
@@ -398,7 +398,7 @@ namespace eae
 
     void Robot::Log()
     {
-        log->Log(pos->GetWorld()->SimTimeNow(), dist_travel, map->Explored(), goal.x, goal.y, state);
+        log->Log(pos->GetWorld()->SimTimeNow(), dist_travel, map->Explored(), goal.x, goal.y, STATE_STRING[state]);
     }
 
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)
@@ -511,7 +511,7 @@ namespace eae
         // store docking stations
         else{
             for(it = fids.begin(); it<fids.end(); ++it){
-                robot->cord->AddDs(it->id, it->pose);
+                robot->cord->UpdateDs(it->id, it->pose);
             }
         }
 

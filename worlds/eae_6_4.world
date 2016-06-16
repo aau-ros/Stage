@@ -1,22 +1,17 @@
 include "pioneer.inc"
 include "eae.inc"
 
+robots 6
+docking_stations 4
+
 robot( pose [ 1 1 0 0 ] )
-
 robot( pose [ 1 -1 0 0 ] )
-
 robot( pose [ -1 1 0 0 ] )
-
 robot( pose [ -1 -1 0 0 ] )
-
 robot( pose [ 2 0 0 0 ] )
-
 robot( pose [ -2 0 0 0 ] )
 
 docking_station( pose [ 0 1 0 0 ] fiducial_return 2 )
-
 docking_station( pose [ 0 -1 0 0 ] fiducial_return 3 )
-
 docking_station( pose [ 0 3 0 0 ] fiducial_return 4 )
-
 docking_station( pose [ 0 -3 0 0 ] fiducial_return 5 )

@@ -69,8 +69,10 @@ namespace eae
          * Constructor.
          *
          * @param ModelPosition* pos: The instantiated position model of the robot.
+         * @param int robots: The number of robots in this simulation.
+         * @param int dss: The number of docking stations in this simulation.
          */
-        Robot(ModelPosition* pos);
+        Robot(ModelPosition* pos, int robots, int dss);
 
         /**
          * Initialize the robot.

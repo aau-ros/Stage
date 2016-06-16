@@ -27,11 +27,13 @@ namespace eae
          * Creates a subdirectory in the LOG_PATH directory, according to current date.
          *
          * @param int robot: Id of robot owning this object, used for log file name.
+         * @param int robots: The number of robots in this simulation.
+         * @param int dss: The number of docking stations in this simulation.
          * @param string comm: The communication model used for the wifi connections.
          * @param string cord: The coordination strategy
          * @param double battery: The battery capacity.
          */
-        LogOutput(int robot, string comm, string cord, double battery);
+        LogOutput(int robot, int robots, int dss, string comm, string cord, double battery);
 
         /**
          * Destructor.

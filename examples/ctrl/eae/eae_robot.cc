@@ -5,7 +5,7 @@ using namespace std;
 
 namespace eae
 {
-    Robot::Robot(ModelPosition* pos)
+    Robot::Robot(ModelPosition* pos, int robots, int dss)
     {
         // robot id
         id = pos->GetId();
@@ -15,7 +15,7 @@ namespace eae
         fid = (ModelFiducial*)pos->GetUnusedModelOfType("fiducial");
         map = new GridMap(pos->GetPose(), pos->GetWorld(), id);
         cord = new Coordination(pos, this);
-        log = new LogOutput(id, cord->GetWifiModel(), CORD_STRING[COORDINATION], pos->FindPowerPack()->GetCapacity());
+        log = new LogOutput(id, robots, dss, cord->GetWifiModel(), CORD_STRING[COORDINATION], pos->FindPowerPack()->GetCapacity());
         cam = new OrthoCamera();
         wpcolor = Color(0,1,0); // waypoint color is green
 

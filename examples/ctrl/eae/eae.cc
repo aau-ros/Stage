@@ -1,4 +1,5 @@
 #include "eae.hh"
+#include "worldfile.hh"
 #include "eae_coordination.hh"
 #include "eae_robot.hh"
 #include "region.hh"
@@ -17,7 +18,15 @@ int Coordination::auction_id = 0;
  */
 extern "C" int Init(Model* mod, CtrlArgs* args)
 {
-    new Robot((ModelPosition*)mod);
+    // read number of robots and docking stations from world file (just for log output)
+    Worldfile* wf = mod->GetWorld()->GetWorldFile();
+    int robots = 0;
+    robots = wf->ReadInt(0, "robots", robots);
+    int dss = 0;
+    dss = wf->ReadInt(0, "docking_stations", dss);
+
+
+    new Robot((ModelPosition*)mod, robots, dss);
 
     return 0; // ok
 }

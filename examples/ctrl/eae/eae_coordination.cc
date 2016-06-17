@@ -45,25 +45,15 @@ namespace eae
         BroadcastFrAuction(id);
     }
 
-    ds_t Coordination::DockingAuction(Pose pose)
+    void Coordination::DockingAuction(Pose pose, int ds)
     {
         // not enough time between auctions
         if(ds_auctions.size() > 0 && pos->GetWorld()->SimTimeNow() < ds_auctions.back().time + TO_NEXT_AUCTION){
-            ds_t inv_ds;
-            inv_ds.id = 0;
-            inv_ds.state = STATE_UNDEFINED_DS;
-            inv_ds.pose = Pose();
-            return inv_ds;
+            return;
         }
 
         // increment auction id
         int id = ++auction_id;
-
-        // get closest docking station
-        int ds = ClosestDs(pose).id;
-        if(ds == 0){
-            return ds_t();
-        }
 
         // calculate bid
         double bid = BID_INV;
@@ -74,14 +64,11 @@ namespace eae
         else
             printf("[%s:%d] [robot %d]: invalid coordination strategy: %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), COORDINATION);
 
-
         // create and store auction
         StoreNewDsAuction(id, bid, robot->GetId(), pos->GetWorld()->SimTimeNow(), true, ds);
 
         // notify other robots
         BroadcastDsAuction(id);
-
-        return GetDs(ds);
     }
 
     void Coordination::BroadcastMap()
@@ -131,61 +118,111 @@ namespace eae
 
     ds_t Coordination::ClosestDs(Pose pose)
     {
-        ds_t ds_free = ds_t();
-        ds_t ds_occu = ds_t();
-        double dist_free = 0;
-        double dist_occu = 0;
+        ds_t ds = ds_t();
+        double dist = 0;
         double dist_temp;
         vector<ds_t>::iterator it;
 
-        // iterate over all docking stations
+        // iterate over all docking stations to find closest
         for(it=dss.begin(); it<dss.end(); ++it){
+            dist_temp = pose.Distance(it->pose);
+            if(dist_temp < dist || dist == 0){
+                ds = *it;
+                dist = dist_temp;
+            }
+        }
+
+        return ds;
+    }
+
+    ds_t Coordination::ClosestFreeDs(Pose pose, double range)
+    {
+        ds_t ds = ds_t();
+        double dist = 0;
+        double dist_temp;
+        vector<ds_t>::iterator it;
+
+        // iterate over all docking stations to find closest free in range
+        for(it=dss.begin(); it<dss.end(); ++it){
+            dist_temp = pose.Distance(it->pose);
+            if(it->state != STATE_OCCUPIED && dist_temp <= range && (dist_temp < dist || dist == 0)){
+                ds = *it;
+                dist = dist_temp;
+            }
+        }
+
+        return ds;
+    }
+
+    ds_t Coordination::NextClosestDs(Pose pose, double range)
+    {
+        printf("[%s:%d] [robot %d]: looking for next closest ds\n", StripPath(__FILE__), __LINE__, robot->GetId());
+        bool frontiers; // true if there are frontiers in range of the docking station
+        bool reachable; // true if one docking station is reachable by another
+        ds_t ds = ds_t();
+        double dist = 0;
+        double dist_temp;
+        vector<ds_t> dss_reachable; // docking stations in range of robot
+        vector<ds_t> dss_frontiers; // docking stations that have frontiers in range
+        vector<ds_t> dss_reach_front; // docking stations in range of robot with frontiers in range
+        vector<ds_t>::iterator it, jt;
+
+        // iterate over all docking stations and sort into different vectors
+        for(it=dss.begin(); it<dss.end(); ++it){
+            dist_temp = pose.Distance(it->pose);
+            frontiers = (robot->FrontiersReachable(it->pose, robot->MaxDist(), true).empty() == false);
+
+            // docking station is reachable and has frontiers in range
+            if(dist_temp <= range && frontiers){
+            printf("[%s:%d] [robot %d]: found in range with frontiers\n", StripPath(__FILE__), __LINE__, robot->GetId());
+                dss_reach_front.push_back(*it);
+            }
+
+            // docking station is reachable
+            else if(dist_temp <= range){
+            printf("[%s:%d] [robot %d]: found in range\n", StripPath(__FILE__), __LINE__, robot->GetId());
+                dss_reachable.push_back(*it);
+            }
+            // docking station has frontiers in range
+            else if(frontiers){
+            printf("[%s:%d] [robot %d]: found with frontiers\n", StripPath(__FILE__), __LINE__, robot->GetId());
+                dss_frontiers.push_back(*it);
+            }
+        }
+
+        // return closest docking station in range of robot with frontiers in range
+        for(it=dss_reach_front.begin(); it<dss_reach_front.end(); ++it){
+            dist_temp = pose.Distance(it->pose);
+            if(dist_temp < dist || dist == 0){
+                ds = *it;
+                dist = dist_temp;
+            }
+        }
+        if(dist > 0)
+            return ds;
+
+        // return closest docking station in range of robot
+        for(it=dss_reachable.begin(); it<dss_reachable.end(); ++it){
+            // check if docking station is in the right direction
+            // i.e. it is possible to reach a docking station from there which has frontiers in range
+            reachable = false;
+            for(jt=dss_frontiers.begin(); jt<dss_frontiers.end(); ++jt){
+                if(hypot(jt->pose.x - it->pose.x, jt->pose.y - it->pose.y) <= range){
+                    reachable = true;
+                    break;
+                }
+            }
+
+            // minimize distance
+            if(reachable){
                 dist_temp = pose.Distance(it->pose);
-
-            //  docking station is occupied
-            if(it->state == STATE_OCCUPIED){
-                if(dist_temp < dist_occu || dist_occu == 0){
-                    ds_occu = *it;
-                    dist_occu = dist_temp;
-                }
-            }
-
-            // docking station is vacant
-            else{
-                if(dist_temp < dist_free || dist_free == 0){
-                    ds_free = *it;
-                    dist_free = dist_temp;
+                if(dist_temp < dist || dist == 0){
+                    ds = *it;
+                    dist = dist_temp;
                 }
             }
         }
-
-        // if energy is optimized, select closest docking station
-        if(OPT == OPT_ENERGY){
-            if(dist_free != 0 && dist_occu != 0){
-                if(dist_free <= dist_occu)
-                    return ds_free;
-                else if(COORDINATION == CORD_MARKET) // return occupied only when auctioning takes place
-                    return ds_occu;
-                else
-                    return ds_t();
-            }
-            else if(dist_free != 0)
-                return ds_free;
-            else if(dist_occu != 0 && COORDINATION == CORD_MARKET)
-                return ds_occu;
-            else
-                return ds_t();
-        }
-
-        // otherwise prefer vacant docking stations
-        else{
-            if(dist_free != 0)
-                return ds_free;
-            else if(dist_occu != 0 && COORDINATION == CORD_MARKET)
-                return ds_occu;
-            else
-                return ds_t();
-        }
+        return ds;
     }
 
     void Coordination::DsVacant(int id)
@@ -346,10 +383,6 @@ namespace eae
         // new auction, store in vector
         StoreNewDsAuction(id, bid, robot, pos->GetWorld()->SimTimeNow(), true, ds);
 
-        // don't respond to auctions with greedy strategy
-        if(bid == DBL_MAX)
-            return;
-
         // don't respond if just done charging
         if(this->robot->FullyCharged())
             return;
@@ -361,6 +394,10 @@ namespace eae
                 return;
         }
 
+        // don't respond to auctions with greedy strategy
+        else if(bid == DBL_MAX)
+            return;
+
         // for energy optimization, only respond to auctions for closest docking station
         if(OPT == OPT_ENERGY){
             if(ds != ClosestDs(this->robot->GetPose()).id)
@@ -369,7 +406,13 @@ namespace eae
 
         // respond to auction
         // calculate bid
-        double my_bid = DockingBid(ds, this->robot->GetPose());
+        double my_bid = BID_INV;
+        if(COORDINATION == CORD_MARKET)
+            my_bid = DockingBid(ds, this->robot->GetPose());
+        else if(COORDINATION == CORD_GREEDY)
+            my_bid = DBL_MAX + 1; // if i'm currently docking, make sure i'm not interrupted
+        else
+            printf("[%s:%d] [robot %d]: invalid coordination strategy: %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), COORDINATION);
 
         // invalid bid
         if(my_bid == BID_INV){

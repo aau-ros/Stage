@@ -1,8 +1,6 @@
 #include "eae.hh"
-#include "worldfile.hh"
 #include "eae_coordination.hh"
 #include "eae_robot.hh"
-#include "region.hh"
 
 using namespace Stg;
 using namespace std;
@@ -24,7 +22,6 @@ extern "C" int Init(Model* mod, CtrlArgs* args)
     robots = wf->ReadInt(0, "robots", robots);
     int dss = 0;
     dss = wf->ReadInt(0, "docking_stations", dss);
-
 
     new Robot((ModelPosition*)mod, robots, dss);
 

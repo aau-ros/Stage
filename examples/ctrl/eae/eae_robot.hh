@@ -176,6 +176,13 @@ namespace eae
         double RemainingChargeTime();
 
         /**
+         * Estimate the distance that the robot can drive with full battery.
+         *
+         * @return double: The distance in meters.
+         */
+        double MaxDist();
+
+        /**
          * Check whether the robot's battery is fully charged or not.
          *
          * @return bool: True if the robot's battery charge is above or equal to CHARGE_FULL.
@@ -203,6 +210,16 @@ namespace eae
          * @return vector< vector <int> >: A vector containing an element for every frontier. Each element ist a vector with the two coordinates of that frontier.
          */
         vector< vector <int> > FrontiersReachable();
+
+        /**
+         * Get a list of all frontiers the robot can reach from a given position.
+         *
+         * @param Pose pos: The position from where to start looking.
+         * @param double range: The range that the robot can travel.
+         * @param bool ds: Whether the given position is a docking station or not.
+         * @return vector< vector <int> >: A vector containing an element for every frontier. Each element ist a vector with the two coordinates of that frontier.
+         */
+        vector< vector <int> > FrontiersReachable(Pose pos, double range, bool ds);
 
         /**
          * Update the local grid map with a given map.
@@ -260,9 +277,22 @@ namespace eae
         double RemainingDist();
 
         /**
+         * Estimate the remaining distance that the robot can drive with a given battery charge.
+         *
+         * @param joules_t charge: The charge of the robots battery.
+         * @return double: The remaining distance in meters.
+         */
+        double RemainingDist(joules_t charge);
+
+        /**
          * Write a line with the current status to the log file.
          */
         void Log();
+
+        /**
+         * Finalize the exploration.
+         */
+        void Finalize();
 
         /**
          * Callback function that is called when the robot changes position.

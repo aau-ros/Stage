@@ -77,7 +77,7 @@ namespace eae
         double bid;
 
         // get list of frontiers
-        vector< vector <int> > frontiers = map->Frontiers();
+        vector< vector <int> > frontiers = FrontiersReachable();
 
         // iterate through all frontiers
         vector< vector<int> >::iterator it;
@@ -91,8 +91,9 @@ namespace eae
             bid = CalcBid(frontier);
 
             // invalid bid, not enough energy to reach frontier
-            if(bid == BID_INV)
+            if(bid == BID_INV){
                 continue;
+            }
 
             // maximize bid, minimize cost
             if(bid > max_bid || max_bid == 0){
@@ -106,34 +107,54 @@ namespace eae
          * coordinate with other robots *
          ********************************/
 
-        // no new goal was found
+        // no new goal was found, coordinate docking with other robots
         if(goal == pose){
-            // end of exploration
+            // no reachable goal with full battery
             if(FullyCharged()){
-                state = STATE_FINISHED;
-                printf("[%s:%d] [robot %d]: exploration finished\n", StripPath(__FILE__), __LINE__, id);
+                // try finding another docking station from where it is still possible to explore
+                ds = cord->NextClosestDs(pos->GetPose(), RemainingDist());
 
-                // log data
-                Log();
+                // start docking station auction
+                if(ds.id > 0){
+                    state = STATE_PRECHARGE;
+                    cord->DockingAuction(pos->GetPose(), ds.id);
+                }
 
-                // share map with other robots in range
-                cord->BroadcastMap();
-
-                // pause if all other robots finished already
-                if(cord->Finished())
-                    pos->GetWorld()->Stop();
+                // end of exploration
+                else
+                    Finalize();
             }
 
             // needs recharging, coordinate with other robots
             else{
                 state = STATE_PRECHARGE;
+
+                // select docking station and store in private variable
+                switch(OPT){
+                    case OPT_ENERGY:
+                        ds = cord->ClosestDs(pos->GetPose());
+                        break;
+                    case OPT_TIME:
+                        ds = cord->ClosestFreeDs(pos->GetPose(), RemainingDist());
+                        break;
+                    case OPT_STABILITY:
+                        printf("[%s:%d] [robot %d]: optimization of stability not yet implemented\n", StripPath(__FILE__), __LINE__, id);
+                        break;
+                    default:
+                        printf("[%s:%d] [robot %d]: invalid optimization goal %d\n", StripPath(__FILE__), __LINE__, id, OPT);
+                }
+
                 // start docking station auction
-                // and store selected docking station in private variable
-                ds = cord->DockingAuction(pos->GetPose());
+                if(ds.id > 0)
+                    cord->DockingAuction(pos->GetPose(), ds.id);
+
+                // no docking station found
+                else
+                    printf("[%s:%d] [robot %d]: no docking station found\n", StripPath(__FILE__), __LINE__, id);
             }
         }
 
-        // goal found, coordinate with other robots
+        // goal found, coordinate exploration with other robots
         else{
             cord->FrontierAuction(goal, max_bid);
         }
@@ -141,6 +162,10 @@ namespace eae
 
     void Robot::Move()
     {
+        // don't move if charging, dead or done exploring
+        if(state == STATE_CHARGE || state == STATE_DEAD || state == STATE_FINISHED)
+            return;
+
         // robot already at current goal
         if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE){
             // check if there is a valid goal in the queue
@@ -208,14 +233,14 @@ namespace eae
     {
         Pose pose = pos->GetPose();
 
-        // find closest free docking station and store in private variable
+        // find closest docking station and store in private variable
         ds = cord->ClosestDs(pose);
 
         // calculate distances
         double dg = pose.Distance(frontier);
         double dgb = Distance(frontier.x, frontier.y, ds.pose.x, ds.pose.y);
 
-        // check if frontier is reachable
+        // no reachable frontier
         if(RemainingDist() <= dg + dgb)
             return BID_INV;
 
@@ -292,6 +317,11 @@ namespace eae
         return pos->FindPowerPack()->RemainingCapacity() / WATTS_CHARGE;
     }
 
+    double Robot::MaxDist()
+    {
+        return RemainingDist(pos->FindPowerPack()->GetCapacity());
+    }
+
     bool Robot::FullyCharged()
     {
         return pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL;
@@ -314,17 +344,27 @@ namespace eae
 
     vector< vector <int> > Robot::FrontiersReachable()
     {
+        return FrontiersReachable(pos->GetPose(), RemainingDist(), false);
+    }
+
+    vector< vector <int> > Robot::FrontiersReachable(Pose pos, double range, bool ds)
+    {
         // get all frontiers
         vector< vector <int> > frontiers = map->Frontiers();
 
         // iterate through all frontiers
         vector< vector<int> >::iterator it;
-        for(it=frontiers.begin(); it<frontiers.end(); ++it){
+        for(it=frontiers.end()-1; it>=frontiers.begin(); --it){
             // calculate distance
-            double dist = Distance(it->at(0), it->at(1)) + Distance(it->at(0), it->at(1), ds.pose.x, ds.pose.y);
+            double dist1 = Distance(pos.x, pos.y, it->at(0), it->at(1));
+            double dist2;
+            if(ds)
+                dist2 = dist1;
+            else
+                dist2 = Distance(it->at(0), it->at(1), this->ds.pose.x, this->ds.pose.y);
 
             // remove frontier if it is not reachable
-            if(RemainingDist() <= dist)
+            if(range <= dist1 + dist2)
                 frontiers.erase(it);
         }
 
@@ -376,6 +416,11 @@ namespace eae
 
     double Robot::RemainingDist()
     {
+        return RemainingDist(pos->FindPowerPack()->GetStored());
+    }
+
+    double Robot::RemainingDist(joules_t charge)
+    {
         double velocity; // average velocity
         double power;    // power consumption at average velocity
         World* world = pos->GetWorld();
@@ -393,12 +438,28 @@ namespace eae
         power = velocity * WATTS_KGMS * pos->GetTotalMass() + WATTS;
 
         // calculate remaining distance
-        return pos->FindPowerPack()->GetStored() / power * velocity;
+        return charge / power * velocity;
     }
 
     void Robot::Log()
     {
         log->Log(pos->GetWorld()->SimTimeNow(), dist_travel, map->Explored(), goal.x, goal.y, STATE_STRING[state]);
+    }
+
+    void Robot::Finalize()
+    {
+        state = STATE_FINISHED;
+        printf("[%s:%d] [robot %d]: exploration finished\n", StripPath(__FILE__), __LINE__, id);
+
+        // log data
+        Log();
+
+        // share map with other robots in range
+        cord->BroadcastMap();
+
+        // pause if all other robots finished already
+        if(cord->Finished())
+                pos->GetWorld()->Stop();
     }
 
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)
@@ -452,11 +513,28 @@ namespace eae
 
                 // robot is waiting for docking station, start new auction
                 else{
-                    ds_t ds = robot->cord->DockingAuction(pos->GetPose());
+                    // select docking station and store in private variable
+                    switch(OPT){
+                        case OPT_ENERGY:
+                            robot->ds = robot->cord->ClosestDs(pos->GetPose());
+                            break;
+                        case OPT_TIME:
+                            robot->ds = robot->cord->ClosestFreeDs(pos->GetPose(), robot->RemainingDist());
+                            break;
+                        case OPT_STABILITY:
+                            printf("[%s:%d] [robot %d]: optimization of stability not yet implemented\n", StripPath(__FILE__), __LINE__, robot->id);
+                            break;
+                        default:
+                            printf("[%s:%d] [robot %d]: invalid optimization goal %d\n", StripPath(__FILE__), __LINE__, robot->id, OPT);
+                    }
 
-                    // ds is only valid if there was enough time since last auction
-                    if(ds.id > 0)
-                        robot->ds = ds;
+                    // start docking station auction
+                    if(robot->ds.id > 0)
+                        robot->cord->DockingAuction(pos->GetPose(), robot->ds.id);
+
+                    // no docking station found
+                    else
+                        printf("[%s:%d] [robot %d]: no docking station found\n", StripPath(__FILE__), __LINE__, robot->id);
                 }
             }
 

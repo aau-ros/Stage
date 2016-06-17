@@ -135,9 +135,9 @@ namespace eae
          * Initiate an auction for assigning robots to docking stations.
          *
          * @param Pose pose: The position of the robot.
-         * @return ds_t: The docking station a bid was made for.
+         * @param int ds: ID of the docking station to start the auction for.
          */
-        ds_t DockingAuction(Pose pose);
+        void DockingAuction(Pose pose, int ds);
 
         /**
          * Send a map update to the other robots.
@@ -162,12 +162,30 @@ namespace eae
         void UpdateDs(int id, Pose pose, ds_state_t state=STATE_UNDEFINED_DS);
 
         /**
-         * Get the docking station that is closest to the robots current location and that is vacant.
+         * Get the docking station closest to the robot's current position.
          *
-         * @param Pose pose: The robots current location.
-         * @return ds_t: The docking station.
+         * @param Pose pose: The pose of the robot.
+         * @return ds_t: The closest docking station.
          */
         ds_t ClosestDs(Pose pose);
+
+        /**
+         * Get the docking station closest to the robot's current position that is free and in range of the robot.
+         *
+         * @param Pose pose: The pose of the robot.
+         * @param double range: The range of the robot.
+         * @return ds_t: The closest free docking station.
+         */
+        ds_t ClosestFreeDs(Pose pose, double range);
+
+        /**
+         * Get the docking station closest to the robots current location where there are frontiers nearby that the robot can reach after recharging. If this is not possible get the closest docking station where another docking station with frontiers nearby can be reached in the next step.
+         *
+         * @param Pose pose: The pose of the robot.
+         * @param double range: The range of the robot.
+         * @return ds_t: The docking station.
+         */
+        ds_t NextClosestDs(Pose pose, double range);
 
         /**
          * Set a docking station to the state vacant.

@@ -2,19 +2,19 @@
 #define EAE_H
 
 #include "stage.hh"
+#include "worldfile.hh"
 #include <fstream>
 #include <ctime>
 #include <string>
 #include <stdexcept>
 #include <sstream>
 #include <sys/stat.h>
-//#include <boost/filesystem.hpp>
 
 using namespace Stg;
 using namespace std;
 
 /**
- * Namespace for energy aware exploration (eae).
+ * @brief Namespace for energy aware exploration (eae).
  */
 namespace eae
 {

@@ -84,7 +84,14 @@ namespace eae
          *
          * @return int: The number of explored grid cells.
          */
-        int Explored();
+        int ExploredCells();
+
+        /**
+         * Get the amount of explored area combined from all robots.
+         *
+         * @return double: The explored area in square meters.
+         */
+        double Explored();
 
         /**
          * Assignment operator.
@@ -142,8 +149,8 @@ namespace eae
         int y_offset; // offset of origin in y-dimension
         int x_min;    // minimum x-coordinate in map
         int x_max;    // maximum x-coordinate in map
-        int y_min;    // ...
-        int y_max;    // ...
+        int y_min;    // minimum y-coordinate in map
+        int y_max;    // maximum y-coordinate in map
 
         /**
          * Visualizer objects.
@@ -157,6 +164,11 @@ namespace eae
          * Robot ID.
          */
         int robot;
+
+        /**
+         * Resolution of the map.
+         */
+        double resolution;
     };
 }
 

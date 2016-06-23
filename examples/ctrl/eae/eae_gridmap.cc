@@ -53,6 +53,10 @@ namespace eae
 
         // robot id
         this->robot = robot;
+
+        // read resolution from world file
+        Worldfile* wf = world->GetWorldFile();
+        resolution = wf->ReadFloat(0, "resolution", resolution);
     }
 
     void GridMap::Visualize(Pose pose)
@@ -265,7 +269,7 @@ namespace eae
         }
     }
 
-    int GridMap::Explored()
+    int GridMap::ExploredCells()
     {
         int explored = 0;
         vector< vector<grid_cell_t> >::iterator it;
@@ -279,6 +283,12 @@ namespace eae
             }
         }
         return explored;
+    }
+
+    double GridMap::Explored()
+    {
+        // multiply twice with resolution because we have a two-dimensional area
+        return ExploredCells() * resolution * resolution;
     }
 
     GridMap& GridMap::operator=(const GridMap& toCopy)

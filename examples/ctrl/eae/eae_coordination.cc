@@ -64,7 +64,7 @@ namespace eae
         if(strategy == CORD_MARKET)
             bid = DockingBid(ds, pose);
         else if(strategy == CORD_GREEDY)
-            bid = DBL_MAX;
+            bid = BID_MAX;
         else
             printf("[%s:%d] [robot %d]: invalid coordination strategy: %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), strategy);
 
@@ -409,7 +409,7 @@ namespace eae
         }
 
         // don't respond to auctions with greedy strategy
-        else if(bid == DBL_MAX)
+        else if(bid == BID_MAX)
             return;
 
         // for energy optimization, only respond to auctions for closest docking station
@@ -424,7 +424,7 @@ namespace eae
         if(strategy == CORD_MARKET)
             my_bid = DockingBid(ds, this->robot->GetPose());
         else if(strategy == CORD_GREEDY)
-            my_bid = DBL_MAX + 1; // if i'm currently docking, make sure i'm not interrupted
+            my_bid = BID_MAX + 1; // if i'm currently docking, make sure i'm not interrupted
         else
             printf("[%s:%d] [robot %d]: invalid coordination strategy: %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), strategy);
 

@@ -34,6 +34,11 @@ namespace eae
     const double BID_INV = 0;
 
     /**
+     * Value for maximum bid, used for the greedy strategy.
+     */
+    const double BID_MAX = 1000000;
+
+    /**
      * Map grid cell values.
      */
     typedef enum{

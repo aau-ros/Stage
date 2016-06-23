@@ -11,7 +11,7 @@ speedup 1
 paused 1
 quit_time 18000
 resolution 1
-threads 4
+#threads 4
 
 window
 (

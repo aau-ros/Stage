@@ -116,6 +116,7 @@ namespace eae
 
                 // start docking station auction
                 if(ds.id > 0){
+//                     printf("[%s:%d] [robot %d]: starting auction\n", StripPath(__FILE__), __LINE__, id);
                     state = STATE_PRECHARGE;
                     cord->DockingAuction(pos->GetPose(), ds.id);
                 }
@@ -507,12 +508,12 @@ namespace eae
             else if(robot->state == STATE_PRECHARGE){
                 // robot already at docking station, continue docking
                 // or robot just finished exploring and will now go to docking station
-                if(robot->goal == robot->ds.pose || robot->GoalQueue()){
-                    robot->Move();
-                }
-
-                // robot is waiting for docking station, start new auction
-                else{
+//                 if(robot->goal == robot->ds.pose || robot->GoalQueue()){
+//                     robot->Move();
+//                 }
+//
+//                 // robot is waiting for docking station, start new auction
+//                 else{
                     // select docking station and store in private variable
                     switch(OPT){
                         case OPT_ENERGY:
@@ -535,7 +536,7 @@ namespace eae
                     // no docking station found
                     else
                         printf("[%s:%d] [robot %d]: no docking station found\n", StripPath(__FILE__), __LINE__, robot->id);
-                }
+//                 }
             }
 
             else{

@@ -28,7 +28,7 @@ namespace eae
     /**
      * SOC at which the battery is considered as full.
      */
-    const double CHARGE_FULL = 0.99;
+    const double CHARGE_FULL = 0.95;
 
     /**
      * SOC at which the robot will head home.

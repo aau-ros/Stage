@@ -156,7 +156,7 @@ namespace eae
 
     ds_t Coordination::NextClosestDs(Pose pose, double range)
     {
-        printf("[%s:%d] [robot %d]: looking for next closest ds\n", StripPath(__FILE__), __LINE__, robot->GetId());
+//         printf("[%s:%d] [robot %d]: looking for next closest ds\n", StripPath(__FILE__), __LINE__, robot->GetId());
         bool frontiers; // true if there are frontiers in range of the docking station
         bool reachable; // true if one docking station is reachable by another
         ds_t ds = ds_t();
@@ -174,18 +174,18 @@ namespace eae
 
             // docking station is reachable and has frontiers in range
             if(dist_temp <= range && frontiers){
-            printf("[%s:%d] [robot %d]: found in range with frontiers\n", StripPath(__FILE__), __LINE__, robot->GetId());
+//             printf("[%s:%d] [robot %d]: found in range with frontiers\n", StripPath(__FILE__), __LINE__, robot->GetId());
                 dss_reach_front.push_back(*it);
             }
 
             // docking station is reachable
             else if(dist_temp <= range){
-            printf("[%s:%d] [robot %d]: found in range\n", StripPath(__FILE__), __LINE__, robot->GetId());
+//             printf("[%s:%d] [robot %d]: found in range\n", StripPath(__FILE__), __LINE__, robot->GetId());
                 dss_reachable.push_back(*it);
             }
             // docking station has frontiers in range
             else if(frontiers){
-            printf("[%s:%d] [robot %d]: found with frontiers\n", StripPath(__FILE__), __LINE__, robot->GetId());
+//             printf("[%s:%d] [robot %d]: found with frontiers\n", StripPath(__FILE__), __LINE__, robot->GetId());
                 dss_frontiers.push_back(*it);
             }
         }

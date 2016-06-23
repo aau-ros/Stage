@@ -30,10 +30,11 @@ namespace eae
          * @param int robots: The number of robots in this simulation.
          * @param int dss: The number of docking stations in this simulation.
          * @param string comm: The communication model used for the wifi connections.
-         * @param string cord: The coordination strategy
+         * @param int i_cord: The coordination strategy.
+         * @param string s_cord: The coordination strategy as a string.
          * @param double battery: The battery capacity.
          */
-        LogOutput(int robot, int robots, int dss, string comm, string cord, double battery);
+        LogOutput(int robot, int robots, int dss, string comm, int i_cord, string s_cord, double battery);
 
         /**
          * Destructor.

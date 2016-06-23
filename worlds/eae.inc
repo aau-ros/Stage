@@ -41,8 +41,8 @@ define charging_bump model
 define robot pioneer2dx
 (
     ctrl "eae"
-    kjoules 10
-    kjoules_capacity 10
+    kjoules 5
+    kjoules_capacity 5
     localization "gps"
     localization_origin [ 0 0 0 0 ]
     fiducial_return 0

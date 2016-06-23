@@ -10,6 +10,10 @@ namespace eae
         // position model to access wifi
         this->pos = pos;
 
+        // read exploration strategy from world file
+        Worldfile* wf = pos->GetWorld()->GetWorldFile();
+        strategy = (cord_t)wf->ReadInt(0, "coordination", strategy);
+
         // initialize wifi adapter
         wifi = (ModelWifi*)pos->GetChild("wifi:0");
         wifi->AddCallback(Model::CB_UPDATE, (model_callback_t)WifiUpdate, this);
@@ -57,12 +61,12 @@ namespace eae
 
         // calculate bid
         double bid = BID_INV;
-        if(COORDINATION == CORD_MARKET)
+        if(strategy == CORD_MARKET)
             bid = DockingBid(ds, pose);
-        else if(COORDINATION == CORD_GREEDY)
+        else if(strategy == CORD_GREEDY)
             bid = DBL_MAX;
         else
-            printf("[%s:%d] [robot %d]: invalid coordination strategy: %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), COORDINATION);
+            printf("[%s:%d] [robot %d]: invalid coordination strategy: %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), strategy);
 
         // create and store auction
         StoreNewDsAuction(id, bid, robot->GetId(), pos->GetWorld()->SimTimeNow(), true, ds);
@@ -264,6 +268,16 @@ namespace eae
         return wifi->GetConfig()->GetModelString();
     }
 
+    cord_t Coordination::GetStrategy()
+    {
+        return strategy;
+    }
+
+    string Coordination::GetStrategyString()
+    {
+        return CORD_STRING[strategy];
+    }
+
     void Coordination::UpdateRobots(int id, robot_state_t state, Pose pose)
     {
         //  i don't need to be on the list
@@ -407,12 +421,12 @@ namespace eae
         // respond to auction
         // calculate bid
         double my_bid = BID_INV;
-        if(COORDINATION == CORD_MARKET)
+        if(strategy == CORD_MARKET)
             my_bid = DockingBid(ds, this->robot->GetPose());
-        else if(COORDINATION == CORD_GREEDY)
+        else if(strategy == CORD_GREEDY)
             my_bid = DBL_MAX + 1; // if i'm currently docking, make sure i'm not interrupted
         else
-            printf("[%s:%d] [robot %d]: invalid coordination strategy: %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), COORDINATION);
+            printf("[%s:%d] [robot %d]: invalid coordination strategy: %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), strategy);
 
         // invalid bid
         if(my_bid == BID_INV){

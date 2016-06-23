@@ -73,11 +73,6 @@ namespace eae
     const opt_t OPT = OPT_ENERGY;
 
     /**
-     * Coordination strategy for coordinating the recharging at docking stations.
-     */
-    const cord_t COORDINATION = CORD_MARKET;
-
-    /**
      * Auction type for frontiers.
      */
     typedef struct{
@@ -207,6 +202,20 @@ namespace eae
          * @return string: The name of the wifi model.
          */
         string GetWifiModel();
+
+        /**
+         * Get the coordination strategy.
+         *
+         * @return cord_t: The index of the coordination strategy.
+         */
+        cord_t GetStrategy();
+
+        /**
+         * Get the coordination strategy.
+         *
+         * @return string: A string describing the coordination strategy.
+         */
+        string GetStrategyString();
 
         /**
          * ID of auction.
@@ -341,6 +350,11 @@ namespace eae
          * @param void* coordination: Pointer to the coordination class.
          */
         static void ProcessMessage(WifiMessageBase* incoming, void* coordination);
+
+        /**
+         * The coordination strategy for coordinating the recharging at docking stations.
+         */
+        cord_t strategy;
 
         /**
          * The wifi model of the robot.

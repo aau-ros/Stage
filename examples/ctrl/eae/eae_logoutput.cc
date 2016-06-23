@@ -5,7 +5,7 @@ using namespace std;
 
 namespace eae
 {
-    LogOutput::LogOutput(int robot, int robots, int dss, string comm, string cord, double battery)
+    LogOutput::LogOutput(int robot, int robots, int dss, string comm, int i_cord, string s_cord, double battery)
     {
         // get current time
         std::time_t now = time(NULL);
@@ -24,12 +24,16 @@ namespace eae
         char timestring[7];
         strftime(timestring, 7, "%H-%M", timeinfo);
 
+        // add coordination strategy index to file name
+        ostringstream ss_cord;
+        ss_cord << i_cord;
+
         // add robot id to file name
-        ostringstream robot_ss;
-        robot_ss << robot;
+        ostringstream ss_robot;
+        ss_robot << robot;
 
         // complete path of file
-        string filepath = path + string(timestring) + "-" + robot_ss.str() + ".log";
+        string filepath = path + string(timestring) + "-" + ss_cord.str() + "-" + ss_robot.str() + ".log";
         cout << "log file: " << filepath << endl;
 
         // open log file
@@ -37,7 +41,7 @@ namespace eae
 
         // write header
         stringstream output;
-        output << "# robot\t" << robot << endl << "# number of robots\t" << robots << endl << "# number of docking stations\t" << dss << endl <<"# communication type\t" <<  comm << endl << "# coordination type\t" << cord << endl << "# battery capacity\t" << battery << endl;
+        output << "# robot\t" << robot << endl << "# number of robots\t" << robots << endl << "# number of docking stations\t" << dss << endl <<"# communication type\t" <<  comm << endl << "# coordination type\t" << s_cord << endl << "# battery capacity\t" << battery << endl;
         Write(output.str());
         Write("time\tdistance\tarea\tx position\ty position\tstate");
     }

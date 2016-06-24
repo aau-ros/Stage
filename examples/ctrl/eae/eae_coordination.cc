@@ -43,7 +43,7 @@ namespace eae
         int id = ++auction_id;
 
         // create and store auction
-        StoreNewFrAuction(id, bid, robot->GetId(), pos->GetWorld()->SimTimeNow(), true, frontier);
+        StoreNewFrAuction(id, bid, robot->GetId(), robot->GetId(), pos->GetWorld()->SimTimeNow(), true, frontier);
 
         // notify other robots
         BroadcastFrAuction(id);
@@ -122,21 +122,39 @@ namespace eae
 
     ds_t Coordination::ClosestDs(Pose pose)
     {
-        ds_t ds = ds_t();
-        double dist = 0;
+        ds_t ds_free = ds_t();
+        ds_t ds_occ = ds_t();
+        double dist_free = 0;
+        double dist_occ = 0;
         double dist_temp;
         vector<ds_t>::iterator it;
 
-        // iterate over all docking stations to find closest
+        // iterate over all docking stations to find closest free / occupied
         for(it=dss.begin(); it<dss.end(); ++it){
             dist_temp = pose.Distance(it->pose);
-            if(dist_temp < dist || dist == 0){
-                ds = *it;
-                dist = dist_temp;
+            if(it->state != STATE_OCCUPIED && (dist_temp < dist_free || dist_free == 0)){
+                ds_free = *it;
+                dist_free = dist_temp;
+            }
+            else if(it->state == STATE_OCCUPIED && (dist_temp < dist_occ || dist_occ == 0)){
+                ds_occ = *it;
+                dist_occ = dist_temp;
             }
         }
 
-        return ds;
+        // return free if it is closer than occupied or maximum DS_TOLERANCE further away
+        if(dist_free > 0 && dist_occ > 0){
+            if(dist_free < dist_occ + DS_TOLERANCE )
+                return ds_free;
+            return ds_occ;
+        }
+
+        // return free docking station
+        if(dist_free > 0)
+            return ds_free;
+
+        // return occupied docking station (or invalid one)
+        return ds_occ;
     }
 
     ds_t Coordination::ClosestFreeDs(Pose pose, double range)
@@ -357,7 +375,7 @@ namespace eae
             // my bid is higher
             if(my_bid > bid){
                 // store auction
-                StoreNewFrAuction(id, my_bid, this->robot->GetId(), pos->GetWorld()->SimTimeNow(), true, frontier);
+                StoreNewFrAuction(id, my_bid, -1, this->robot->GetId(), pos->GetWorld()->SimTimeNow(), true, frontier);
 
                 // notify other robots
                 BroadcastFrAuction(id);
@@ -365,7 +383,7 @@ namespace eae
 
             // my bid is lower, just store auction
             else{
-                StoreNewFrAuction(id, bid, robot, pos->GetWorld()->SimTimeNow(), true, frontier);
+                StoreNewFrAuction(id, bid, -1, robot, pos->GetWorld()->SimTimeNow(), true, frontier);
             }
         }
     }
@@ -450,6 +468,13 @@ namespace eae
         vector<fr_auction_t>::iterator it;
         vector<ds_auction_t>::iterator jt;
 
+        // store frontier of won frontier auction
+        fr_auction_t goal;
+        goal.id = -1;
+
+        // looser of frontier auction
+        bool lost = false;
+
         // iterate through all frontier auctions
         for(it=fr_auctions.begin(); it<fr_auctions.end(); ++it){
             // check if auction is open and timeout expired
@@ -457,10 +482,42 @@ namespace eae
                 // close auction
                 it->open = false;
 
-                // i won, move to frontier
-                if(it->winner == robot->GetId())
-                    robot->Move(it->pose, it->highest_bid);
+                // i won the auction
+                if(it->winner == robot->GetId()){
+                    // i was the initiator, move to that frontier now
+                    if(it->initiator == robot->GetId()){
+                        goal = *it;
+                        break;
+                    }
+                    // i was not the initiator
+                    // store frontier and keep looking for other won auctions
+                    // keep frontier with highest bid
+                    if(goal.id > 0){
+                        if(goal.highest_bid < it->highest_bid)
+                            goal = *it;
+                    }
+                    else
+                        goal = *it;
+                }
+
+                // i lost my own auction, continue exploration
+                else if(it->initiator == robot->GetId()){
+                    lost = true;
+                }
             }
+        }
+
+        // move to frontier
+        if(goal.id > 0){
+//             printf("[%s:%d] [robot %d]: moving to (%.0f,%.0f), bid %.2f\n", StripPath(__FILE__), __LINE__, robot->GetId(), goal.pose.x, goal.pose.y, goal.highest_bid);
+            robot->Move(goal.pose, goal.highest_bid);
+            return; // only dock if no frontier auction was won
+        }
+
+        // continue exploration
+        if(lost){
+            robot->Explore();
+            return; // only dock if i didn't start any frontier auction
         }
 
         // iterate through all docking station auctions
@@ -481,7 +538,7 @@ namespace eae
         }
     }
 
-    void Coordination::StoreNewFrAuction(int id, double bid, int winner, usec_t time, bool open, Pose pose)
+    void Coordination::StoreNewFrAuction(int id, double bid, int initiator, int winner, usec_t time, bool open, Pose pose)
     {
         // invalid bid
         if(bid == BID_INV){
@@ -492,6 +549,7 @@ namespace eae
         fr_auction_t auction;
         auction.id = id;
         auction.highest_bid = bid;
+        auction.initiator = initiator;
         auction.winner = winner;
         auction.time = time;
         auction.open = open;

@@ -225,9 +225,9 @@ namespace eae
             goal_next_bid = bid;
         }
 
-        else{
-            printf("[%s:%d] [robot %d]: invalid goal or bid!\n", StripPath(__FILE__), __LINE__, id);
-        }
+//         else{
+//             printf("[%s:%d] [robot %d]: cannot move to (%.0f,%.0f), already moving to (%0.f,%.0f) then (%.0f,%.0f)!\n", StripPath(__FILE__), __LINE__, id, to.x, to.y, goal.x, goal.y, goal_next.x, goal_next.y);
+//         }
     }
 
     double Robot::CalcBid(Pose frontier)
@@ -494,14 +494,14 @@ namespace eae
                 robot->Log();
 
                 // there is still a goal in the queue
-                if(robot->GoalQueue()){
-                    robot->Move();
-                }
-
-                // otherwise just find a new goal
-                else{
+//                 if(robot->GoalQueue()){
+//                     robot->Move();
+//                 }
+//
+//                 // otherwise just find a new goal
+//                 else{
                     robot->Explore();
-                }
+//                 }
             }
 
             // robot needs recharging

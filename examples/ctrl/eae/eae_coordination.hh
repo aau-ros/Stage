@@ -73,11 +73,17 @@ namespace eae
     const opt_t OPT = OPT_ENERGY;
 
     /**
+     * Tolerance when calculating the distance to the closest docking station.
+     */
+    const double DS_TOLERANCE = 2;
+
+    /**
      * Auction type for frontiers.
      */
     typedef struct{
         int id;
         double highest_bid;
+        int initiator;
         int winner;
         usec_t time;
         bool open;
@@ -267,11 +273,26 @@ namespace eae
 
         /**
          * Store a new frontier auction in the private vector.
+         *
+         * @param int id: ID of the auction.
+         * @param double bid: Bid for the auction.
+         * @param int initiator: ID of the robot who started the auction.
+         * @param int winner: ID of the current highest bidder.
+         * @param usec_t time: Timestamp of the auction.
+         * @param bool open: Whether or not the auction is still running.
+         * @param Pose pose: Position of the frontier.
          */
-        void StoreNewFrAuction(int id, double bid, int winner, usec_t time, bool open, Pose pose);
+        void StoreNewFrAuction(int id, double bid, int initiator, int winner, usec_t time, bool open, Pose pose);
 
         /**
          * Store a new docking station auction in the private vector.
+         *
+         * @param int id: ID of the auction.
+         * @param double bid: Bid for the auction.
+         * @param int winner: The current highest bidder.
+         * @param usec_t time: Timestamp of the auction.
+         * @param bool open: Whether or not the auction is still running.
+         * @param int ds_id: ID of the docking station.
          */
         void StoreNewDsAuction(int id, double bid, int winner, usec_t time, bool open, int ds_id);
 

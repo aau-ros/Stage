@@ -19,7 +19,7 @@ namespace eae
 
         // make directory if it doesn't exist
         if(mkdir(path.c_str(), 0777) < 0){
-            printf("could not create log folder, nothing will be recorded!\n");
+            printf("could not create log folder %s, nothing will be recorded!\n", path.c_str());
             return;
         }
 

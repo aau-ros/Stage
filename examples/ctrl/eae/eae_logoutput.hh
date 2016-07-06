@@ -14,7 +14,7 @@ namespace eae
     /**
      * Path for log files. Subdirectories are automatically created.
      */
-    const string LOG_PATH = "/media/mrappapo/Daten/Arbeit/NES/projects/2014_mrs/simulation/cpp_dock-coord/";
+    const string LOG_PATH = "~/stage_log/";
 
     /**
      * A class for logging data.

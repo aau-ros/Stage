@@ -12,9 +12,9 @@ using namespace std;
 namespace eae
 {
     /**
-     * Path for log files. Subdirectories are automatically created.
+     * Folder for log files inside home directory. Create this folder beforehand, subdirectories are automatically created. Keep trailing slash.
      */
-    const string LOG_PATH = "~/stage_log/";
+    const string LOG_PATH = "stage_log/";
 
     /**
      * A class for logging data.

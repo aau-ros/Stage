@@ -15,12 +15,16 @@ namespace eae
         // path to log file
         char dir[11];
         strftime(dir, 11, "%y-%m-%d/", timeinfo);
-        string path = LOG_PATH + string(dir);
+        string path = string(getenv("HOME")) + "/" + LOG_PATH + string(dir);
 
-        // make directory if it doesn't exist
-        if(mkdir(path.c_str(), 0777) < 0){
-            printf("could not create log folder %s, nothing will be recorded!\n", path.c_str());
-            return;
+        // create directory if it doesn't exist
+        struct stat sb;
+        if(stat(path.c_str(), &sb) != 0 || S_ISDIR(sb.st_mode) == false){
+            if(mkdir(path.c_str(), 0755) < 0){
+                string base_path = string(getenv("HOME")) + "/" + LOG_PATH;
+                printf("Could not create log folder %s, please create it manually!\n", base_path.c_str());
+                return;
+            }
         }
 
         // file name from time

@@ -1,4 +1,3 @@
-include "pioneer.inc"
 include "eae.inc"
 
 robots 3

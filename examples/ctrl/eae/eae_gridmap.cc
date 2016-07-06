@@ -89,10 +89,10 @@ namespace eae
                     printf("? ");
                 ++x;
             }
-            cout << endl;
+            printf("\n");
             --y;
         }
-        cout << endl;
+        printf("\n");
     }
 
     void GridMap::VisualizeGui(Pose pose)

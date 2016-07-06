@@ -18,7 +18,10 @@ namespace eae
         string path = LOG_PATH + string(dir);
 
         // make directory if it doesn't exist
-        mkdir(path.c_str(), 0777);
+        if(mkdir(path.c_str(), 0777) < 0){
+            printf("could not create log folder, nothing will be recorded!\n");
+            return;
+        }
 
         // file name from time
         char timestring[7];
@@ -34,7 +37,7 @@ namespace eae
 
         // complete path of file
         string filepath = path + string(timestring) + "-" + ss_cord.str() + "-" + ss_robot.str() + ".log";
-        cout << "log file: " << filepath << endl;
+        printf("log file: %s\n", filepath);
 
         // open log file
         file.open(filepath.c_str());

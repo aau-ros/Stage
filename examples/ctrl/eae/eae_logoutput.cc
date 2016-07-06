@@ -37,7 +37,7 @@ namespace eae
 
         // complete path of file
         string filepath = path + string(timestring) + "-" + ss_cord.str() + "-" + ss_robot.str() + ".log";
-        printf("log file: %s\n", filepath);
+        printf("log file: %s\n", filepath.c_str());
 
         // open log file
         file.open(filepath.c_str());

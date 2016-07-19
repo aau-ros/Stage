@@ -38,6 +38,12 @@ namespace eae
 
         // goal queue is empty
         goal_next_bid = BID_INV;
+
+        // charging power
+        charging_watt = 0;
+
+        // last charging time
+        last_charge = 0;
     }
 
     void Robot::Init()
@@ -169,6 +175,31 @@ namespace eae
 
         // robot already at current goal
         if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE){
+            // start recharging
+            if(state == STATE_PRECHARGE){
+                state = STATE_CHARGE;
+
+                // stop moving
+                pos->Stop();
+
+                // get model of docking station
+                stringstream ds_name;
+                ds_name << "ds" << this->ds.id;
+                Model* ds = pos->GetWorld()->GetModel(ds_name.str());
+
+                // docking station is occupied
+                if(ds->GetSubscriptionCount() > 0){
+                    printf("[%s:%d] [robot %d]: docking station already occupied\n", StripPath(__FILE__), __LINE__, id);
+                    return;
+                }
+
+                // register callback for charging
+                ds->AddCallback(Model::CB_UPDATE, (model_callback_t)ChargingUpdate, this);
+                ds->Subscribe();
+
+                return;
+            }
+
             // check if there is a valid goal in the queue
             if(goal_next_bid != BID_INV){
                 // set goal and invalidate next goal
@@ -189,23 +220,9 @@ namespace eae
         // store traveled distance
         dist_travel += pos->GetPose().Distance(goal);
 
-        // move robot to frontier
-        if(state == STATE_EXPLORE){
+        // move robot to frontier / docking station
+        if(state == STATE_EXPLORE || state == STATE_PRECHARGE){
             pos->GoTo(goal);
-        }
-
-        // move robot to docking station
-        else if(state == STATE_PRECHARGE){
-            // stop moving once the recharging starts
-            if(pos->FindPowerPack()->GetCharging()){
-                pos->Stop();
-                state = STATE_CHARGE;
-            }
-
-            // move to docking station
-            else{
-                pos->GoTo(goal);
-            }
         }
     }
 
@@ -299,6 +316,10 @@ namespace eae
 
     void Robot::Dock(ds_t ds, double bid)
     {
+        // already charging, no docking required
+        if(this->ds.id == ds.id && state == STATE_CHARGE)
+            return;
+
         this->ds = ds;
         state = STATE_PRECHARGE;
         Move(ds.pose, bid);
@@ -539,6 +560,9 @@ namespace eae
 //                 }
             }
 
+            else if(robot->state == STATE_CHARGE)
+                return 0;
+
             else{
                 printf("[%s:%d] [robot %d]: invalid state: %d\n", StripPath(__FILE__), __LINE__, robot->id, robot->state);
             }
@@ -593,6 +617,40 @@ namespace eae
                 robot->cord->UpdateDs(it->id, it->pose);
             }
         }
+
+        return 0; // run again
+    }
+
+    int Robot::ChargingUpdate(Model* mod, Robot* robot)
+    {
+        // stop recharging
+        if(robot->FullyCharged()){
+            robot->pos->FindPowerPack()->ChargeStop();
+            mod->Unsubscribe();
+            return -1; // no more updates
+        }
+
+        // start recharging
+        if(robot->pos->FindPowerPack()->GetCharging() == false){
+            robot->pos->FindPowerPack()->ChargeStart();
+        }
+
+        // charge with a constant rate
+        if(mod->GetWorld()->SimTimeNow() < robot->last_charge + CHARGE_RATE)
+            return 0;
+        robot->last_charge = mod->GetWorld()->SimTimeNow();
+
+        // look for power output of docking station in world file
+        if(robot->charging_watt <= 0){
+            for(int i=0; i<mod->GetWorld()->GetWorldFile()->GetEntityCount(); ++i){
+                robot->charging_watt = mod->GetWorld()->GetWorldFile()->ReadFloat(i, "give_watts", robot->charging_watt);
+                if(robot->charging_watt > 0)
+                    break;
+            }
+        }
+
+        // add watts to robot's power pack according to rate
+        robot->pos->FindPowerPack()->Add(robot->charging_watt);
 
         return 0; // run again
     }

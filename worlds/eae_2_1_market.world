@@ -7,4 +7,4 @@ coordination 0
 robot( pose [ 1 0 0 0 ] )
 robot( pose [ -1 0 0 0 ] )
 
-docking_station( pose [ 0 0 0 0 ] fiducial_return 2 )
+docking_station( pose [ 0 0 0 0 ] fiducial_return 2 name "ds2" )

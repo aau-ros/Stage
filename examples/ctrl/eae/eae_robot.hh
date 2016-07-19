@@ -60,6 +60,12 @@ namespace eae
     const double MAP_UPDATE_DIST = 1.41;
 
     /**
+     * Rate for charging robot.
+     * This is supposed to be one second since the unit of power is watts (= joules / second).
+     */
+    const usec_t CHARGE_RATE = 1000000;
+
+    /**
      * A class that defines the behavior of a robot.
      */
     class Robot
@@ -316,6 +322,16 @@ namespace eae
         static int FiducialUpdate(ModelFiducial* fid, Robot* robot);
 
         /**
+         * Callback function that is called when the docking station supplies energy to the robot.
+         *
+         * @param Model* mod: The instantiated docking station model.
+         * @param Robot* robot: The instantiated robot object which attached the callback.
+         *
+         * @return int: Returns 0.
+         */
+        static int ChargingUpdate(Model* mod, Robot* robot);
+
+        /**
          * Identifier of the robot.
          */
         int id;
@@ -392,6 +408,16 @@ namespace eae
          * This helps to reduce the map update frequency to improve performance.
          */
         Pose last_pose;
+
+        /**
+         * The power at which the battery gets charged at a docking station.
+         */
+        watts_t charging_watt;
+
+        /**
+         * The latest time at which the robot was recharged.
+         */
+        usec_t last_charge;
     };
 }
 

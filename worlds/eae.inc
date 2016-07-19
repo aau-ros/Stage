@@ -66,5 +66,5 @@ define docking_station model
 
     kjoules -1  # provides infinite energy
     give_watts 1000
-    alwayson 1 # so we give charge without any explicit subscriber
+    alwayson 0 # so we give charge without any explicit subscriber
 )

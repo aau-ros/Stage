@@ -122,9 +122,6 @@ namespace eae
 
                 // start docking station auction
                 if(ds.id > 0){
-//                     printf("[%s:%d] [robot %d]: starting auction\n", StripPath(__FILE__), __LINE__, id);
-                    printf("[%s:%d] [robot %d]: precharge\n", StripPath(__FILE__), __LINE__, id);
-                    printf("[%s:%d] [robot %d]: start auction\n", StripPath(__FILE__), __LINE__, id);
                     state = STATE_PRECHARGE;
                     cord->DockingAuction(pos->GetPose(), ds.id);
                 }
@@ -136,7 +133,6 @@ namespace eae
 
             // needs recharging, coordinate with other robots
             else{
-        printf("[%s:%d] [robot %d]: precharge\n", StripPath(__FILE__), __LINE__, id);
                 state = STATE_PRECHARGE;
 
                 // select docking station and store in private variable
@@ -156,7 +152,6 @@ namespace eae
 
                 // start docking station auction
                 if(ds.id > 0){
-                    printf("[%s:%d] [robot %d]: start auction %d\n", StripPath(__FILE__), __LINE__, id, OPT);
                     cord->DockingAuction(pos->GetPose(), ds.id);
                 }
 
@@ -185,10 +180,8 @@ namespace eae
                 // stop moving
                 pos->Stop();
 
-                printf("[%s:%d] [robot %d]: state charge\n", StripPath(__FILE__), __LINE__, id);
+                // charging state
                 state = STATE_CHARGE;
-
-                printf("[%s:%d] [robot %d]: charging at docking station %d\n", StripPath(__FILE__), __LINE__, id, ds.id);
 
                 // subscribe to docking station
                 ds.model->AddCallback(Model::CB_UPDATE, (model_callback_t)ChargingUpdate, this);
@@ -241,10 +234,6 @@ namespace eae
             goal_next = to;
             goal_next_bid = bid;
         }
-
-//         else{
-//             printf("[%s:%d] [robot %d]: cannot move to (%.0f,%.0f), already moving to (%0.f,%.0f) then (%.0f,%.0f)!\n", StripPath(__FILE__), __LINE__, id, to.x, to.y, goal.x, goal.y, goal_next.x, goal_next.y);
-//         }
     }
 
     double Robot::CalcBid(Pose frontier)
@@ -321,8 +310,6 @@ namespace eae
             return;
 
         this->ds = ds;
-
-        printf("[%s:%d] [robot %d]: going charging\n", StripPath(__FILE__), __LINE__, id);
         state = STATE_GOING_CHARGING;
         Move(ds.pose, bid);
     }
@@ -335,24 +322,12 @@ namespace eae
 
         this->ds = ds;
         goal = ds.pose;
-        printf("[%s:%d] [robot %d]: charge queue\n", StripPath(__FILE__), __LINE__, id);
         state = STATE_CHARGE_QUEUE;
         Move(ds.pose, bid);
     }
 
     void Robot::UnDock()
     {
-        // get model of docking station
-//         stringstream ds_name;
-//         ds_name << "ds" << this->ds.id;
-//         Model* ds = pos->GetWorld()->GetModel(ds_name.str());
-//
-//         // unregister callback for charging
-//         ds->Unsubscribe();
-//         ds->RemoveCallback(Model::CB_UPDATE, (model_callback_t)ChargingUpdate);
-         printf("[%s:%d] [robot %d]: undock\n", StripPath(__FILE__), __LINE__, id);
-//         pos->FindPowerPack()->ChargeStop();
-
         // continue exploration
         state = STATE_EXPLORE;
         Explore();
@@ -573,15 +548,8 @@ namespace eae
                 // log data
                 robot->Log();
 
-                // there is still a goal in the queue
-//                 if(robot->GoalQueue()){
-//                     robot->Move();
-//                 }
-//
-//                 // otherwise just find a new goal
-//                 else{
-                    robot->Explore();
-//                 }
+                // continue exploration
+                robot->Explore();
             }
 
             // robot needs recharging docking station
@@ -595,39 +563,14 @@ namespace eae
 
             // robot waits for recharging at docking station
             else if(robot->state == STATE_CHARGE_QUEUE){
-                // robot already at docking station, continue docking
-                // or robot just finished exploring and will now go to docking station
-//                 if(robot->goal == robot->ds.pose || robot->GoalQueue()){
-//                     robot->Move();
-//                 }
-//
-//                 // robot is waiting for docking station, start new auction
-//                 else{
-                    // select docking station and store in private variable
-//                     switch(OPT){
-//                         case OPT_ENERGY:
-//                             robot->ds = robot->cord->ClosestDs(pos->GetPose());
-//                             break;
-//                         case OPT_TIME:
-//                             robot->ds = robot->cord->ClosestFreeDs(pos->GetPose(), robot->RemainingDist());
-//                             break;
-//                         case OPT_STABILITY:
-//                             printf("[%s:%d] [robot %d]: optimization of stability not yet implemented\n", StripPath(__FILE__), __LINE__, robot->id);
-//                             break;
-//                         default:
-//                             printf("[%s:%d] [robot %d]: invalid optimization goal %d\n", StripPath(__FILE__), __LINE__, robot->id, OPT);
-//                     }
-
                     // start docking station auction
                     if(robot->ds.id > 0){
-                        printf("[%s:%d] [robot %d]: start auction\n", StripPath(__FILE__), __LINE__, robot->id);
                         robot->cord->DockingAuction(pos->GetPose(), robot->ds.id);
                     }
 
                     // no docking station found
                     else
                         printf("[%s:%d] [robot %d]: no docking station found\n", StripPath(__FILE__), __LINE__, robot->id);
-//                 }
             }
 
             else{
@@ -717,7 +660,6 @@ namespace eae
         }
 
         // add watts to robot's power pack according to rate
-        printf("[%s:%d] [robot %d]: charging with %.1f watt\n", StripPath(__FILE__), __LINE__, robot->GetId(), robot->charging_watt);
         robot->pos->FindPowerPack()->Add(robot->charging_watt);
 
         return 0; // run again

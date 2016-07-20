@@ -35,10 +35,6 @@ namespace eae
             return;
         }
 
-        // not enough time between auctions
-//         if(fr_auctions.size() > 0 && pos->GetWorld()->SimTimeNow() < fr_auctions.back().time + TO_NEXT_AUCTION)
-//             return;
-
         // increment auction id
         int id = ++auction_id;
 
@@ -223,18 +219,15 @@ namespace eae
 
             // docking station is reachable and has frontiers in range
             if(dist_temp <= range && frontiers){
-//             printf("[%s:%d] [robot %d]: found in range with frontiers\n", StripPath(__FILE__), __LINE__, robot->GetId());
                 dss_reach_front.push_back(*it);
             }
 
             // docking station is reachable
             else if(dist_temp <= range){
-//             printf("[%s:%d] [robot %d]: found in range\n", StripPath(__FILE__), __LINE__, robot->GetId());
                 dss_reachable.push_back(*it);
             }
             // docking station has frontiers in range
             else if(frontiers){
-//             printf("[%s:%d] [robot %d]: found with frontiers\n", StripPath(__FILE__), __LINE__, robot->GetId());
                 dss_frontiers.push_back(*it);
             }
         }
@@ -536,7 +529,6 @@ namespace eae
 
         // move to frontier
         if(goal.id > 0){
-//             printf("[%s:%d] [robot %d]: moving to (%.0f,%.0f), bid %.2f\n", StripPath(__FILE__), __LINE__, robot->GetId(), goal.pose.x, goal.pose.y, goal.highest_bid);
             robot->Move(goal.pose, goal.highest_bid);
             return; // only dock if no frontier auction was won
         }
@@ -559,7 +551,6 @@ namespace eae
 
                 // i won, move to docking station
                 if(jt->winner == robot->GetId()){
-                    printf("[%s:%d] [robot %d]: won auction\n", StripPath(__FILE__), __LINE__, robot->GetId());
                     robot->Dock(GetDs(jt->ds_id), jt->highest_bid);
                     continue;
                 }
@@ -569,7 +560,6 @@ namespace eae
                 ds_t ds;
                 if(robot->Charging(ds)){
                     if(ds.id == jt->ds_id){
-                        printf("[%s:%d] [robot %d]: charging and lost auction\n", StripPath(__FILE__), __LINE__, robot->GetId());
                         robot->UnDock();
                         continue;
                     }
@@ -577,7 +567,6 @@ namespace eae
 
                 // i lost my own auction, queue at the docking station
                 if(jt->initiator == robot->GetId()){
-                    printf("[%s:%d] [robot %d]: initiator lost auction\n", StripPath(__FILE__), __LINE__, robot->GetId());
                     robot->DockQueue(GetDs(jt->ds_id), jt->highest_bid);
                 }
             }

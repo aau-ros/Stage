@@ -123,6 +123,8 @@ namespace eae
                 // start docking station auction
                 if(ds.id > 0){
 //                     printf("[%s:%d] [robot %d]: starting auction\n", StripPath(__FILE__), __LINE__, id);
+                    printf("[%s:%d] [robot %d]: precharge\n", StripPath(__FILE__), __LINE__, id);
+                    printf("[%s:%d] [robot %d]: start auction\n", StripPath(__FILE__), __LINE__, id);
                     state = STATE_PRECHARGE;
                     cord->DockingAuction(pos->GetPose(), ds.id);
                 }
@@ -134,6 +136,7 @@ namespace eae
 
             // needs recharging, coordinate with other robots
             else{
+        printf("[%s:%d] [robot %d]: precharge\n", StripPath(__FILE__), __LINE__, id);
                 state = STATE_PRECHARGE;
 
                 // select docking station and store in private variable
@@ -148,12 +151,14 @@ namespace eae
                         printf("[%s:%d] [robot %d]: optimization of stability not yet implemented\n", StripPath(__FILE__), __LINE__, id);
                         break;
                     default:
-                        printf("[%s:%d] [robot %d]: invalid optimization goal %d\n", StripPath(__FILE__), __LINE__, id, OPT);
+                        printf("[%s:%d] [robot %d]: invalid optimization goal\n", StripPath(__FILE__), __LINE__, id);
                 }
 
                 // start docking station auction
-                if(ds.id > 0)
+                if(ds.id > 0){
+                    printf("[%s:%d] [robot %d]: start auction %d\n", StripPath(__FILE__), __LINE__, id, OPT);
                     cord->DockingAuction(pos->GetPose(), ds.id);
+                }
 
                 // no docking station found
                 else
@@ -176,42 +181,37 @@ namespace eae
         // robot already at current goal
         if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE){
             // start recharging
-            if(state == STATE_PRECHARGE){
-                state = STATE_CHARGE;
-
+            if(state == STATE_GOING_CHARGING){
                 // stop moving
                 pos->Stop();
 
-                // get model of docking station
-                stringstream ds_name;
-                ds_name << "ds" << this->ds.id;
-                Model* ds = pos->GetWorld()->GetModel(ds_name.str());
+                printf("[%s:%d] [robot %d]: state charge\n", StripPath(__FILE__), __LINE__, id);
+                state = STATE_CHARGE;
 
-                // docking station is occupied
-                if(ds->GetSubscriptionCount() > 0){
-                    printf("[%s:%d] [robot %d]: docking station already occupied\n", StripPath(__FILE__), __LINE__, id);
-                    return;
-                }
+                printf("[%s:%d] [robot %d]: charging at docking station %d\n", StripPath(__FILE__), __LINE__, id, ds.id);
 
-                // register callback for charging
-                ds->AddCallback(Model::CB_UPDATE, (model_callback_t)ChargingUpdate, this);
-                ds->Subscribe();
+                // subscribe to docking station
+                ds.model->AddCallback(Model::CB_UPDATE, (model_callback_t)ChargingUpdate, this);
+                ds.model->Subscribe();
 
                 return;
             }
 
-            // check if there is a valid goal in the queue
-            if(goal_next_bid != BID_INV){
-                // set goal and invalidate next goal
-                goal = goal_next;
-                goal_next_bid = BID_INV;
+            if(state == STATE_CHARGE_QUEUE){
+                // stop moving
+                pos->Stop();
+                return;
             }
 
-            // no valid goal
-            else{
+            // no valid goal in the queue
+            if(goal_next_bid == BID_INV){
                 printf("[%s:%d] [robot %d]: invalid goal\n", StripPath(__FILE__), __LINE__, id);
                 return;
             }
+
+            // set goal and invalidate next goal
+            goal = goal_next;
+            goal_next_bid = BID_INV;
         }
 
         // store goal for visualization
@@ -221,7 +221,7 @@ namespace eae
         dist_travel += pos->GetPose().Distance(goal);
 
         // move robot to frontier / docking station
-        if(state == STATE_EXPLORE || state == STATE_PRECHARGE){
+        if(state == STATE_EXPLORE || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE){
             pos->GoTo(goal);
         }
     }
@@ -237,7 +237,7 @@ namespace eae
         // store as next goal only
         // - if my bid is higher than for the other goal already stored
         // - if robot needs recharging (goal should be a docking station)
-        else if(goal_next_bid == BID_INV || goal_next_bid < bid || state == STATE_PRECHARGE){
+        else if(goal_next_bid == BID_INV || goal_next_bid < bid || state == STATE_GOING_CHARGING){
             goal_next = to;
             goal_next_bid = bid;
         }
@@ -321,8 +321,41 @@ namespace eae
             return;
 
         this->ds = ds;
-        state = STATE_PRECHARGE;
+
+        printf("[%s:%d] [robot %d]: going charging\n", StripPath(__FILE__), __LINE__, id);
+        state = STATE_GOING_CHARGING;
         Move(ds.pose, bid);
+    }
+
+    void Robot::DockQueue(ds_t ds, double bid)
+    {
+        // already charging, no queueing required
+        if(this->ds.id == ds.id && state == STATE_CHARGE)
+            return;
+
+        this->ds = ds;
+        goal = ds.pose;
+        printf("[%s:%d] [robot %d]: charge queue\n", StripPath(__FILE__), __LINE__, id);
+        state = STATE_CHARGE_QUEUE;
+        Move(ds.pose, bid);
+    }
+
+    void Robot::UnDock()
+    {
+        // get model of docking station
+//         stringstream ds_name;
+//         ds_name << "ds" << this->ds.id;
+//         Model* ds = pos->GetWorld()->GetModel(ds_name.str());
+//
+//         // unregister callback for charging
+//         ds->Unsubscribe();
+//         ds->RemoveCallback(Model::CB_UPDATE, (model_callback_t)ChargingUpdate);
+         printf("[%s:%d] [robot %d]: undock\n", StripPath(__FILE__), __LINE__, id);
+//         pos->FindPowerPack()->ChargeStop();
+
+        // continue exploration
+        state = STATE_EXPLORE;
+        Explore();
     }
 
     double Robot::RemainingTime()
@@ -349,9 +382,29 @@ namespace eae
         return pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL;
     }
 
+    bool Robot::Charging(ds_t& at)
+    {
+        if(state == STATE_CHARGE){
+            at = ds;
+            return true;
+        }
+
+        return false;
+    }
+
     bool Robot::Docking(ds_t& at)
     {
-        if(state == STATE_PRECHARGE || state == STATE_CHARGE){
+        if(state == STATE_GOING_CHARGING || state == STATE_CHARGE){
+            at = ds;
+            return true;
+        }
+
+        return false;
+    }
+
+    bool Robot::Queueing(ds_t& at)
+    {
+        if(state == STATE_CHARGE_QUEUE){
             at = ds;
             return true;
         }
@@ -481,13 +534,19 @@ namespace eae
 
         // pause if all other robots finished already
         if(cord->Finished())
-                pos->GetWorld()->Stop();
+            pos->GetWorld()->Stop();
     }
 
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)
     {
+        // robot is done
         if(robot->state == STATE_FINISHED){
             return -1; // no more updates
+        }
+
+        // no position update required when charging
+        if(robot->state == STATE_PRECHARGE || robot->state == STATE_CHARGE){
+            return 0;
         }
 
         // initialize robot
@@ -525,8 +584,17 @@ namespace eae
 //                 }
             }
 
-            // robot needs recharging
-            else if(robot->state == STATE_PRECHARGE){
+            // robot needs recharging docking station
+            else if(robot->state == STATE_GOING_CHARGING){
+                if(robot->GoalQueue()){
+                    if(robot->goal_next == robot->ds.pose){
+                        robot->Move(robot->goal_next, robot->goal_next_bid);
+                    }
+                }
+            }
+
+            // robot waits for recharging at docking station
+            else if(robot->state == STATE_CHARGE_QUEUE){
                 // robot already at docking station, continue docking
                 // or robot just finished exploring and will now go to docking station
 //                 if(robot->goal == robot->ds.pose || robot->GoalQueue()){
@@ -536,32 +604,31 @@ namespace eae
 //                 // robot is waiting for docking station, start new auction
 //                 else{
                     // select docking station and store in private variable
-                    switch(OPT){
-                        case OPT_ENERGY:
-                            robot->ds = robot->cord->ClosestDs(pos->GetPose());
-                            break;
-                        case OPT_TIME:
-                            robot->ds = robot->cord->ClosestFreeDs(pos->GetPose(), robot->RemainingDist());
-                            break;
-                        case OPT_STABILITY:
-                            printf("[%s:%d] [robot %d]: optimization of stability not yet implemented\n", StripPath(__FILE__), __LINE__, robot->id);
-                            break;
-                        default:
-                            printf("[%s:%d] [robot %d]: invalid optimization goal %d\n", StripPath(__FILE__), __LINE__, robot->id, OPT);
-                    }
+//                     switch(OPT){
+//                         case OPT_ENERGY:
+//                             robot->ds = robot->cord->ClosestDs(pos->GetPose());
+//                             break;
+//                         case OPT_TIME:
+//                             robot->ds = robot->cord->ClosestFreeDs(pos->GetPose(), robot->RemainingDist());
+//                             break;
+//                         case OPT_STABILITY:
+//                             printf("[%s:%d] [robot %d]: optimization of stability not yet implemented\n", StripPath(__FILE__), __LINE__, robot->id);
+//                             break;
+//                         default:
+//                             printf("[%s:%d] [robot %d]: invalid optimization goal %d\n", StripPath(__FILE__), __LINE__, robot->id, OPT);
+//                     }
 
                     // start docking station auction
-                    if(robot->ds.id > 0)
+                    if(robot->ds.id > 0){
+                        printf("[%s:%d] [robot %d]: start auction\n", StripPath(__FILE__), __LINE__, robot->id);
                         robot->cord->DockingAuction(pos->GetPose(), robot->ds.id);
+                    }
 
                     // no docking station found
                     else
                         printf("[%s:%d] [robot %d]: no docking station found\n", StripPath(__FILE__), __LINE__, robot->id);
 //                 }
             }
-
-            else if(robot->state == STATE_CHARGE)
-                return 0;
 
             else{
                 printf("[%s:%d] [robot %d]: invalid state: %d\n", StripPath(__FILE__), __LINE__, robot->id, robot->state);
@@ -578,7 +645,7 @@ namespace eae
         std::vector<ModelFiducial::Fiducial>::iterator it;
 
         // robots is on its way for recharging
-        if(robot->state == STATE_PRECHARGE){
+        if(robot->state == STATE_GOING_CHARGING){
             // check fiducial return signal
             for(it = fids.begin(); it<fids.end(); ++it){
                 // fiducial is my docking station
@@ -624,9 +691,8 @@ namespace eae
     int Robot::ChargingUpdate(Model* mod, Robot* robot)
     {
         // stop recharging
-        if(robot->FullyCharged()){
-            robot->pos->FindPowerPack()->ChargeStop();
-            mod->Unsubscribe();
+        if(robot->FullyCharged() || robot->state != STATE_CHARGE){
+            robot->UnDock();
             return -1; // no more updates
         }
 
@@ -636,20 +702,22 @@ namespace eae
         }
 
         // charge with a constant rate
-        if(mod->GetWorld()->SimTimeNow() < robot->last_charge + CHARGE_RATE)
+        if(robot->pos->GetWorld()->SimTimeNow() < robot->last_charge + CHARGE_RATE){
             return 0;
-        robot->last_charge = mod->GetWorld()->SimTimeNow();
+        }
+        robot->last_charge = robot->pos->GetWorld()->SimTimeNow();
 
         // look for power output of docking station in world file
         if(robot->charging_watt <= 0){
-            for(int i=0; i<mod->GetWorld()->GetWorldFile()->GetEntityCount(); ++i){
-                robot->charging_watt = mod->GetWorld()->GetWorldFile()->ReadFloat(i, "give_watts", robot->charging_watt);
+            for(int i=0; i<robot->pos->GetWorld()->GetWorldFile()->GetEntityCount(); ++i){
+                robot->charging_watt = robot->pos->GetWorld()->GetWorldFile()->ReadFloat(i, "give_watts", robot->charging_watt);
                 if(robot->charging_watt > 0)
                     break;
             }
         }
 
         // add watts to robot's power pack according to rate
+        printf("[%s:%d] [robot %d]: charging with %.1f watt\n", StripPath(__FILE__), __LINE__, robot->GetId(), robot->charging_watt);
         robot->pos->FindPowerPack()->Add(robot->charging_watt);
 
         return 0; // run again

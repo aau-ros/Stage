@@ -96,6 +96,7 @@ namespace eae
     typedef struct{
         int id;
         double highest_bid;
+        int initiator;
         int winner;
         usec_t time;
         bool open;
@@ -289,12 +290,13 @@ namespace eae
          *
          * @param int id: ID of the auction.
          * @param double bid: Bid for the auction.
+         * @param int initiator: ID of the robot who started the auction.
          * @param int winner: The current highest bidder.
          * @param usec_t time: Timestamp of the auction.
          * @param bool open: Whether or not the auction is still running.
          * @param int ds_id: ID of the docking station.
          */
-        void StoreNewDsAuction(int id, double bid, int winner, usec_t time, bool open, int ds_id);
+        void StoreNewDsAuction(int id, double bid, int initiator, int winner, usec_t time, bool open, int ds_id);
 
         /**
          * Send a broadcast message for a frontier auction.

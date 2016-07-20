@@ -51,9 +51,21 @@ namespace eae
 
     void Coordination::DockingAuction(Pose pose, int ds)
     {
-        // not enough time between auctions
-        if(ds_auctions.size() > 0 && pos->GetWorld()->SimTimeNow() < ds_auctions.back().time + TO_NEXT_AUCTION){
-            return;
+        // check if enough time between auctions
+        if(ds_auctions.size() > 0){
+            vector<ds_auction_t>::iterator it;
+            for(it=ds_auctions.end()-1; it>=ds_auctions.begin(); --it){
+                // i started auction for same docking station
+                if(it->initiator == robot->GetId() && it->ds_id == ds){
+                    // not enough time between auctions
+                    if(pos->GetWorld()->SimTimeNow() < it->time + TO_NEXT_AUCTION){
+                        return;
+                    }
+
+                    // enough time between auctions
+                    break;
+                }
+            }
         }
 
         // increment auction id
@@ -69,7 +81,7 @@ namespace eae
             printf("[%s:%d] [robot %d]: invalid coordination strategy: %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), strategy);
 
         // create and store auction
-        StoreNewDsAuction(id, bid, robot->GetId(), pos->GetWorld()->SimTimeNow(), true, ds);
+        StoreNewDsAuction(id, bid, robot->GetId(), robot->GetId(), pos->GetWorld()->SimTimeNow(), true, ds);
 
         // notify other robots
         BroadcastDsAuction(id);
@@ -100,18 +112,33 @@ namespace eae
         // check if docking station is already in vector
         vector<ds_t>::iterator it;
         for(it=dss.begin(); it<dss.end(); ++it){
-            // docking station already in vector, update state
+            // docking station already in vector
             if(it->id == id){
+                // update state
                 it->state = state;
+
+                // start new auction if currently queueing at that docking station
+                ds_t ds;
+                if(robot->Queueing(ds)){
+                    if(ds.id == id && state == STATE_VACANT){
+                        DockingAuction(robot->GetPose(), id);
+                    }
+                }
                 return;
             }
         }
+
+        // get model of docking station
+        stringstream ds_name;
+        ds_name << "ds" << id;
+        Model* ds_model = pos->GetWorld()->GetModel(ds_name.str());
 
         // add new docking station
         ds_t ds;
         ds.id = id;
         ds.state = state;
         ds.pose = pose;
+        ds.model = ds_model;
         dss.push_back(ds);
 
         // broadcast docking station information
@@ -413,7 +440,7 @@ namespace eae
         }
 
         // new auction, store in vector
-        StoreNewDsAuction(id, bid, robot, pos->GetWorld()->SimTimeNow(), true, ds);
+        StoreNewDsAuction(id, bid, -1, robot, pos->GetWorld()->SimTimeNow(), true, ds);
 
         // don't respond if just done charging
         if(this->robot->FullyCharged())
@@ -532,7 +559,26 @@ namespace eae
 
                 // i won, move to docking station
                 if(jt->winner == robot->GetId()){
+                    printf("[%s:%d] [robot %d]: won auction\n", StripPath(__FILE__), __LINE__, robot->GetId());
                     robot->Dock(GetDs(jt->ds_id), jt->highest_bid);
+                    continue;
+                }
+
+                // i lost and am currently charging at that docking station
+                // now i have to move away
+                ds_t ds;
+                if(robot->Charging(ds)){
+                    if(ds.id == jt->ds_id){
+                        printf("[%s:%d] [robot %d]: charging and lost auction\n", StripPath(__FILE__), __LINE__, robot->GetId());
+                        robot->UnDock();
+                        continue;
+                    }
+                }
+
+                // i lost my own auction, queue at the docking station
+                if(jt->initiator == robot->GetId()){
+                    printf("[%s:%d] [robot %d]: initiator lost auction\n", StripPath(__FILE__), __LINE__, robot->GetId());
+                    robot->DockQueue(GetDs(jt->ds_id), jt->highest_bid);
                 }
             }
         }
@@ -557,7 +603,7 @@ namespace eae
         fr_auctions.push_back(auction);
     }
 
-    void Coordination::StoreNewDsAuction(int id, double bid, int winner, usec_t time, bool open, int ds_id)
+    void Coordination::StoreNewDsAuction(int id, double bid, int initiator, int winner, usec_t time, bool open, int ds_id)
     {
         // invalid bid
         if(bid == BID_INV){
@@ -568,6 +614,7 @@ namespace eae
         ds_auction_t auction;
         auction.id = id;
         auction.highest_bid = bid;
+        auction.initiator = initiator;
         auction.winner = winner;
         auction.time = time;
         auction.open = open;

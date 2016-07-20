@@ -55,7 +55,9 @@ namespace eae
         STATE_INIT,
         STATE_IDLE,
         STATE_EXPLORE,
+        STATE_CHARGE_QUEUE,
         STATE_PRECHARGE,
+        STATE_GOING_CHARGING,
         STATE_CHARGE,
         STATE_DEAD,
         STATE_FINISHED
@@ -65,7 +67,7 @@ namespace eae
      * Strings describing the robot state.
      * Make sure they match the robot_state_t enum!
      */
-    const string STATE_STRING[] = {"undefined", "init", "idle", "explore", "precharge", "charge", "dead", "finished"};
+    const string STATE_STRING[] = {"undefined", "init", "idle", "explore", "charge queue", "precharge", "going charging", "charge", "dead", "finished"};
 
     /**
      * The current state of a docking station.
@@ -83,6 +85,7 @@ namespace eae
         int id;
         ds_state_t state;
         Pose pose;
+        Model* model;
     } ds_t;
 
     /**

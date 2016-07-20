@@ -168,6 +168,19 @@ namespace eae
         void Dock(ds_t ds, double bid);
 
         /**
+         * Enqueue at a docking station.
+         *
+         * @param ds_t ds: The docking station to queue at.
+         * @param double bid: The bid that was made for that docking station.
+         */
+        void DockQueue(ds_t ds, double bid);
+
+        /**
+         * Stop recharging and continue exploration.
+         */
+        void UnDock();
+
+        /**
          * Estimate the remaining time that the robot can drive with its current battery.
          *
          * @return double: The remaining time in seconds.
@@ -196,12 +209,28 @@ namespace eae
         bool FullyCharged();
 
         /**
+         * Check whether the robot is currently charging.
+         *
+         * @param ds_t& at: The docking station where the robot is charging at. It is set only if the robot is currently charging.
+         * @return bool: True if the robot is charging, false otherwise.
+         */
+        bool Charging(ds_t& at);
+
+        /**
          * Check whether the robot is currently on its way for recharging.
          *
          * @param ds_t& at: The docking station where the robot is docking at. It is set only if the robot is currently on its way for recharging.
          * @return bool: True if the robot is on its way for recharging, false otherwise.
          */
         bool Docking(ds_t& at);
+
+        /**
+         * Check whether the robot is currently waiting for recharging.
+         *
+         * @param ds_t& at: The docking station the robot is waiting for. It is set only if the robot is currently waiting.
+         * @return bool: True if the robot is waiting, false otherwise.
+         */
+        bool Queueing(ds_t& at);
 
         /**
          * Get the grid map.

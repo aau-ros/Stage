@@ -73,6 +73,9 @@ define robot pioneer2dx
     # the controller to use (see ../examples/ctrl)
     ctrl "eae"
 
+    # mass in kg
+    mass 9.0
+
     # initial battery charge in kJ
     kjoules 5
 

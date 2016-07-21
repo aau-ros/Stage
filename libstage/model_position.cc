@@ -85,8 +85,8 @@ using namespace Stg;
 
 
 
-static const double WATTS_KGMS = 10.0; // current per kg per meter per second
-static const double WATTS = 1.0; // base cost of position device
+static const double WATTS_KGMS = 4.0; // current per kg per meter per second
+static const double WATTS = 10.5; // base cost of position device
 
 // simple odometry error model parameters. the error is selected at
 // random in the interval -MAX/2 to +MAX/2 at startup

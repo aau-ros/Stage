@@ -1,0 +1,34 @@
+# include definition of world, robots, and docking stations for energy-aware exploration (eae) with multiple robots
+include "eae.inc"
+
+# number of robots
+robots 2
+
+# number of docking stations
+docking_stations 1
+
+# coordination strategy between robots for coordinating access to docking stations
+# 0: marked based
+# 1: greedy
+# 2: optimal (not yet implemented)
+coordination 1
+
+# a robot
+robot(
+    # position in world coordinates
+    pose [ 1 0 0 0 ]
+)
+
+# a docking station
+docking_station(
+    # position in world coordinates
+    pose [ 0 0 0 0 ]
+
+    # fiducial id that is returned to a fiducial sensor
+    # must be unique among multiple docking stations
+    fiducial_return 2
+
+    # name of the docking station
+    # must be ds + fiducial id
+    name "ds2"
+)

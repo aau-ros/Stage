@@ -210,9 +210,6 @@ namespace eae
         // store goal for visualization
         pos->waypoints.push_back(ModelPosition::Waypoint(goal, wpcolor));
 
-        // store traveled distance
-        dist_travel += pos->GetPose().Distance(goal);
-
         // move robot to frontier / docking station
         if(state == STATE_EXPLORE || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE){
             pos->GoTo(goal);
@@ -481,7 +478,7 @@ namespace eae
         }
         // at beginning of simulation take max velocity
         else{
-            velocity = pos->velocity_bounds->max;
+            velocity = pos->velocity_bounds->max / 2;
         }
 
         // calculate power consumption (according to stage model: libstage/model_position:496)
@@ -519,11 +516,6 @@ namespace eae
             return -1; // no more updates
         }
 
-        // no position update required when charging
-        if(robot->state == STATE_PRECHARGE || robot->state == STATE_CHARGE){
-            return 0;
-        }
-
         // initialize robot
         if(robot->state == STATE_INIT){
             robot->Init();
@@ -534,11 +526,23 @@ namespace eae
             robot->Explore();
         }
 
-        // clear map while traveling (not too often)
+        // clear map and compute traveled distance while traveling (not too often)
         Pose pose = pos->GetPose();
-        if(pose.Distance(robot->last_pose) > MAP_UPDATE_DIST){
+        double dist = pose.Distance(robot->last_pose);
+        if(dist > MAP_UPDATE_DIST){
+            // clear map
             robot->UpdateMap();
+
+            // add distance to traveled distance
+            robot->dist_travel += dist;
+
+            // store last pose
             robot->last_pose = pose;
+        }
+
+        // no action required when charging
+        if(robot->state == STATE_PRECHARGE || robot->state == STATE_CHARGE){
+            return 0;
         }
 
         // robot reached goal

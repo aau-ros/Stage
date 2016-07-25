@@ -142,9 +142,16 @@ namespace eae
         void DockingAuction(Pose pose, int ds);
 
         /**
-         * Send a map update to the other robots.
+         * Send a map update to the other robots containing the complete map.
          */
         void BroadcastMap();
+
+        /**
+         * Send a map update to the other robots containing only part of the map.
+         *
+         * @param GridMap* local: The map to send.
+         */
+        void BroadcastMap(GridMap* local);
 
         /**
          * Returns the distance from a given pose to the closest robot.

@@ -421,10 +421,7 @@ namespace eae
     void Robot::UpdateMap(GridMap* map)
     {
         // apply map updates
-        this->map->Update(map, pos->GetPose());
-
-        // visualize map progress
-        map->VisualizeGui(pos->GetPose());
+        this->map->Update(map);
     }
 
     void Robot::UpdateMap()
@@ -432,14 +429,14 @@ namespace eae
         // get current position
         Pose pose = pos->GetPose();
 
-        // mark neighborhood as visited
-        map->Clear(round(pose.x), round(pose.y));
+        // mark local neighborhood as visited
+        GridMap* local = map->Clear(pose);
 
         // visualize map progress
         map->VisualizeGui(pose);
 
         // share map with other robots in range
-        cord->BroadcastMap();
+        cord->BroadcastMap(local);
     }
 
     double Robot::Distance(double from_x, double from_y, double to_x, double to_y)

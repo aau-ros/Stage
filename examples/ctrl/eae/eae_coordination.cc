@@ -85,7 +85,12 @@ namespace eae
 
     void Coordination::BroadcastMap()
     {
-        WifiMessageMap* msg = new WifiMessageMap(robot->GetMap());
+        BroadcastMap(robot->GetMap());
+    }
+
+    void Coordination::BroadcastMap(GridMap* local)
+    {
+        WifiMessageMap* msg = new WifiMessageMap(local);
         WifiMessageBase* base_ptr = msg;
         wifi->comm.SendBroadcastMessage(base_ptr);
     }

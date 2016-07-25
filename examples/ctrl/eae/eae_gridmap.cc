@@ -203,20 +203,28 @@ namespace eae
 
         // insert value
         try{
-            Write(x, y, val);
+            Write(x,y,val);
         }
         catch(const out_of_range& e){
             printf("[%s:%d] [robot %d]: Could not write '%d' to (%d,%d)! Something went wrong when extending the map!\n", StripPath(__FILE__), __LINE__, robot, val, x, y);
         }
     }
 
-    void GridMap::Clear(int x, int y)
+    GridMap* GridMap::Clear(Pose pos)
     {
-        for(int i=x-LASER_RANGE; i<=x+LASER_RANGE; ++i){
-            for(int j=y-LASER_RANGE; j<=y+LASER_RANGE; ++j){
+        // local map (for returning)
+        GridMap* local = new GridMap(pos, vis_frontier->GetWorld(), robot);
+
+        // iterate in grid map
+        for(int i=pos.x-LASER_RANGE; i<=pos.x+LASER_RANGE; ++i){
+            // mark local neighborhood as free
+            for(int j=pos.y-LASER_RANGE; j<=pos.y+LASER_RANGE; ++j){
                 Insert(i,j,CELL_FREE);
+                local->Insert(i,j,CELL_FREE);
             }
         }
+
+        return local;
     }
 
     vector< vector <int> > GridMap::Frontiers()
@@ -244,7 +252,7 @@ namespace eae
         return frontiers;
     }
 
-    void GridMap::Update(GridMap* map, Pose pose)
+    void GridMap::Update(GridMap* map)
     {
         int x = map->x_min;
         vector< vector<grid_cell_t> >::iterator it;

@@ -56,14 +56,14 @@ namespace eae
         void Insert(int x, int y, grid_cell_t val);
 
         /**
-         * Mark all cells visible to the robot at cell (x,y) as visited.
+         * Mark all cells visible from the robot's current position as visited.
          *
-         * @param int x: X-coordinate of the cell.
-         * @param int y: Y-coordinate of the cell.
+         * @param Pose pos: The position of the robot.
+         * @return GridMap*: A map containing only the updated cells.
          *
          * @todo: Don't always mark as free, but according to actual sensor reading.
          */
-        void Clear(int x, int y);
+        GridMap* Clear(Pose pos);
 
         /**
          * Get a list of all frontiers.
@@ -77,7 +77,7 @@ namespace eae
          *
          * @param GridMap* map: A GridMap object to take the data from.
          */
-        void Update(GridMap* map, Pose pose);
+        void Update(GridMap* map);
 
         /**
          * Get the amount of explored area combined from all robots.

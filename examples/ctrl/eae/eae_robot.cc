@@ -13,6 +13,8 @@ namespace eae
         // instantiate objects
         this->pos = pos;
         fid = (ModelFiducial*)pos->GetUnusedModelOfType("fiducial");
+        laser = (ModelRanger*)pos->GetChild( "ranger:1" );
+        sonar = (ModelRanger*)pos->GetChild( "ranger:0" );
         map = new GridMap(pos->GetPose(), pos->GetWorld(), id);
         cord = new Coordination(pos, this);
         log = new LogOutput(id, robots, dss, cord->GetWifiModel(), cord->GetStrategy(), cord->GetStrategyString(), pos->FindPowerPack()->GetCapacity());
@@ -30,6 +32,12 @@ namespace eae
         fid->AddCallback(Model::CB_UPDATE, (model_callback_t)FiducialUpdate, this);
         fid->Subscribe();
 
+        // subscribe to laser ranger to receive data
+        laser->Subscribe();
+
+        // subscribe to sonar ranger to receive data
+        sonar->Subscribe();
+
         // store starting point for visualization
         pos->waypoints.push_back(ModelPosition::Waypoint(pos->GetPose(), wpcolor));
 
@@ -44,6 +52,9 @@ namespace eae
 
         // last charging time
         last_charge = 0;
+
+        // TODO
+        avoidcount = 0;
     }
 
     void Robot::Init()
@@ -66,6 +77,10 @@ namespace eae
                 return;
             state = STATE_EXPLORE;
         }
+
+        // only explore if the robot is not avoiding an obstacle
+        if(ObstacleAvoid())
+            return;
 
         // get current position
         Pose pose = pos->GetPose();
@@ -171,6 +186,10 @@ namespace eae
     {
         // don't move if charging, dead or done exploring
         if(state == STATE_CHARGE || state == STATE_DEAD || state == STATE_FINISHED)
+            return;
+
+        // don't move if the robot is avoiding an obstacle
+        if(ObstacleAvoid())
             return;
 
         // robot already at current goal
@@ -422,6 +441,9 @@ namespace eae
     {
         // apply map updates
         this->map->Update(map);
+
+        // visualize map progress
+        map->VisualizeGui(pos->GetPose());
     }
 
     void Robot::UpdateMap()
@@ -430,7 +452,7 @@ namespace eae
         Pose pose = pos->GetPose();
 
         // mark local neighborhood as visited
-        GridMap* local = map->Clear(pose);
+        GridMap* local = map->Clear(pose, laser->GetSensors()[0].ranges);
 
         // visualize map progress
         map->VisualizeGui(pose);
@@ -506,6 +528,80 @@ namespace eae
             pos->GetWorld()->Stop();
     }
 
+    bool Robot::ObstacleAvoid()
+    {
+        bool obstruction = false;
+        bool stop = false;
+
+        // find the closest distance to the left and right and check if
+        // there's anything in front
+        double minleft = 1e6;
+        double minright = 1e6;
+
+        // Get the data from the first sensor of the laser
+        const std::vector<meters_t>& scan = sonar->GetSensors()[0].ranges;
+
+        uint32_t sample_count = scan.size();
+
+        for(uint32_t i = 0; i < sample_count; i++){
+            //printf("[%s:%d] [robot %d]: %.0f\n", StripPath(__FILE__), __LINE__, id, scan[i]);
+
+            if( (i > (sample_count/4))
+            && (i < (sample_count - (sample_count/4)))
+            && scan[i] < minfrontdistance)
+            {
+                //puts( "  obstruction!" );
+                obstruction = true;
+            }
+
+            if( scan[i] < stopdist )
+            {
+                //puts( "  stopping!" );
+                stop = true;
+            }
+
+            if( i > sample_count/2 )
+                minleft = std::min( minleft, scan[i] );
+            else
+                minright = std::min( minright, scan[i] );
+        }
+
+            //puts( "" );
+            //printf( "minleft %.3f \n", minleft );
+            //printf( "minright %.3f\n ", minright );
+
+        if( obstruction || stop || (avoidcount>0) ){
+            //printf( "Avoid %d\n", avoidcount );
+
+            pos->SetXSpeed( stop ? 0.0 : avoidspeed );
+
+            /* once we start avoiding, select a turn direction and stick
+            with it for a few iterations */
+            if( avoidcount < 1 )
+            {
+                //puts( "Avoid START" );
+                avoidcount = random() % avoidduration + avoidduration;
+
+                if( minleft < minright  )
+                {
+                    pos->SetTurnSpeed( -avoidturn );
+                    //printf( "turning right %.2f\n", -avoidturn );
+                }
+                else
+                {
+                    pos->SetTurnSpeed( +avoidturn );
+                    //printf( "turning left %2f\n", +avoidturn );
+                }
+            }
+
+            avoidcount--;
+
+            return true; // busy avoding obstacles
+        }
+
+        return false; // didn't have to avoid anything
+    }
+
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)
     {
         // robot is done
@@ -522,6 +618,9 @@ namespace eae
         if(robot->state == STATE_IDLE){
             robot->Explore();
         }
+
+        // avoid obstacles
+        robot->ObstacleAvoid();
 
         // clear map and compute traveled distance while traveling (not too often)
         Pose pose = pos->GetPose();

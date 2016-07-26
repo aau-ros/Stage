@@ -1,0 +1,26 @@
+include "eae.inc"
+
+name "lines"
+robots 2
+docking_stations 5
+coordination 0
+
+#floorplan
+#(
+    #name "lines"
+    #pose [100 0 0 0]
+    #size [250.000 50.000 1]
+    #bitmap "bitmaps/lines_l.png"
+    #obstacle_return 1
+#)
+
+robot( pose [ 1 0 0 0 ] )
+#robot( pose [ -1 0 0 180 ] )
+#robot( pose [ 0 1 0 90 ] )
+#robot( pose [ 0 -1 0 270 ] )
+
+docking_station( pose [ 0 0 0 0 ] fiducial_return 2 name "ds2" )
+docking_station( pose [ 25 0 0 0 ] fiducial_return 3 name "ds3" )
+docking_station( pose [ 50 0 0 0 ] fiducial_return 4 name "ds4" )
+docking_station( pose [ 75 0 0 0 ] fiducial_return 5 name "ds5" )
+docking_station( pose [ 100 0 0 0 ] fiducial_return 6 name "ds6" )

@@ -66,6 +66,16 @@ namespace eae
     const usec_t CHARGE_RATE = 1000000;
 
     /**
+     * @todo: comment
+     */
+const double cruisespeed = 0.4;
+const double avoidspeed = 0.05;
+const double avoidturn = 0.5;
+const double minfrontdistance = 1.2;
+const double stopdist = 1;
+const int avoidduration = 10;
+
+    /**
      * A class that defines the behavior of a robot.
      */
     class Robot
@@ -330,6 +340,13 @@ namespace eae
         void Finalize();
 
         /**
+         * Avoid obstacles.
+         *
+         * @return bool: Whether or not the robot is currently busy avoiding an obstacle.
+         */
+        bool ObstacleAvoid();
+
+        /**
          * Callback function that is called when the robot changes position.
          * When the robot reached it's goal, it directs the robot to continue exploration.
          *
@@ -379,6 +396,16 @@ namespace eae
          * The fiducial sensor of the robot for detecting docking stations.
          */
         ModelFiducial* fid;
+
+        /**
+         * The laser range sensor (lidar) of the robot for mapping obstacles.
+         */
+        ModelRanger* laser;
+
+        /**
+         * The sonar range sensor of the robot for avoiding obstacles.
+         */
+        ModelRanger* sonar;
 
         /**
          * The position model of the robot.
@@ -447,6 +474,11 @@ namespace eae
          * The latest time at which the robot was recharged.
          */
         usec_t last_charge;
+
+        /**
+         * @todo
+         */
+        int avoidcount;
     };
 }
 

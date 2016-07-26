@@ -12,11 +12,6 @@ using namespace std;
 namespace eae
 {
     /**
-     * Laser range in grid cells.
-     */
-    const int LASER_RANGE = 3;
-
-    /**
      * A class for the internal representation of the map.
      */
     class GridMap
@@ -56,14 +51,13 @@ namespace eae
         void Insert(int x, int y, grid_cell_t val);
 
         /**
-         * Mark all cells visible from the robot's current position as visited.
+         * Mark all cells visible from the robot's current position as occupied or free, depending on laser scan data.
          *
          * @param Pose pos: The position of the robot.
+         * @param vector<meters_t> scan: The laser scan data.
          * @return GridMap*: A map containing only the updated cells.
-         *
-         * @todo: Don't always mark as free, but according to actual sensor reading.
          */
-        GridMap* Clear(Pose pos);
+        GridMap* Clear(Pose pos, vector<meters_t> scan);
 
         /**
          * Get a list of all frontiers.

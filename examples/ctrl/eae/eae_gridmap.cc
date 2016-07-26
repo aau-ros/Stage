@@ -210,17 +210,41 @@ namespace eae
         }
     }
 
-    GridMap* GridMap::Clear(Pose pos)
+    GridMap* GridMap::Clear(Pose pos, vector<meters_t> scan)
     {
         // local map (for returning)
         GridMap* local = new GridMap(pos, vis_frontier->GetWorld(), robot);
 
-        // iterate in grid map
-        for(int i=pos.x-LASER_RANGE; i<=pos.x+LASER_RANGE; ++i){
-            // mark local neighborhood as free
-            for(int j=pos.y-LASER_RANGE; j<=pos.y+LASER_RANGE; ++j){
-                Insert(i,j,CELL_FREE);
-                local->Insert(i,j,CELL_FREE);
+        // number of scan values
+        int n = scan.size();
+        int j = 0;
+
+        // iterate through all scan values, i.e. all scan angles
+        vector<meters_t>::iterator it;
+        for(it=scan.begin(); it<scan.end(); ++it){
+            // absolute scan angle (starting from pos x-asis)
+            double a = pos.a - LASER_FOV/2 + (j+0.5)/n*LASER_FOV;
+            ++j;
+
+            // absolute cell indexes
+            int x = 0;
+            int y = 0;
+
+            // raytrace along the scan angle and set cells to free
+            int i;
+            for(i=0; i<*it; ++i){
+                x = round(i*cos(a));
+                y = round(i*sin(a));
+                Insert(x,y,CELL_FREE);
+                local->Insert(x,y,CELL_FREE);
+            }
+
+            // if ray hit an obstacle, set cell to occupied
+            if(i<LASER_RANGE){
+                x = round(i*cos(a));
+                y = round(i*sin(a));
+                Insert(x,y,CELL_OCCUPIED);
+                local->Insert(x,y,CELL_OCCUPIED);
             }
         }
 

@@ -39,6 +39,16 @@ namespace eae
     const double BID_MAX = 1000000;
 
     /**
+     * Field of view of laser scanner in radian.
+     */
+    const double LASER_FOV = 3.0/2*PI;
+
+    /**
+     * Range of laser scanner in grid cells.
+     */
+    const int LASER_RANGE = 20;
+
+    /**
      * Map grid cell values.
      */
     typedef enum{

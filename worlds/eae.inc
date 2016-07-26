@@ -4,6 +4,8 @@
 
 # include device definitions for pioneer robots
 include "pioneer.inc"
+include "sick.inc"
+include "map.inc"
 
 # speed of simulation relative to real time
 speedup 1
@@ -60,7 +62,8 @@ define charging_bump model
         pose [ 0 0 -0.050 0 ]
 
         # range of sensor
-        range_max 5
+        range_max 20
+        range_max_id 20
 
         # field of view of sensor
         fov 360
@@ -68,7 +71,7 @@ define charging_bump model
 )
 
 # definition of a robot
-define robot pioneer2dx
+define robot pioneer2dx_front_sonar
 (
     # the controller to use (see ../examples/ctrl)
     ctrl "eae"
@@ -91,8 +94,8 @@ define robot pioneer2dx
     # cannot be detected by fiducial sensors
     fiducial_return 0
 
-    # cannot collide with other obstacles
-    obstacle_return 0
+    # can collide with other obstacles
+    obstacle_return 1
 
     # charging connector
     charging_bump()
@@ -103,6 +106,18 @@ define robot pioneer2dx
         model "friis"
         power 30
         sensitivity -80
+    )
+
+    # lidar
+    sickbase(
+        sensor(
+            samples 135 # angular resolution
+            range [0 20] # range in meters (check also ../examples/ctrl/eae/eae.hh)
+            fov 270 # field of view (check also ../examples/ctrl/eae/eae.hh)
+        )
+        color "blue"
+        ranger_return 1
+        watts 8
     )
 )
 
@@ -116,7 +131,7 @@ define docking_station model
     color "purple"
 
     # cannot be detected by a laser range finder
-    ranger_return 0
+    ranger_return -1
 
     # cannot collide with other obstacles
     obstacle_return 0

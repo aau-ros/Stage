@@ -18,8 +18,8 @@ namespace eae
         y_max = pose.y + (LASER_RANGE);
 
         // fill grid map with unknown values
-        vector<grid_cell_t> col(y_dim, CELL_UNKNOWN);
-        for(int i=0; i<x_dim; ++i){
+        vector<grid_cell_v> col(y_dim, CELL_UNKNOWN);
+        for(unsigned int i=0; i<x_dim; ++i){
             grid.push_back(col);
         }
 
@@ -65,7 +65,7 @@ namespace eae
 
         for(int i=grid.at(0).size()-1; i>=0; --i){
             int x = x_min;
-            vector< vector<grid_cell_t> >::iterator it;
+            vector< vector<grid_cell_v> >::iterator it;
 
             for(it = grid.begin(); it<grid.end(); ++it){
                 // robot position
@@ -106,7 +106,7 @@ namespace eae
 
         for(int i=grid.at(0).size()-1; i>=0; --i){
             int x = x_min;
-            vector< vector<grid_cell_t> >::iterator it;
+            vector< vector<grid_cell_v> >::iterator it;
 
             for(it = grid.begin(); it<grid.end(); ++it){
                 // frontier
@@ -134,17 +134,17 @@ namespace eae
         }
     }
 
-    void GridMap::Insert(int x, int y, grid_cell_t val)
+    void GridMap::Insert(int x, int y, grid_cell_v val)
     {
         // iterator
-        vector< vector<grid_cell_t> >::iterator it;
+        vector< vector<grid_cell_v> >::iterator it;
 
         // x index out of bounds, extend vector in x dimension
         if(x < x_min){
             // number of columns to add
             int add = x_min - x;
             // column containing unknown values
-            vector<grid_cell_t> col(y_dim, CELL_UNKNOWN);
+            vector<grid_cell_v> col(y_dim, CELL_UNKNOWN);
             // add column
             for(int i=0; i<add; ++i){
                 grid.insert(grid.begin(), col);
@@ -160,7 +160,7 @@ namespace eae
             // number of columns to add
             int add = x - x_max;
             // column containing unknown values
-            vector<grid_cell_t> col(y_dim, CELL_UNKNOWN);
+            vector<grid_cell_v> col(y_dim, CELL_UNKNOWN);
             // add column
             for(int i=0; i<add; ++i){
                 grid.push_back(col);
@@ -233,16 +233,16 @@ namespace eae
             // raytrace along the scan angle and set cells to free
             int i;
             for(i=0; i<*it; ++i){
-                x = round(i*cos(a));
-                y = round(i*sin(a));
+                x = pos.x + round(i*cos(a));
+                y = pos.y + round(i*sin(a));
                 Insert(x,y,CELL_FREE);
                 local->Insert(x,y,CELL_FREE);
             }
 
             // if ray hit an obstacle, set cell to occupied
             if(i<LASER_RANGE){
-                x = round(i*cos(a));
-                y = round(i*sin(a));
+                x = pos.x + round(i*cos(a));
+                y = pos.y + round(i*sin(a));
                 Insert(x,y,CELL_OCCUPIED);
                 local->Insert(x,y,CELL_OCCUPIED);
             }
@@ -256,8 +256,8 @@ namespace eae
         vector< vector <int> > frontiers;
 
         int x = x_min;
-        vector< vector<grid_cell_t> >::iterator it;
-        vector<grid_cell_t>::iterator jt;
+        vector< vector<grid_cell_v> >::iterator it;
+        vector<grid_cell_v>::iterator jt;
 
         for(it = grid.begin(); it<grid.end(); ++it){
             int y = y_min;
@@ -279,8 +279,8 @@ namespace eae
     void GridMap::Update(GridMap* map)
     {
         int x = map->x_min;
-        vector< vector<grid_cell_t> >::iterator it;
-        vector<grid_cell_t>::iterator jt;
+        vector< vector<grid_cell_v> >::iterator it;
+        vector<grid_cell_v>::iterator jt;
 
         for(it = map->grid.begin(); it<map->grid.end(); ++it){
             int y = map->y_min;
@@ -304,8 +304,8 @@ namespace eae
     int GridMap::ExploredCells()
     {
         int explored = 0;
-        vector< vector<grid_cell_t> >::iterator it;
-        vector<grid_cell_t>::iterator jt;
+        vector< vector<grid_cell_v> >::iterator it;
+        vector<grid_cell_v>::iterator jt;
 
         for(it = grid.begin(); it<grid.end(); ++it){
             for(jt = it->begin(); jt<it->end(); ++jt){
@@ -344,12 +344,104 @@ namespace eae
         return *this;
     }
 
-    grid_cell_t GridMap::Read(int x, int y)
+    grid_cell_t GridMap::M2C(Pose m)
+    {
+        // scale
+        m.x /= resolution;
+        m.y /= resolution;
+
+        // quantize
+        grid_cell_t c;
+        c.x= (unsigned int)round(m.x);
+        c.y= (unsigned int)round(m.y);
+
+        // shift
+        c.x += x_offset;
+        c.y += y_offset;
+
+        return c;
+    }
+
+    Pose GridMap::C2M(grid_cell_t c)
+    {
+        // shift
+        c.x -= x_offset;
+        c.y -= y_offset;
+
+        // convert
+        Pose m;
+        m.x= (meters_t)c.x;
+        m.y= (meters_t)c.y;
+
+        // scale
+        m.x *= resolution;
+        m.y *= resolution;
+
+        return m;
+    }
+
+    double GridMap::C2M(unsigned int c)
+    {
+        // convert
+        double m = (double)c;
+
+        // scale
+        m *= resolution;
+
+        return m;
+    }
+
+    unsigned int GridMap::Width()
+    {
+        return x_dim;
+    }
+
+    unsigned int GridMap::Height()
+    {
+        return y_dim;
+    }
+
+    uint8_t* GridMap::Rasterize()
+    {
+        uint8_t* data = new uint8_t[x_dim*y_dim];
+        int idx = 0;
+
+        for(unsigned int i=0; i<grid.at(0).size(); ++i){
+            vector< vector<grid_cell_v> >::iterator it;
+
+            for(it = grid.begin(); it<grid.end(); ++it){
+                // free
+                if(it->at(i) == CELL_FREE){
+                    data[idx] = 1;
+                }
+
+                // occupied
+                else if(it->at(i) == CELL_OCCUPIED){
+                    data[idx] = 9;
+                }
+
+                // unknown
+                else{
+                    if(PLAN_UNKNOWN){
+                        data[idx] = 1;
+                    }
+                    else{
+                        data[idx] = 9;
+                    }
+                }
+                ++idx;
+            }
+        }
+
+        return data;
+    }
+
+    grid_cell_v GridMap::Read(int x, int y)
     {
         return grid.at(x+x_offset).at(y+y_offset);
     }
 
-    void GridMap::Write(int x, int y, grid_cell_t val)
+    void GridMap::Write(int x, int y, grid_cell_v val)
     {
         grid.at(x+x_offset).at(y+y_offset) = val;
     }

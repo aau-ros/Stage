@@ -534,7 +534,7 @@ namespace eae
 
         // move to frontier
         if(goal.id > 0){
-            robot->Move(goal.pose, goal.highest_bid);
+            robot->SetGoal(goal.pose, goal.highest_bid);
             return; // only dock if no frontier auction was won
         }
 

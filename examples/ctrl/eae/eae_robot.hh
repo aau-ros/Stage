@@ -3,6 +3,7 @@
 
 #include "eae.hh"
 #include "eae_coordination.hh"
+#include "eae_graph.hh"
 #include "eae_gridmap.hh"
 #include "eae_logoutput.hh"
 
@@ -101,17 +102,25 @@ const int avoidduration = 10;
         void Explore();
 
         /**
-         * Move the robot to the pose stored in the private variable goal.
+         * Move the robot to the pose stored in the private variable goal
+         * following the planned path stored in the private variable path.
+         *
+         * @param bool clear: If true, remove old path and plan new one to goal. Default false.
          */
-        void Move();
+        void Move(bool clear=false);
 
         /**
-         * Move the robot to a given goal.
+         * Set a goal for the robot.
          *
          * @param Pose to: The goal where the robot should move to.
          * @param double bid: The bid the robot submitted for that goal.
          */
-        void Move(Pose to, double bid);
+        void SetGoal(Pose to, double bid);
+
+        /**
+         * Set the current goal for the robot to the next goal.
+         */
+        void SetGoalNext();
 
         /**
          * Calculate the bid for a frontier.
@@ -119,6 +128,16 @@ const int avoidduration = 10;
          * @param Pose frontier: The frontier to calculate the bid for.
          */
         double CalcBid(Pose frontier);
+
+        /**
+         * Compute a plan from start to goal using the A* algorithm
+         * and store the result in the private variable path.
+         *
+         * @param Pose start_pose: The starting point.
+         * @param Pose goal_pose: The end point.
+         * @return bool: Success of plan generation.
+         */
+        bool Plan(Pose start_pose, Pose goal_pose);
 
         /**
          * Return the camera object.
@@ -347,6 +366,13 @@ const int avoidduration = 10;
         bool ObstacleAvoid();
 
         /**
+         * Check whether the robot is currently following a planned path.
+         *
+         * @return bool: True if the robot has a valid path, false otherwise.
+         */
+        bool HasPlan();
+
+        /**
          * Callback function that is called when the robot changes position.
          * When the robot reached it's goal, it directs the robot to continue exploration.
          *
@@ -440,6 +466,11 @@ const int avoidduration = 10;
         double goal_next_bid;
 
         /**
+         * An intermediate goal that is part of the path calculated by the path planner.
+         */
+        Pose goal_step;
+
+        /**
          * The docking station that the robot selected for recharging.
          */
         ds_t ds;
@@ -479,6 +510,16 @@ const int avoidduration = 10;
          * @todo
          */
         int avoidcount;
+
+        /**
+         * The path planned by the path planner.
+         */
+        Graph* path;
+
+        /**
+         * Whether the planned path is valid or not.
+         */
+        bool valid_path;
     };
 }
 

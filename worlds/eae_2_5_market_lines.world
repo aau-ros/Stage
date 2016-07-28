@@ -14,7 +14,7 @@ coordination 0
     #obstacle_return 1
 #)
 
-robot( pose [ 1 0 0 0 ] )
+robot( pose [ -1 0 0 0 ] )
 #robot( pose [ -1 0 0 180 ] )
 #robot( pose [ 0 1 0 90 ] )
 #robot( pose [ 0 -1 0 270 ] )

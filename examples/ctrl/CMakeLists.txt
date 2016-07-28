@@ -19,7 +19,7 @@ endforeach( PLUGIN )
 
 ADD_LIBRARY( fasr2 MODULE fasr2.cc astar/findpath.cpp )
 
-ADD_LIBRARY( eae/eae MODULE eae/eae_coordination.cc eae/eae_gridmap.cc eae/eae_logoutput.cc eae/eae_robot.cc eae/eae_wifimessage.cc )
+ADD_LIBRARY( eae/eae MODULE eae/eae_coordination.cc eae/eae_graph.cc eae/eae_gridmap.cc eae/eae_logoutput.cc eae/eae_robot.cc eae/eae_wifimessage.cc astar/findpath.cpp )
 
 # add extras to the list of plugins
 SET( PLUGINS ${PLUGINS} fasr2 )

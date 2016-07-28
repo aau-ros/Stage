@@ -3,6 +3,7 @@
 
 #include "stage.hh"
 #include "worldfile.hh"
+#include "../astar/astar.h"
 #include <fstream>
 #include <ctime>
 #include <string>
@@ -21,7 +22,7 @@ namespace eae
     /**
      * Distance that the robot can be away from goal.
      */
-    const double GOAL_TOLERANCE = 0.05;
+    const double GOAL_TOLERANCE = 0.5;
 
     /**
      * Math constant π.
@@ -55,7 +56,15 @@ namespace eae
         CELL_FREE = 0,
         CELL_UNKNOWN,
         CELL_OCCUPIED
-    } grid_cell_t;
+    } grid_cell_v;
+
+    /**
+     * Map grid cell coordinate type.
+     */
+    typedef struct{
+        int x;
+        int y;
+    }grid_cell_t;
 
     /**
      * The current state of a robot.
@@ -114,7 +123,11 @@ namespace eae
      * Forward class declarations.
      */
     class Coordination;
+    class Edge;
+    class Graph;
+    class GraphVis;
     class LogOutput;
+    class Node;
     class Robot;
     class WifiMessage;
     class WifiMessageRobot;

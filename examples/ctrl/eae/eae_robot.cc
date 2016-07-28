@@ -79,8 +79,8 @@ namespace eae
         }
 
         // only explore if the robot is not avoiding an obstacle
-        if(ObstacleAvoid())
-            return;
+//         if(ObstacleAvoid())
+//             return;
 
         // get current position
         Pose pose = pos->GetPose();
@@ -100,9 +100,19 @@ namespace eae
         // get list of frontiers
         vector< vector <int> > frontiers = FrontiersReachable();
 
+        /// debug ///
+//         goal.x = frontiers.begin()->at(0);
+//         goal.y = frontiers.begin()->at(1);
+//         goal.a = 0;
+//         max_bid = 1;
+        /// debug ///
+
         // iterate through all frontiers
         vector< vector<int> >::iterator it;
         for(it=frontiers.begin(); it<frontiers.end(); ++it){
+            if(it->at(0) == pose.x && it->at(1) == pose.y)
+                continue;
+
             // make pose of coordinates
             frontier.x = it->at(0);
             frontier.y = it->at(1);
@@ -182,74 +192,109 @@ namespace eae
         }
     }
 
-    void Robot::Move()
+    void Robot::Move(bool clear)
     {
         // don't move if charging, dead or done exploring
         if(state == STATE_CHARGE || state == STATE_DEAD || state == STATE_FINISHED)
             return;
 
         // don't move if the robot is avoiding an obstacle
-        if(ObstacleAvoid())
-            return;
-
-        // robot already at current goal
-        if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE){
-            // start recharging
-            if(state == STATE_GOING_CHARGING){
-                // stop moving
-                pos->Stop();
-
-                // charging state
-                state = STATE_CHARGE;
-
-                // subscribe to docking station
-                ds.model->AddCallback(Model::CB_UPDATE, (model_callback_t)ChargingUpdate, this);
-                ds.model->Subscribe();
-
-                return;
-            }
-
-            if(state == STATE_CHARGE_QUEUE){
-                // stop moving
-                pos->Stop();
-                return;
-            }
-
-            // no valid goal in the queue
-            if(goal_next_bid == BID_INV){
-                printf("[%s:%d] [robot %d]: invalid goal\n", StripPath(__FILE__), __LINE__, id);
-                return;
-            }
-
-            // set goal and invalidate next goal
-            goal = goal_next;
-            goal_next_bid = BID_INV;
-        }
-
-        // store goal for visualization
-        pos->waypoints.push_back(ModelPosition::Waypoint(goal, wpcolor));
+//         if(ObstacleAvoid())
+//             return;
 
         // move robot to frontier / docking station
         if(state == STATE_EXPLORE || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE){
-            pos->GoTo(goal);
+            // make a new plan
+            if(clear){
+                printf("[%s:%d] [robot %d]: make new plans\n", StripPath(__FILE__), __LINE__, id);
+                // plan path to goal
+                valid_path = Plan(pos->GetPose(), goal);
+                printf("[%s:%d] [robot %d]: got new plan\n", StripPath(__FILE__), __LINE__, id);
+
+                // store goal for visualization
+                pos->waypoints.push_back(ModelPosition::Waypoint(goal, wpcolor));
+            }
+
+            // robot has a path, keep following
+            if(valid_path){
+                double a_goal, a_error;
+
+                // get angular velocity
+                path->GoodDirection(pos->GetPose(), 5.0, a_goal);
+                a_error = normalize(a_goal - pos->GetPose().a);
+
+                // set velocities
+                pos->SetTurnSpeed(a_error);
+                pos->SetXSpeed(pos->velocity_bounds->max);
+
+//                 printf("[%s:%d] [robot %d]: a_error: %.2f\n", StripPath(__FILE__), __LINE__, id, a_error);
+//                 a_error = normalize(a_goal - pos->GetPose().a);
+//                 pos->SetTurnSpeed(a_error);
+//                 pos->SetXSpeed(pos->velocity_bounds->max);
+//                 pos->SetTurnSpeed(0);
+//                 goal_step = path->PopBack()->pose;
+//                 pos->GoTo(goal_step);
+            }
+
+            // compute new path
+
         }
     }
 
-    void Robot::Move(Pose to, double bid)
+    void Robot::SetGoal(Pose to, double bid)
     {
-        // robot is at goal, move to next goal
-        if(to == goal || pos->GetPose().Distance(goal) < GOAL_TOLERANCE){
-            goal = to;
-            Move();
+        // TODO do we need this???
+        if(to == goal){}
+
+        // robot is at goal
+        // or does not have a goal
+        if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE || (state == STATE_EXPLORE && valid_path == false)){
+            // goal in queue
+            if(GoalQueue()){
+                printf("[%s:%d] [robot %d]: enqueue goal\n", StripPath(__FILE__), __LINE__, id);
+                // go to goal in queue
+                goal = goal_next;
+                goal_next_bid = BID_INV;
+
+                // enqueue new goal
+                goal_next = to;
+                goal_next_bid = bid;
+            }
+
+            // no goal in queue, go to new goal
+            else{
+                printf("[%s:%d] [robot %d]: set new goal\n", StripPath(__FILE__), __LINE__, id);
+                goal = to;
+            }
+
+            // move towards goal
+            Move(true);
         }
 
         // store as next goal only
         // - if my bid is higher than for the other goal already stored
         // - if robot needs recharging (goal should be a docking station)
-        else if(goal_next_bid == BID_INV || goal_next_bid < bid || state == STATE_GOING_CHARGING){
+        else if(GoalQueue() == false || goal_next_bid < bid || state == STATE_GOING_CHARGING || STATE_CHARGE_QUEUE){
+            printf("[%s:%d] [robot %d]: enqueue goal 2\n", StripPath(__FILE__), __LINE__, id);
             goal_next = to;
             goal_next_bid = bid;
         }
+
+        else{
+            printf("[%s:%d] [robot %d]: lost\n", StripPath(__FILE__), __LINE__, id);
+        }
+    }
+
+    void Robot::SetGoalNext()
+    {
+        // set new goal
+        goal = goal_next;
+
+        // invalidate next goal
+        goal_next_bid = BID_INV;
+
+        // start moving there
+        Move(true);
     }
 
     double Robot::CalcBid(Pose frontier)
@@ -260,8 +305,12 @@ namespace eae
         ds = cord->ClosestDs(pose);
 
         // calculate distances
-        double dg = pose.Distance(frontier);
-        double dgb = Distance(frontier.x, frontier.y, ds.pose.x, ds.pose.y);
+        if(!Plan(pose, frontier))
+            return BID_INV;
+        double dg = map->C2M(path->Size());
+        if(!Plan(frontier, ds.pose))
+            return BID_INV;
+        double dgb = map->C2M(path->Size());
 
         // no reachable frontier
         if(RemainingDist() <= dg + dgb)
@@ -282,6 +331,89 @@ namespace eae
 
         // calculate bid
         return -(W1*dg + W2*dgb + W3*dgbe + W4*theta + W5*dr);
+    }
+
+    bool Robot::Plan(Pose start_pose, Pose goal_pose)
+    {
+        //static float hits = 0;
+        //static float misses = 0;
+
+        // change my color to that of my destination
+        //pos->SetColor( dest->GetColor() );
+
+        grid_cell_t start_cell = map->M2C(start_pose);
+        grid_cell_t goal_cell = map->M2C(goal_pose);
+
+        ast::point_t start(start_cell.x, start_cell.y);
+        ast::point_t goal(goal_cell.x, goal_cell.y);
+
+        //printf( "searching from (%.2f, %.2f) [%d, %d]\n", start_pose.x, start_pose.y, start.x, start.y );
+        //printf( "searching to   (%.2f, %.2f) [%d, %d]\n", goal_pose.x, goal_pose.y, goal.x, goal.y );
+
+        // astar() is not reentrant, so we protect it thus
+
+        //graph.nodes.clear(); // whatever happens, we clear the old plan
+
+
+        //pthread_mutex_lock( &planner_mutex );
+
+        // check to see if we have a path planned for these positions already
+        //printf( "plancache @ %p size %d\n", &plancache, (int)plancache.size() );
+
+        //if( this->path )
+        //delete this->path;
+
+        // look for cached plan
+//         this->path = LookupPlan(start, goal);
+
+        // no plan cached
+//         if(!this->path){
+//             misses++;
+
+            vector<ast::point_t> path;
+            bool result = ast::astar(map->Rasterize(), (uint32_t)map->Width(), (uint32_t)map->Height(), start, goal, path);
+
+            if(!result){
+                printf("[%s:%d] [robot %d]: failed to find path from (%.2f,%.2f) to (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, start_pose.x, start_pose.y, goal_pose.x, goal_pose.y);
+                return false;
+            }
+            if(valid_path)
+                delete this->path;
+
+            this->path = new Graph();
+
+            unsigned int dist = 0;
+
+            Node* last_node = NULL;
+
+            vector<ast::point_t>::reverse_iterator rit;
+            for(rit = path.rbegin(); rit != path.rend(); ++rit){
+                //printf( "%d, %d\n", it->x, it->y );
+
+                grid_cell_t c;
+                c.x = rit->x;
+                c.y = rit->y;
+                Node* node = new Node(map->C2M(c), dist++);
+
+                this->path->AddNode(node);
+
+                if(last_node)
+                    last_node->AddEdge(new Edge(node));
+
+                last_node = node;
+            }
+
+//             CachePlan(start, goal, this->path);
+//         }
+//         else{
+//             hits++;
+            //puts( "FOUND CACHED PLAN" );
+//         }
+
+        //printf( "hits/misses %.2f\n", hits/misses );
+        //pthread_mutex_unlock( &planner_mutex );
+
+        return true;
     }
 
     OrthoCamera* Robot::GetCam()
@@ -327,7 +459,7 @@ namespace eae
 
         this->ds = ds;
         state = STATE_GOING_CHARGING;
-        Move(ds.pose, bid);
+        SetGoal(ds.pose, bid);
     }
 
     void Robot::DockQueue(ds_t ds, double bid)
@@ -337,9 +469,8 @@ namespace eae
             return;
 
         this->ds = ds;
-        goal = ds.pose;
         state = STATE_CHARGE_QUEUE;
-        Move(ds.pose, bid);
+        SetGoal(ds.pose, bid);
     }
 
     void Robot::UnDock()
@@ -456,6 +587,7 @@ namespace eae
 
         // visualize map progress
         map->VisualizeGui(pose);
+        //map->Visualize(pose);
 
         // share map with other robots in range
         cord->BroadcastMap(local);
@@ -620,7 +752,7 @@ namespace eae
         }
 
         // avoid obstacles
-        robot->ObstacleAvoid();
+        //robot->ObstacleAvoid();
 
         // clear map and compute traveled distance while traveling (not too often)
         Pose pose = pos->GetPose();
@@ -643,39 +775,81 @@ namespace eae
 
         // robot reached goal
         if(pos->GetPose().Distance(robot->goal) < GOAL_TOLERANCE){
-            // continue exploration
-            if(robot->state == STATE_EXPLORE){
-                // log data
-                robot->Log();
+            printf("[%s:%d] [robot %d]: reached goal\n", StripPath(__FILE__), __LINE__, robot->id);
+            // remove current path plan
+            delete robot->path;
+            robot->valid_path = false;
 
-                // continue exploration
-                robot->Explore();
-            }
+            // log data
+            // TODO consider lower frequency of file system access
+            robot->Log();
 
-            // robot needs recharging docking station
-            else if(robot->state == STATE_GOING_CHARGING){
-                if(robot->GoalQueue()){
-                    if(robot->goal_next == robot->ds.pose){
-                        robot->Move(robot->goal_next, robot->goal_next_bid);
-                    }
+            // robot needs recharging
+            if(robot->state == STATE_GOING_CHARGING){
+                // already at docking station
+                if(robot->goal == robot->ds.pose){
+                    // stop moving
+                    pos->Stop();
+
+                    // charging state
+                    robot->state = STATE_CHARGE;
+
+                    // subscribe to docking station
+                    robot->ds.model->AddCallback(Model::CB_UPDATE, (model_callback_t)ChargingUpdate, robot);
+                    robot->ds.model->Subscribe();
+                }
+
+                // next goal is docking station
+                else if(robot->GoalQueue() && robot->goal_next == robot->ds.pose){
+                    robot->SetGoalNext();
                 }
             }
 
             // robot waits for recharging at docking station
             else if(robot->state == STATE_CHARGE_QUEUE){
-                    // start docking station auction
-                    if(robot->ds.id > 0){
-                        robot->cord->DockingAuction(pos->GetPose(), robot->ds.id);
-                    }
+                // already at docking station
+                if(robot->goal == robot->ds.pose){
+                    // stop moving
+                    pos->Stop();
 
-                    // no docking station found
-                    else
-                        printf("[%s:%d] [robot %d]: no docking station found\n", StripPath(__FILE__), __LINE__, robot->id);
+                    // start docking station auction
+                    robot->cord->DockingAuction(pos->GetPose(), robot->ds.id);
+                }
+
+                // next goal is docking station
+                else if(robot->GoalQueue() && robot->goal_next == robot->ds.pose)
+                    robot->SetGoalNext();
+            }
+
+            // go to next goal
+            else if(robot->GoalQueue()){
+                printf("[%s:%d] [robot %d]: goto next goal\n", StripPath(__FILE__), __LINE__, robot->id);
+                robot->SetGoalNext();
+            }
+
+            // continue exploration
+            else if(robot->state == STATE_EXPLORE){
+                printf("[%s:%d] [robot %d]: continue exploration\n", StripPath(__FILE__), __LINE__, robot->id);
+                robot->Explore();
             }
 
             else{
                 printf("[%s:%d] [robot %d]: invalid state: %d\n", StripPath(__FILE__), __LINE__, robot->id, robot->state);
             }
+
+            return 0;
+        }
+
+        // robot reached next step of path, continue on the path
+//         if(pos->GetPose().Distance(robot->goal_step) < GOAL_TOLERANCE && path != NULL && path->Size() > 0){
+//             goal_step = path->PopBack()->pose;
+//             return 0;
+//         }
+
+        // robot is following the path to the next step, continue moving
+        if(robot->valid_path){
+            robot->Move();
+            return 0;
         }
 
         return 0; // run again
@@ -697,7 +871,7 @@ namespace eae
                     robot->goal.x = it->pose.x;
                     robot->goal.y = it->pose.y;
                     robot->goal.a = it->bearing;
-                    robot->Move();
+                    robot->SetGoal(robot->goal, 0);
                 }
             }
         }

@@ -130,14 +130,24 @@ const int avoidduration = 10;
         double CalcBid(Pose frontier);
 
         /**
-         * Compute a plan from start to goal using the A* algorithm
-         * and store the result in the private variable path.
+         * Compute a path from start to goal using the A* algorithm
+         * and store the result as a graph in the private variable path.
          *
          * @param Pose start_pose: The starting point.
          * @param Pose goal_pose: The end point.
-         * @return bool: Success of plan generation.
+         * @return bool: Success of path generation.
          */
         bool Plan(Pose start_pose, Pose goal_pose);
+
+        /**
+         * Generate a path from start to goal using the A* algorithm.
+         *
+         * @param Pose start_pose: The starting point.
+         * @param Pose goal_pose: The end point.
+         * @param vector<ast::point_t>* path: The resulting path will be stored here.
+         * @return bool: Success of path generation.
+         */
+        bool AStar(Pose start_pose, Pose goal_pose, vector<ast::point_t>* path);
 
         /**
          * Return the camera object.
@@ -307,9 +317,9 @@ const int avoidduration = 10;
          * @param double to_x: X-coordinate of end point.
          * @param double to_y: Y-coordinate of end point.
          *
-         * @return double: The distance.
+         * @return int: The distance, -1 if plan fails.
          */
-        double Distance(double from_x, double from_y, double to_x, double to_y);
+        int Distance(double from_x, double from_y, double to_x, double to_y);
 
         /**
          * Compute the distance from the current location to a point.
@@ -317,9 +327,9 @@ const int avoidduration = 10;
          * @param double to_x: X-coordinate of end point.
          * @param double to_y: Y-coordinate of end point.
          *
-         * @return double: The distance.
+         * @return int: The distance, -1 if plan fails.
          */
-        double Distance(double to_x, double to_y);
+        int Distance(double to_x, double to_y);
 
         /**
          * Compute the angle between two points starting from the positive x-axis.

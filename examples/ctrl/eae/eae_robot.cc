@@ -305,12 +305,12 @@ namespace eae
         ds = cord->ClosestDs(pose);
 
         // calculate distances
-        if(!Plan(pose, frontier))
+        int dg = Distance(frontier.x, frontier.y);
+        if(dg < 0)
             return BID_INV;
-        double dg = map->C2M(path->Size());
-        if(!Plan(frontier, ds.pose))
+        int dgb = Distance(frontier.x, frontier.y, ds.pose.x, ds.pose.y);
+        if(dgb < 0)
             return BID_INV;
-        double dgb = map->C2M(path->Size());
 
         // no reachable frontier
         if(RemainingDist() <= dg + dgb)
@@ -335,83 +335,55 @@ namespace eae
 
     bool Robot::Plan(Pose start_pose, Pose goal_pose)
     {
-        //static float hits = 0;
-        //static float misses = 0;
+        // execute a* algorithm
+        vector<ast::point_t> path;
+        if(AStar(start_pose, goal_pose, &path) == false)
+            return false;
 
-        // change my color to that of my destination
-        //pos->SetColor( dest->GetColor() );
+        // remove old path
+        if(valid_path){
+            delete this->path;
+            valid_path = false;
+        }
 
+        // generate path as graph
+        this->path = new Graph();
+        unsigned int dist = 0;
+        Node* last_node = NULL;
+        vector<ast::point_t>::reverse_iterator rit;
+        for(rit = path.rbegin(); rit != path.rend(); ++rit){
+            grid_cell_t c;
+            c.x = rit->x;
+            c.y = rit->y;
+            Node* node = new Node(map->C2M(c), dist++);
+
+            this->path->AddNode(node);
+
+            if(last_node)
+                last_node->AddEdge(new Edge(node));
+
+            last_node = node;
+        }
+
+        return true;
+    }
+
+    bool Robot::AStar(Pose start_pose, Pose goal_pose, vector<ast::point_t>* path)
+    {
+        // start and goal
         grid_cell_t start_cell = map->M2C(start_pose);
         grid_cell_t goal_cell = map->M2C(goal_pose);
-
         ast::point_t start(start_cell.x, start_cell.y);
         ast::point_t goal(goal_cell.x, goal_cell.y);
 
-        //printf( "searching from (%.2f, %.2f) [%d, %d]\n", start_pose.x, start_pose.y, start.x, start.y );
-        //printf( "searching to   (%.2f, %.2f) [%d, %d]\n", goal_pose.x, goal_pose.y, goal.x, goal.y );
+        // find path
+        bool result = ast::astar(map->Rasterize(), (uint32_t)map->Width(), (uint32_t)map->Height(), start, goal, *path);
 
-        // astar() is not reentrant, so we protect it thus
-
-        //graph.nodes.clear(); // whatever happens, we clear the old plan
-
-
-        //pthread_mutex_lock( &planner_mutex );
-
-        // check to see if we have a path planned for these positions already
-        //printf( "plancache @ %p size %d\n", &plancache, (int)plancache.size() );
-
-        //if( this->path )
-        //delete this->path;
-
-        // look for cached plan
-//         this->path = LookupPlan(start, goal);
-
-        // no plan cached
-//         if(!this->path){
-//             misses++;
-
-            vector<ast::point_t> path;
-            bool result = ast::astar(map->Rasterize(), (uint32_t)map->Width(), (uint32_t)map->Height(), start, goal, path);
-
-            if(!result){
-                printf("[%s:%d] [robot %d]: failed to find path from (%.2f,%.2f) to (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, start_pose.x, start_pose.y, goal_pose.x, goal_pose.y);
-                return false;
-            }
-            if(valid_path)
-                delete this->path;
-
-            this->path = new Graph();
-
-            unsigned int dist = 0;
-
-            Node* last_node = NULL;
-
-            vector<ast::point_t>::reverse_iterator rit;
-            for(rit = path.rbegin(); rit != path.rend(); ++rit){
-                //printf( "%d, %d\n", it->x, it->y );
-
-                grid_cell_t c;
-                c.x = rit->x;
-                c.y = rit->y;
-                Node* node = new Node(map->C2M(c), dist++);
-
-                this->path->AddNode(node);
-
-                if(last_node)
-                    last_node->AddEdge(new Edge(node));
-
-                last_node = node;
-            }
-
-//             CachePlan(start, goal, this->path);
-//         }
-//         else{
-//             hits++;
-            //puts( "FOUND CACHED PLAN" );
-//         }
-
-        //printf( "hits/misses %.2f\n", hits/misses );
-        //pthread_mutex_unlock( &planner_mutex );
+        // error
+        if(!result){
+            printf("[%s:%d] [robot %d]: failed to find path from (%.2f,%.2f) to (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, start_pose.x, start_pose.y, goal_pose.x, goal_pose.y);
+            return false;
+        }
 
         return true;
     }
@@ -593,14 +565,17 @@ namespace eae
         cord->BroadcastMap(local);
     }
 
-    double Robot::Distance(double from_x, double from_y, double to_x, double to_y)
+    int Robot::Distance(double from_x, double from_y, double to_x, double to_y)
     {
-        double x = to_x - from_x;
-        double y = to_y - from_y;
-        return hypot(x,y);
+        // execute a* algorithm
+        vector<ast::point_t> path;
+        if(AStar(Pose(from_x, from_y, 0, 0), Pose(to_x, to_y, 0, 0), &path) == false)
+            return -1;
+
+        return (int)path.size();
     }
 
-    double Robot::Distance(double to_x, double to_y)
+    int Robot::Distance(double to_x, double to_y)
     {
         return Distance(pos->GetPose().x, pos->GetPose().y, to_x, to_y);
     }

@@ -100,13 +100,6 @@ namespace eae
         // get list of frontiers
         vector< vector <int> > frontiers = FrontiersReachable();
 
-        /// debug ///
-//         goal.x = frontiers.begin()->at(0);
-//         goal.y = frontiers.begin()->at(1);
-//         goal.a = 0;
-//         max_bid = 1;
-        /// debug ///
-
         // iterate through all frontiers
         vector< vector<int> >::iterator it;
         for(it=frontiers.begin(); it<frontiers.end(); ++it){
@@ -226,26 +219,12 @@ namespace eae
                 // set velocities
                 pos->SetTurnSpeed(a_error);
                 pos->SetXSpeed(pos->velocity_bounds->max);
-
-//                 printf("[%s:%d] [robot %d]: a_error: %.2f\n", StripPath(__FILE__), __LINE__, id, a_error);
-//                 a_error = normalize(a_goal - pos->GetPose().a);
-//                 pos->SetTurnSpeed(a_error);
-//                 pos->SetXSpeed(pos->velocity_bounds->max);
-//                 pos->SetTurnSpeed(0);
-//                 goal_step = path->PopBack()->pose;
-//                 pos->GoTo(goal_step);
             }
-
-            // compute new path
-
         }
     }
 
     void Robot::SetGoal(Pose to, double bid)
     {
-        // TODO do we need this???
-        if(to == goal){}
-
         // robot is at goal
         // or does not have a goal
         if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE || (state == STATE_EXPLORE && valid_path == false)){
@@ -814,12 +793,6 @@ namespace eae
 
             return 0;
         }
-
-        // robot reached next step of path, continue on the path
-//         if(pos->GetPose().Distance(robot->goal_step) < GOAL_TOLERANCE && path != NULL && path->Size() > 0){
-//             goal_step = path->PopBack()->pose;
-//             return 0;
-//         }
 
         // robot is following the path to the next step, continue moving
         if(robot->valid_path){

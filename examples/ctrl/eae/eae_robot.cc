@@ -199,10 +199,8 @@ namespace eae
         if(state == STATE_EXPLORE || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE){
             // make a new plan
             if(clear){
-                printf("[%s:%d] [robot %d]: make new plans\n", StripPath(__FILE__), __LINE__, id);
                 // plan path to goal
                 valid_path = Plan(pos->GetPose(), goal);
-                printf("[%s:%d] [robot %d]: got new plan\n", StripPath(__FILE__), __LINE__, id);
 
                 // store goal for visualization
                 pos->waypoints.push_back(ModelPosition::Waypoint(goal, wpcolor));
@@ -227,10 +225,9 @@ namespace eae
     {
         // robot is at goal
         // or does not have a goal
-        if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE || (state == STATE_EXPLORE && valid_path == false)){
+        if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE || ((state == STATE_EXPLORE || state == STATE_GOING_CHARGING) && valid_path == false)){
             // goal in queue
             if(GoalQueue()){
-                printf("[%s:%d] [robot %d]: enqueue goal\n", StripPath(__FILE__), __LINE__, id);
                 // go to goal in queue
                 goal = goal_next;
                 goal_next_bid = BID_INV;
@@ -242,7 +239,6 @@ namespace eae
 
             // no goal in queue, go to new goal
             else{
-                printf("[%s:%d] [robot %d]: set new goal\n", StripPath(__FILE__), __LINE__, id);
                 goal = to;
             }
 
@@ -254,13 +250,8 @@ namespace eae
         // - if my bid is higher than for the other goal already stored
         // - if robot needs recharging (goal should be a docking station)
         else if(GoalQueue() == false || goal_next_bid < bid || state == STATE_GOING_CHARGING || STATE_CHARGE_QUEUE){
-            printf("[%s:%d] [robot %d]: enqueue goal 2\n", StripPath(__FILE__), __LINE__, id);
             goal_next = to;
             goal_next_bid = bid;
-        }
-
-        else{
-            printf("[%s:%d] [robot %d]: lost\n", StripPath(__FILE__), __LINE__, id);
         }
     }
 
@@ -426,6 +417,15 @@ namespace eae
 
     void Robot::UnDock()
     {
+        // log data
+        Log();
+
+        // docking station is free now
+        cord->DsVacant(ds.id);
+
+        // invalidate any previous goals
+        goal_next_bid = BID_INV;
+
         // continue exploration
         state = STATE_EXPLORE;
         Explore();
@@ -537,7 +537,7 @@ namespace eae
         GridMap* local = map->Clear(pose, laser->GetSensors()[0].ranges);
 
         // visualize map progress
-        map->VisualizeGui(pose);
+        //map->VisualizeGui(pose);
         //map->Visualize(pose);
 
         // share map with other robots in range
@@ -729,13 +729,11 @@ namespace eae
 
         // robot reached goal
         if(pos->GetPose().Distance(robot->goal) < GOAL_TOLERANCE){
-            printf("[%s:%d] [robot %d]: reached goal\n", StripPath(__FILE__), __LINE__, robot->id);
             // remove current path plan
             delete robot->path;
             robot->valid_path = false;
 
             // log data
-            // TODO consider lower frequency of file system access
             robot->Log();
 
             // robot needs recharging
@@ -777,18 +775,16 @@ namespace eae
 
             // go to next goal
             else if(robot->GoalQueue()){
-                printf("[%s:%d] [robot %d]: goto next goal\n", StripPath(__FILE__), __LINE__, robot->id);
                 robot->SetGoalNext();
             }
 
             // continue exploration
             else if(robot->state == STATE_EXPLORE){
-                printf("[%s:%d] [robot %d]: continue exploration\n", StripPath(__FILE__), __LINE__, robot->id);
                 robot->Explore();
             }
 
             else{
-                printf("[%s:%d] [robot %d]: invalid state: %d\n", StripPath(__FILE__), __LINE__, robot->id, robot->state);
+                printf("[%s:%d] [robot %d]: invalid state: %s\n", StripPath(__FILE__), __LINE__, robot->id, STATE_STRING[robot->state].c_str());
             }
 
             return 0;
@@ -814,7 +810,7 @@ namespace eae
             // check fiducial return signal
             for(it = fids.begin(); it<fids.end(); ++it){
                 // fiducial is my docking station
-                if(it->id == robot->ds.id){
+                if(it->id == robot->ds.id && robot->goal != robot->ds.pose){
                     // move robot to docking station
                     robot->goal.x = it->pose.x;
                     robot->goal.y = it->pose.y;
@@ -828,18 +824,6 @@ namespace eae
         else if(robot->state == STATE_CHARGE){
             // robot is done charging
             if(robot->FullyCharged()){
-                // log data
-                robot->Log();
-
-                // docking station is free now
-                robot->cord->DsVacant(robot->ds.id);
-
-                // invalidate any previous goals
-                robot->goal_next_bid = BID_INV;
-
-                // continue exploration
-                robot->state = STATE_EXPLORE;
-                robot->Explore();
             }
         }
 
@@ -857,6 +841,7 @@ namespace eae
     {
         // stop recharging
         if(robot->FullyCharged() || robot->state != STATE_CHARGE){
+            robot->pos->FindPowerPack()->ChargeStop();
             robot->UnDock();
             return -1; // no more updates
         }

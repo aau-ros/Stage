@@ -25,11 +25,10 @@ namespace eae
         /**
          * Constructor.
          *
-         * @param Pose pose: The initial position of the robot.
-         * @param World* world: The world used for visualization.
+         * @param ModelPosition* pos: The position model of the robot.
          * @param int robot: The ID of the robot.
          */
-        GridMap(Pose pose, World* world, int robot);
+        GridMap(ModelPosition* pos, int robot);
 
         /**
          * Visualize the map in the command line.
@@ -216,6 +215,11 @@ namespace eae
          * Resolution of the map.
          */
         double resolution;
+
+        /**
+         * Position model of the robot.
+         */
+        ModelPosition* pos;
     };
 }
 

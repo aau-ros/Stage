@@ -4,6 +4,9 @@
 
 define floorplan model
 (
+  # name for selecting from code
+  name "floorplan"
+
   # sombre, sensible, artistic
   color "gray30"
 

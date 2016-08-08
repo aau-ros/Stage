@@ -5,14 +5,13 @@ robots 2
 docking_stations 5
 coordination 0
 
-#floorplan
-#(
-    #name "lines"
-    #pose [100 0 0 0]
-    #size [250.000 50.000 1]
-    #bitmap "bitmaps/lines_l.png"
-    #obstacle_return 1
-#)
+floorplan
+(
+    pose [100 0 0 0]
+    size [250.000 50.000 1]
+    bitmap "bitmaps/lines_l.png"
+    obstacle_return 1
+)
 
 robot( pose [ -1 0 0 0 ] )
 #robot( pose [ -1 0 0 180 ] )

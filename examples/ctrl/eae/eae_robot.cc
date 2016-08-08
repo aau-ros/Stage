@@ -15,7 +15,7 @@ namespace eae
         fid = (ModelFiducial*)pos->GetUnusedModelOfType("fiducial");
         laser = (ModelRanger*)pos->GetChild( "ranger:1" );
         sonar = (ModelRanger*)pos->GetChild( "ranger:0" );
-        map = new GridMap(pos->GetPose(), pos->GetWorld(), id);
+        map = new GridMap(pos, id);
         cord = new Coordination(pos, this);
         log = new LogOutput(id, robots, dss, cord->GetWifiModel(), cord->GetStrategy(), cord->GetStrategyString(), pos->FindPowerPack()->GetCapacity());
         cam = new OrthoCamera();
@@ -537,7 +537,7 @@ namespace eae
         GridMap* local = map->Clear(pose, laser->GetSensors()[0].ranges);
 
         // visualize map progress
-        //map->VisualizeGui(pose);
+        map->VisualizeGui(pose);
         //map->Visualize(pose);
 
         // share map with other robots in range

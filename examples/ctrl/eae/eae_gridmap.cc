@@ -5,8 +5,15 @@ using namespace std;
 
 namespace eae
 {
-    GridMap::GridMap(Pose pose, World* world, int robot)
+    GridMap::GridMap(ModelPosition* pos, int robot)
     {
+        // store position model
+        this->pos = pos;
+
+        // get required objects from position model
+        Pose pose = pos->GetPose();
+        World* world = pos->GetWorld();
+
         // set dimension parameters
         x_dim = 1 + 2 * (LASER_RANGE);
         y_dim = 1 + 2 * (LASER_RANGE);
@@ -212,39 +219,61 @@ namespace eae
 
     GridMap* GridMap::Clear(Pose pos, vector<meters_t> scan)
     {
-        // local map (for returning)
-        GridMap* local = new GridMap(pos, vis_frontier->GetWorld(), robot);
+        // local map containing only the updated cells (for returning)
+        GridMap* local = new GridMap(this->pos, robot);
 
-        // number of scan values
-        int n = scan.size();
-        int j = 0;
+        // get global from underlying floorplan model
+        Model * map = this->pos->GetWorld()->GetModel("floorplan");
 
-        // iterate through all scan values, i.e. all scan angles
-        vector<meters_t>::iterator it;
-        for(it=scan.begin(); it<scan.end(); ++it){
-            // absolute scan angle (starting from pos x-asis)
-            double a = pos.a - LASER_FOV/2 + (j+0.5)/n*LASER_FOV;
-            ++j;
+        // read global map size
+        int w = round(map->GetGeom().size.x);
+        int h = round(map->GetGeom().size.y);
 
-            // absolute cell indexes
-            int x = 0;
-            int y = 0;
+        // read global map origin
+        Pose origin = map->GetPose();
 
-            // raytrace along the scan angle and set cells to free
-            int i;
-            for(i=0; i<*it; ++i){
-                x = pos.x + round(i*cos(a));
-                y = pos.y + round(i*sin(a));
-                Insert(x,y,CELL_FREE);
-                local->Insert(x,y,CELL_FREE);
-            }
+        // read global map data
+        uint8_t* data = new uint8_t[w*h];
+        memset(data, 0, sizeof(uint8_t)*w*h);
+        map->Rasterize(data, w, h, 1, 1);
 
-            // if ray hit an obstacle, set cell to occupied
-            if(i<LASER_RANGE){
-                x = pos.x + round(i*cos(a));
-                y = pos.y + round(i*sin(a));
-                Insert(x,y,CELL_OCCUPIED);
-                local->Insert(x,y,CELL_OCCUPIED);
+        // iterate over all angles of fov
+        for(int a=0; a<360; ++a){
+            // iterate until laser range or obstacle
+            for(int r=0; r<LASER_RANGE; ++r){
+                // coordinates in local map
+                int x = pos.x + floor(r*cos(a));
+                int y = pos.y + floor(r*sin(a));
+
+                // index in global map
+                int i = (y-origin.y+h/2)*w + x-origin.x+w/2;
+
+                // index out of bounds
+                if(i < 0 || w*h <= i)
+                    break;
+
+                // read value of grid cell in global map
+                uint8_t cell = data[i];
+                grid_cell_v value;
+                switch(cell){
+                    case 0:
+                        value = CELL_FREE;
+                        break;
+                    case 1:
+                        value = CELL_OCCUPIED;
+                        break;
+                    default:
+                        value = CELL_UNKNOWN;
+                        printf("[%s:%d] [robot %d]: Could determine cell value at (%d,%d) with index %d!\n", StripPath(__FILE__), __LINE__, robot, x, y, i);
+                }
+
+                // insert cell value in local map
+                Insert(x,y,value);
+                local->Insert(x,y,value);
+
+                // hit obstacle, stop
+                if(value == CELL_OCCUPIED)
+                    break;
             }
         }
 
@@ -462,6 +491,10 @@ namespace eae
 
         // check neighboring cells
         try{
+            // one neighbors is occupied, robot cannot go so close to walls
+            if(Read(x-1,y-1) == CELL_OCCUPIED || Read(x-1,y) == CELL_OCCUPIED || Read(x-1,y+1) == CELL_OCCUPIED || Read(x,y-1) == CELL_OCCUPIED || Read(x,y+1) == CELL_OCCUPIED || Read(x+1,y-1) == CELL_OCCUPIED || Read(x+1,y) == CELL_OCCUPIED || Read(x+1,y+1) == CELL_OCCUPIED){
+                return false;
+            }
             // all neighbors are known, cannot be frontier
             if(Read(x-1,y-1) != CELL_UNKNOWN && Read(x-1,y) != CELL_UNKNOWN && Read(x-1,y+1) != CELL_UNKNOWN && Read(x,y-1) != CELL_UNKNOWN && Read(x,y+1) != CELL_UNKNOWN && Read(x+1,y-1) != CELL_UNKNOWN && Read(x+1,y) != CELL_UNKNOWN && Read(x+1,y+1) != CELL_UNKNOWN){
                 return false;

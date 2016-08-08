@@ -441,7 +441,17 @@ namespace eae
             for(it = grid.begin(); it<grid.end(); ++it){
                 // free
                 if(it->at(i) == CELL_FREE){
-                    data[idx] = 1;
+                    // inflate walls to keep path planner from going too close to walls
+                    if((it-1)->at(i-1) == CELL_FREE && (it-1)->at(i) == CELL_FREE && (it-1)->at(i+1) == CELL_FREE
+                        && it->at(i-1) == CELL_FREE && it->at(i+1) == CELL_FREE
+                        && (it+1)->at(i-1) == CELL_FREE && (it+1)->at(i) == CELL_FREE && (it+1)->at(i+1) == CELL_FREE)
+                        data[idx] = 1;
+                    else if((it-1)->at(i) == CELL_FREE
+                        && it->at(i-1) == CELL_FREE && it->at(i+1) == CELL_FREE
+                        && (it+1)->at(i) == CELL_FREE)
+                        data[idx] = 3;
+                    else
+                        data[idx] = 5;
                 }
 
                 // occupied

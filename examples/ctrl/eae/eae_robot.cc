@@ -13,8 +13,8 @@ namespace eae
         // instantiate objects
         this->pos = pos;
         fid = (ModelFiducial*)pos->GetUnusedModelOfType("fiducial");
-        laser = (ModelRanger*)pos->GetChild( "ranger:1" );
-        sonar = (ModelRanger*)pos->GetChild( "ranger:0" );
+        laser = (ModelRanger*)pos->GetChild("ranger:1");
+        sonar = (ModelRanger*)pos->GetChild("ranger:0");
         map = new GridMap(pos, id);
         cord = new Coordination(pos, this);
         log = new LogOutput(id, robots, dss, cord->GetWifiModel(), cord->GetStrategy(), cord->GetStrategyString(), pos->FindPowerPack()->GetCapacity());
@@ -204,19 +204,29 @@ namespace eae
 
                 // store goal for visualization
                 pos->waypoints.push_back(ModelPosition::Waypoint(goal, wpcolor));
+
+                // visualize path TODO: not working!
+                if(valid_path){
+                    GraphVis* vis_path = new GraphVis(&path);
+                    vis_path->Visualize(pos, cam);
+                }
             }
 
             // robot has a path, keep following
             if(valid_path){
                 double a_goal, a_error;
 
-                // get angular velocity
-                path->GoodDirection(pos->GetPose(), 5.0, a_goal);
+                // get angular velocity to reach next node on path
+                path->GoodDirection(pos->GetPose(), 3, a_goal);
                 a_error = normalize(a_goal - pos->GetPose().a);
+
+                // avoiding obstacle, don't follow path
+                if(ObstacleAvoid(a_error))
+                    return;
 
                 // set velocities
                 pos->SetTurnSpeed(a_error);
-                pos->SetXSpeed(pos->velocity_bounds->max);
+                pos->SetXSpeed(pos->velocity_bounds->max/abs(a_error));
             }
         }
     }
@@ -614,9 +624,9 @@ namespace eae
             pos->GetWorld()->Stop();
     }
 
-    bool Robot::ObstacleAvoid()
+    bool Robot::ObstacleAvoid(double heading)
     {
-        bool obstruction = false;
+        bool avoid = false;
         bool stop = false;
 
         // find the closest distance to the left and right and check if
@@ -624,65 +634,77 @@ namespace eae
         double minleft = 1e6;
         double minright = 1e6;
 
-        // Get the data from the first sensor of the laser
-        const std::vector<meters_t>& scan = sonar->GetSensors()[0].ranges;
+        // get the sonar sensors
+        const vector<ModelRanger::Sensor>& sonars = sonar->GetSensors();
 
-        uint32_t sample_count = scan.size();
+        // one of the two front center sonars detected an obstacle
+//         if(sonars[3].ranges[0] < minfrontdistance || sonars[4].ranges[0] < minfrontdistance)
+//             avoid = true;
 
-        for(uint32_t i = 0; i < sample_count; i++){
-            //printf("[%s:%d] [robot %d]: %.0f\n", StripPath(__FILE__), __LINE__, id, scan[i]);
 
-            if( (i > (sample_count/4))
-            && (i < (sample_count - (sample_count/4)))
-            && scan[i] < minfrontdistance)
-            {
-                //puts( "  obstruction!" );
-                obstruction = true;
+        // check every sonar sensor for obstacles
+        for(unsigned int i=1; i < sonars.size()-1; i++){
+            // sonar range reading
+            meters_t range = sonars[i].ranges[0];
+//             printf("[%s:%d] [robot %d]: %.2f\n", StripPath(__FILE__), __LINE__, id, range);
+
+            // obstacle ahead, robot needs to react
+            if((i >= (sonars.size()/4)) && (i < (sonars.size() - (sonars.size()/4))) && range < minfrontdistance){
+                avoid = true;
             }
 
-            if( scan[i] < stopdist )
-            {
-                //puts( "  stopping!" );
+            // stop immediately
+            if(range < stopdist){
                 stop = true;
             }
 
-            if( i > sample_count/2 )
-                minleft = std::min( minleft, scan[i] );
+            // store minimum distance to obstacle for each side
+            if(i < sonars.size()/2)
+                minleft = min(minleft, range);
             else
-                minright = std::min( minright, scan[i] );
+                minright = min(minright, range);
         }
 
-            //puts( "" );
-            //printf( "minleft %.3f \n", minleft );
-            //printf( "minright %.3f\n ", minright );
+        // there is either an obstacle ahead or the robot is still avoiding an obstacle previously seen
+        if(avoid || stop || (avoidcount>0)){
+            // set forward speed
+            if(stop)
+                pos->SetXSpeed(0);
+            else
+                pos->SetXSpeed(pos->velocity_bounds->max/avoidcount);
+            //printf("set speed %.2f\n", pos->velocity_bounds->max * (min(minleft,minright) - stopdist));
+//             printf("set speed %.2f\n", pos->velocity_bounds->max / avoidcount);
+//             pos->SetXSpeed(pos->velocity_bounds->max / avoidcount);
 
-        if( obstruction || stop || (avoidcount>0) ){
-            //printf( "Avoid %d\n", avoidcount );
-
-            pos->SetXSpeed( stop ? 0.0 : avoidspeed );
-
-            /* once we start avoiding, select a turn direction and stick
-            with it for a few iterations */
-            if( avoidcount < 1 )
-            {
-                //puts( "Avoid START" );
+            // once we start avoiding, select a turn direction and stick with it for a few iterations
+            if(avoidcount < 1){
+                printf("avoid obstacle by turning ");
                 avoidcount = random() % avoidduration + avoidduration;
 
-                if( minleft < minright  )
-                {
-                    pos->SetTurnSpeed( -avoidturn );
-                    //printf( "turning right %.2f\n", -avoidturn );
+                // check two more sensors to decide which direction to turn
+//                 if(sonars[2].ranges[0] < sonars[5].ranges[0]){
+//                     pos->SetTurnSpeed(-avoidturn);
+//                     printf("right %.2f\n", -avoidturn);
+//                 }
+//                 else{
+//                     pos->SetTurnSpeed(+avoidturn);
+//                     printf("left %.2f\n", +avoidturn);
+//                 }
+
+                // turn to the right
+                if(minleft < minright){
+                    pos->SetTurnSpeed(heading-avoidturn);
+                    printf("right %.2f\n", heading-avoidturn);
                 }
-                else
-                {
-                    pos->SetTurnSpeed( +avoidturn );
-                    //printf( "turning left %2f\n", +avoidturn );
+                else{
+                    pos->SetTurnSpeed(heading+avoidturn);
+                    printf("left %.2f\n", heading+avoidturn);
                 }
             }
 
-            avoidcount--;
+            --avoidcount;
 
-            return true; // busy avoding obstacles
+            return true; // busy avoding obstacle
         }
 
         return false; // didn't have to avoid anything

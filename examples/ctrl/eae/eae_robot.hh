@@ -69,8 +69,6 @@ namespace eae
     /**
      * @todo: comment
      */
-const double cruisespeed = 0.4;
-const double avoidspeed = 0.05;
 const double avoidturn = 0.5;
 const double minfrontdistance = 1.2;
 const double stopdist = 1;
@@ -371,9 +369,10 @@ const int avoidduration = 10;
         /**
          * Avoid obstacles.
          *
+         * @param double heading: The direction the robot would go without obstacles.
          * @return bool: Whether or not the robot is currently busy avoiding an obstacle.
          */
-        bool ObstacleAvoid();
+        bool ObstacleAvoid(double heading);
 
         /**
          * Check whether the robot is currently following a planned path.
@@ -517,7 +516,8 @@ const int avoidduration = 10;
         usec_t last_charge;
 
         /**
-         * @todo
+         * Countdown for avoiding obstacle.
+         * It stores the number of iterations a robot sticks to its decision of avoiding an obstacle in a certain direction.
          */
         int avoidcount;
 

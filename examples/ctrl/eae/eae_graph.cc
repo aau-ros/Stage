@@ -99,11 +99,7 @@ namespace eae
         }
 
         //else
-        heading_result = atan2(best_node->pose.y-pose.y, best_node->pose.x-pose.x);
-
-        // add a little bias to one side (the left)
-        // creates two lanes of robot traffic
-        heading_result = normalize(heading_result + 0.25);
+        heading_result = normalize(atan2(best_node->pose.y-pose.y, best_node->pose.x-pose.x));
 
         return true;
     }

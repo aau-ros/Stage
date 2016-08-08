@@ -367,12 +367,11 @@ const int avoidduration = 10;
         void Finalize();
 
         /**
-         * Avoid obstacles.
+         * Set the motor velocities and avoid obstacles.
          *
-         * @param double heading: The direction the robot would go without obstacles.
-         * @return bool: Whether or not the robot is currently busy avoiding an obstacle.
+         * @param double direction: The relative direction the robot would go without obstacles.
          */
-        bool ObstacleAvoid(double heading);
+        void SetMotorSpeed(double direction);
 
         /**
          * Check whether the robot is currently following a planned path.

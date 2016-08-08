@@ -78,10 +78,6 @@ namespace eae
             state = STATE_EXPLORE;
         }
 
-        // only explore if the robot is not avoiding an obstacle
-//         if(ObstacleAvoid())
-//             return;
-
         // get current position
         Pose pose = pos->GetPose();
 
@@ -191,10 +187,6 @@ namespace eae
         if(state == STATE_CHARGE || state == STATE_DEAD || state == STATE_FINISHED)
             return;
 
-        // don't move if the robot is avoiding an obstacle
-//         if(ObstacleAvoid())
-//             return;
-
         // move robot to frontier / docking station
         if(state == STATE_EXPLORE || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE){
             // make a new plan
@@ -220,13 +212,8 @@ namespace eae
                 path->GoodDirection(pos->GetPose(), 3, a_goal);
                 a_error = normalize(a_goal - pos->GetPose().a);
 
-                // avoiding obstacle, don't follow path
-                if(ObstacleAvoid(a_error))
-                    return;
-
-                // set velocities
-                pos->SetTurnSpeed(a_error);
-                pos->SetXSpeed(pos->velocity_bounds->max/abs(a_error));
+                // set velocities and avoid obstacles
+                SetMotorSpeed(a_error);
             }
         }
     }
@@ -624,90 +611,85 @@ namespace eae
             pos->GetWorld()->Stop();
     }
 
-    bool Robot::ObstacleAvoid(double heading)
+    void Robot::SetMotorSpeed(double direction)
     {
-        bool avoid = false;
-        bool stop = false;
+        // current position of the robot
+        int rx = round(pos->GetPose().x);
+        int ry = round(pos->GetPose().y);
+        double ra = pos->GetPose().a;
 
-        // find the closest distance to the left and right and check if
-        // there's anything in front
-        double minleft = 1e6;
-        double minright = 1e6;
+        // speed of the robot
+        double turn_speed = direction;
+        double x_speed;
 
-        // get the sonar sensors
-        const vector<ModelRanger::Sensor>& sonars = sonar->GetSensors();
+        // check adjacent cells in direction of robot
+        // and adapt turn speed
+        try{
+            for(int r=1; r<3; ++r){
+                // cell index
+                double cx = rx + r*cos(ra);
+                double cy = ry + r*sin(ra);
 
-        // one of the two front center sonars detected an obstacle
-//         if(sonars[3].ranges[0] < minfrontdistance || sonars[4].ranges[0] < minfrontdistance)
-//             avoid = true;
-
-
-        // check every sonar sensor for obstacles
-        for(unsigned int i=1; i < sonars.size()-1; i++){
-            // sonar range reading
-            meters_t range = sonars[i].ranges[0];
-//             printf("[%s:%d] [robot %d]: %.2f\n", StripPath(__FILE__), __LINE__, id, range);
-
-            // obstacle ahead, robot needs to react
-            if((i >= (sonars.size()/4)) && (i < (sonars.size() - (sonars.size()/4))) && range < minfrontdistance){
-                avoid = true;
-            }
-
-            // stop immediately
-            if(range < stopdist){
-                stop = true;
-            }
-
-            // store minimum distance to obstacle for each side
-            if(i < sonars.size()/2)
-                minleft = min(minleft, range);
-            else
-                minright = min(minright, range);
-        }
-
-        // there is either an obstacle ahead or the robot is still avoiding an obstacle previously seen
-        if(avoid || stop || (avoidcount>0)){
-            // set forward speed
-            if(stop)
-                pos->SetXSpeed(0);
-            else
-                pos->SetXSpeed(pos->velocity_bounds->max/avoidcount);
-            //printf("set speed %.2f\n", pos->velocity_bounds->max * (min(minleft,minright) - stopdist));
-//             printf("set speed %.2f\n", pos->velocity_bounds->max / avoidcount);
-//             pos->SetXSpeed(pos->velocity_bounds->max / avoidcount);
-
-            // once we start avoiding, select a turn direction and stick with it for a few iterations
-            if(avoidcount < 1){
-                printf("avoid obstacle by turning ");
-                avoidcount = random() % avoidduration + avoidduration;
-
-                // check two more sensors to decide which direction to turn
-//                 if(sonars[2].ranges[0] < sonars[5].ranges[0]){
-//                     pos->SetTurnSpeed(-avoidturn);
-//                     printf("right %.2f\n", -avoidturn);
-//                 }
-//                 else{
-//                     pos->SetTurnSpeed(+avoidturn);
-//                     printf("left %.2f\n", +avoidturn);
-//                 }
-
-                // turn to the right
-                if(minleft < minright){
-                    pos->SetTurnSpeed(heading-avoidturn);
-                    printf("right %.2f\n", heading-avoidturn);
+                // check first quadrant
+                if(0 <= ra && ra < PI/2){
+                    // right is blocked
+                    if(map->Read(ceil(cx),floor(cy)) != CELL_FREE){
+                        turn_speed += avoidturn;
+                    }
+                    // left is blocked
+                    if(map->Read(floor(cx),ceil(cy)) != CELL_FREE){
+                        turn_speed -= avoidturn;
+                    }
                 }
-                else{
-                    pos->SetTurnSpeed(heading+avoidturn);
-                    printf("left %.2f\n", heading+avoidturn);
+
+                // check second quadrant
+                if(PI/2 <= ra && ra < PI){
+                    // right is blocked
+                    if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE){
+                        turn_speed += avoidturn;
+                    }
+                    // left is blocked
+                    if(map->Read(floor(cx),floor(cy)) != CELL_FREE){
+                        turn_speed -= avoidturn;
+                    }
+                }
+
+                // check third quadrant
+                if(-PI <= ra && ra < -PI/2){
+                    // right is blocked
+                    if(map->Read(floor(cx),ceil(cy)) != CELL_FREE){
+                        turn_speed += avoidturn;
+                    }
+                    // left is blocked
+                    if(map->Read(ceil(cx),floor(cy)) != CELL_FREE){
+                        turn_speed -= avoidturn;
+                    }
+                }
+
+                // check fourth quadrant
+                if(-PI/2 <= ra && ra < 0){
+                    // right is blocked
+                    if(map->Read(floor(cx),floor(cy)) != CELL_FREE){
+                        turn_speed += avoidturn;
+                    }
+                    // left is blocked
+                    if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE){
+                        turn_speed -= avoidturn;
+                    }
                 }
             }
-
-            --avoidcount;
-
-            return true; // busy avoding obstacle
         }
 
-        return false; // didn't have to avoid anything
+        // tried to read cell outside of map
+        catch(const out_of_range& e){
+            // just continue to set speed
+            // and hope it works :)
+        }
+
+        // set speed
+        x_speed = pos->velocity_bounds->max/abs(turn_speed);
+        pos->SetXSpeed(x_speed);
+        pos->SetTurnSpeed(turn_speed);
     }
 
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)
@@ -726,9 +708,6 @@ namespace eae
         if(robot->state == STATE_IDLE){
             robot->Explore();
         }
-
-        // avoid obstacles
-        //robot->ObstacleAvoid();
 
         // clear map and compute traveled distance while traveling (not too often)
         Pose pose = pos->GetPose();

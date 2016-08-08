@@ -138,16 +138,14 @@ namespace eae
         unsigned int Height();
 
         /**
-         * Converts the local grid map into a uint8_t*
-         * containing only 1s and 9s where
-         * 1 represents a free cell and
+         * Converts the local grid map into a uint8_t* where
+         * 1-5 represent free cells (with different cost) and
          * 9 represents an occupied cell.
          *
          * @return uint8_t*: The converted grid map.
          */
         uint8_t* Rasterize();
 
-    private:
         /**
          * Read the value of one grid cell.
          * The given coordinates will be converted to the correct indices.
@@ -160,6 +158,7 @@ namespace eae
          */
         grid_cell_v Read(int x, int y);
 
+    private:
         /**
          * Write a value to a grid cell.
          * The given coordinates will be converted to the correct indices.

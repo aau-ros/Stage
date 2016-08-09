@@ -53,8 +53,12 @@ namespace eae
         // last charging time
         last_charge = 0;
 
-        // TODO
-        avoidcount = 0;
+        // no path planned yet
+        valid_path = false;
+
+        // obstacle avoidance variables
+        avoid_count = 0;
+        avoid_direction = 0;
     }
 
     void Robot::Init()
@@ -132,7 +136,7 @@ namespace eae
             // no reachable goal with full battery
             if(FullyCharged()){
                 // try finding another docking station from where it is still possible to explore
-                ds = cord->NextClosestDs(pos->GetPose(), RemainingDist());
+                ds = cord->SelectDs(RemainingDist(), POL_OPPORTUNISTIC);
 
                 // start docking station auction
                 if(ds.id > 0){
@@ -150,19 +154,7 @@ namespace eae
                 state = STATE_PRECHARGE;
 
                 // select docking station and store in private variable
-                switch(OPT){
-                    case OPT_ENERGY:
-                        ds = cord->ClosestDs(pos->GetPose());
-                        break;
-                    case OPT_TIME:
-                        ds = cord->ClosestFreeDs(pos->GetPose(), RemainingDist());
-                        break;
-                    case OPT_STABILITY:
-                        printf("[%s:%d] [robot %d]: optimization of stability not yet implemented\n", StripPath(__FILE__), __LINE__, id);
-                        break;
-                    default:
-                        printf("[%s:%d] [robot %d]: invalid optimization goal\n", StripPath(__FILE__), __LINE__, id);
-                }
+                ds = cord->SelectDs(RemainingDist());
 
                 // start docking station auction
                 if(ds.id > 0){
@@ -222,6 +214,7 @@ namespace eae
     {
         // robot is at goal
         // or does not have a goal
+        // use euclidean distance
         if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE || ((state == STATE_EXPLORE || state == STATE_GOING_CHARGING) && valid_path == false)){
             // goal in queue
             if(GoalQueue()){
@@ -269,13 +262,13 @@ namespace eae
         Pose pose = pos->GetPose();
 
         // find closest docking station and store in private variable
-        ds = cord->ClosestDs(pose);
+        ds = cord->SelectDs();
 
         // calculate distances
         int dg = Distance(frontier.x, frontier.y);
         if(dg < 0)
             return BID_INV;
-        int dgb = Distance(frontier.x, frontier.y, ds.pose.x, ds.pose.y);
+        int dgb = map->Distance(frontier.x, frontier.y, ds.pose.x, ds.pose.y);
         if(dgb < 0)
             return BID_INV;
 
@@ -304,7 +297,7 @@ namespace eae
     {
         // execute a* algorithm
         vector<ast::point_t> path;
-        if(AStar(start_pose, goal_pose, &path) == false)
+        if(map->AStar(start_pose, goal_pose, &path) == false)
             return false;
 
         // remove old path
@@ -330,26 +323,6 @@ namespace eae
                 last_node->AddEdge(new Edge(node));
 
             last_node = node;
-        }
-
-        return true;
-    }
-
-    bool Robot::AStar(Pose start_pose, Pose goal_pose, vector<ast::point_t>* path)
-    {
-        // start and goal
-        grid_cell_t start_cell = map->M2C(start_pose);
-        grid_cell_t goal_cell = map->M2C(goal_pose);
-        ast::point_t start(start_cell.x, start_cell.y);
-        ast::point_t goal(goal_cell.x, goal_cell.y);
-
-        // find path
-        bool result = ast::astar(map->Rasterize(), (uint32_t)map->Width(), (uint32_t)map->Height(), start, goal, *path);
-
-        // error
-        if(!result){
-            printf("[%s:%d] [robot %d]: failed to find path from (%.2f,%.2f) to (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, start_pose.x, start_pose.y, goal_pose.x, goal_pose.y);
-            return false;
         }
 
         return true;
@@ -501,19 +474,25 @@ namespace eae
         vector< vector<int> >::iterator it;
         for(it=frontiers.end()-1; it>=frontiers.begin(); --it){
             // calculate distance
-            double dist1 = Distance(pos.x, pos.y, it->at(0), it->at(1));
+            double dist1 = map->Distance(pos.x, pos.y, it->at(0), it->at(1));
             double dist2;
             if(ds)
                 dist2 = dist1;
             else
-                dist2 = Distance(it->at(0), it->at(1), this->ds.pose.x, this->ds.pose.y);
+                dist2 = map->Distance(it->at(0), it->at(1), this->ds.pose.x, this->ds.pose.y);
 
             // remove frontier if it is not reachable
-            if(range <= dist1 + dist2)
+            if(range <= dist1 + dist2){
                 frontiers.erase(it);
+            }
         }
 
         return frontiers;
+    }
+
+    int Robot::Distance(double to_x, double to_y)
+    {
+        return map->Distance(pos->GetPose().x, pos->GetPose().y, to_x, to_y);
     }
 
     void Robot::UpdateMap(GridMap* map)
@@ -539,21 +518,6 @@ namespace eae
 
         // share map with other robots in range
         cord->BroadcastMap(local);
-    }
-
-    int Robot::Distance(double from_x, double from_y, double to_x, double to_y)
-    {
-        // execute a* algorithm
-        vector<ast::point_t> path;
-        if(AStar(Pose(from_x, from_y, 0, 0), Pose(to_x, to_y, 0, 0), &path) == false)
-            return -1;
-
-        return (int)path.size();
-    }
-
-    int Robot::Distance(double to_x, double to_y)
-    {
-        return Distance(pos->GetPose().x, pos->GetPose().y, to_x, to_y);
     }
 
     double Robot::Angle(double from_x, double from_y, double to_x, double to_y)
@@ -616,66 +580,64 @@ namespace eae
         // current position of the robot
         int rx = round(pos->GetPose().x);
         int ry = round(pos->GetPose().y);
-        double ra = pos->GetPose().a;
+        double ra = pos->GetPose().a + direction;
 
         // speed of the robot
         double turn_speed = direction;
         double x_speed;
 
+        // maximum distance to look ahead
+        int r_max = 5;
+
         // check adjacent cells in direction of robot
         // and adapt turn speed
         try{
-            for(int r=1; r<3; ++r){
-                // cell index
+            for(int r=1; r<r_max; ++r){
+                // cell in driving direction
                 double cx = rx + r*cos(ra);
                 double cy = ry + r*sin(ra);
 
                 // check first quadrant
                 if(0 <= ra && ra < PI/2){
                     // right is blocked
-                    if(map->Read(ceil(cx),floor(cy)) != CELL_FREE){
-                        turn_speed += avoidturn;
-                    }
+                    if(map->Read(ceil(cx),floor(cy)) != CELL_FREE)
+                        turn_speed += avoid_turn;
+
                     // left is blocked
-                    if(map->Read(floor(cx),ceil(cy)) != CELL_FREE){
-                        turn_speed -= avoidturn;
-                    }
+                    if(map->Read(floor(cx),ceil(cy)) != CELL_FREE)
+                        turn_speed -= avoid_turn;
                 }
 
                 // check second quadrant
                 if(PI/2 <= ra && ra < PI){
                     // right is blocked
-                    if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE){
-                        turn_speed += avoidturn;
-                    }
+                    if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE)
+
                     // left is blocked
-                    if(map->Read(floor(cx),floor(cy)) != CELL_FREE){
-                        turn_speed -= avoidturn;
-                    }
+                    if(map->Read(floor(cx),floor(cy)) != CELL_FREE)
+                        turn_speed -= avoid_turn;
                 }
 
                 // check third quadrant
                 if(-PI <= ra && ra < -PI/2){
                     // right is blocked
-                    if(map->Read(floor(cx),ceil(cy)) != CELL_FREE){
-                        turn_speed += avoidturn;
-                    }
+                    if(map->Read(floor(cx),ceil(cy)) != CELL_FREE)
+                        turn_speed += avoid_turn;
+
                     // left is blocked
-                    if(map->Read(ceil(cx),floor(cy)) != CELL_FREE){
-                        turn_speed -= avoidturn;
-                    }
+                    if(map->Read(ceil(cx),floor(cy)) != CELL_FREE)
+                        turn_speed -= avoid_turn;
                 }
 
                 // check fourth quadrant
                 if(-PI/2 <= ra && ra < 0){
                     // right is blocked
-                    if(map->Read(floor(cx),floor(cy)) != CELL_FREE){
-                        turn_speed += avoidturn;
-                    }
+                    if(map->Read(floor(cx),floor(cy)) != CELL_FREE)
+                        turn_speed += avoid_turn * (r_max - r);
+
                     // left is blocked
-                    if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE){
-                        turn_speed -= avoidturn;
-                    }
+                    if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE)
+                        turn_speed -= avoid_turn;
                 }
             }
         }
@@ -686,8 +648,26 @@ namespace eae
             // and hope it works :)
         }
 
+        // started turning to avoid obstacle, store direction
+        if(turn_speed != direction){
+            avoid_count = avoid_duration;
+            avoid_direction = turn_speed - direction;
+        }
+
+        // keep turning the same way for a few more iterations
+        if(turn_speed == direction && avoid_count > 0){
+            turn_speed += avoid_direction;
+            --avoid_count;
+        }
+
+        // calculate forward speed according to turning speed
+        // the more the robot turns, the slower it goes forward
+        if(abs(turn_speed) < 1)
+            x_speed = pos->velocity_bounds->max;
+        else
+            x_speed = pos->velocity_bounds->max / abs(turn_speed);
+
         // set speed
-        x_speed = pos->velocity_bounds->max/abs(turn_speed);
         pos->SetXSpeed(x_speed);
         pos->SetTurnSpeed(turn_speed);
     }
@@ -711,7 +691,7 @@ namespace eae
 
         // clear map and compute traveled distance while traveling (not too often)
         Pose pose = pos->GetPose();
-        double dist = pose.Distance(robot->last_pose);
+        double dist = pose.Distance(robot->last_pose); // euclidean
         if(dist > MAP_UPDATE_DIST){
             // clear map
             robot->UpdateMap();
@@ -729,7 +709,7 @@ namespace eae
         }
 
         // robot reached goal
-        if(pos->GetPose().Distance(robot->goal) < GOAL_TOLERANCE){
+        if(pos->GetPose().Distance(robot->goal) < GOAL_TOLERANCE){ // euclidean
             // remove current path plan
             delete robot->path;
             robot->valid_path = false;

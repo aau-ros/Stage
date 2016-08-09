@@ -132,6 +132,7 @@ namespace eae
          * @param const Pose& pose: Current position.
          * @param meters_t range: Maximum distance to node.
          * @param radians_t& heading_result: Returns the heading to the best node.
+         *
          * @return bool: True, if a node is found, false otherwise.
          */
         bool GoodDirection(const Pose& pose, meters_t range, radians_t& heading_result);

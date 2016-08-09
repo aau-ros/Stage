@@ -80,10 +80,10 @@ define robot pioneer2dx_front_sonar
     mass 9.0
 
     # initial battery charge in kJ
-    kjoules 5
+    kjoules 10
 
     # capacity of battery in kJ
-    kjoules_capacity 5
+    kjoules_capacity 10
 
     # localization method (can be gps or odom)
     localization "gps"

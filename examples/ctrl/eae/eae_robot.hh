@@ -67,12 +67,15 @@ namespace eae
     const usec_t CHARGE_RATE = 1000000;
 
     /**
-     * @todo: comment
+     * The amount the robot turns away from an obstacle in radians.
      */
-const double avoidturn = 0.5;
-const double minfrontdistance = 1.2;
-const double stopdist = 1;
-const int avoidduration = 10;
+    const double avoid_turn = 0.5;
+
+    /**
+     * The number of iterations a robot keeps avoiding an obstacle after passing it.
+     * This makes sure that the robot does not crash into an obstacle when it is still next to it.
+     */
+    const int avoid_duration = 10;
 
     /**
      * A class that defines the behavior of a robot.
@@ -133,19 +136,10 @@ const int avoidduration = 10;
          *
          * @param Pose start_pose: The starting point.
          * @param Pose goal_pose: The end point.
+         *
          * @return bool: Success of path generation.
          */
         bool Plan(Pose start_pose, Pose goal_pose);
-
-        /**
-         * Generate a path from start to goal using the A* algorithm.
-         *
-         * @param Pose start_pose: The starting point.
-         * @param Pose goal_pose: The end point.
-         * @param vector<ast::point_t>* path: The resulting path will be stored here.
-         * @return bool: Success of path generation.
-         */
-        bool AStar(Pose start_pose, Pose goal_pose, vector<ast::point_t>* path);
 
         /**
          * Return the camera object.
@@ -249,6 +243,7 @@ const int avoidduration = 10;
          * Check whether the robot is currently charging.
          *
          * @param ds_t& at: The docking station where the robot is charging at. It is set only if the robot is currently charging.
+         *
          * @return bool: True if the robot is charging, false otherwise.
          */
         bool Charging(ds_t& at);
@@ -257,6 +252,7 @@ const int avoidduration = 10;
          * Check whether the robot is currently on its way for recharging.
          *
          * @param ds_t& at: The docking station where the robot is docking at. It is set only if the robot is currently on its way for recharging.
+         *
          * @return bool: True if the robot is on its way for recharging, false otherwise.
          */
         bool Docking(ds_t& at);
@@ -265,6 +261,7 @@ const int avoidduration = 10;
          * Check whether the robot is currently waiting for recharging.
          *
          * @param ds_t& at: The docking station the robot is waiting for. It is set only if the robot is currently waiting.
+         *
          * @return bool: True if the robot is waiting, false otherwise.
          */
         bool Queueing(ds_t& at);
@@ -289,9 +286,20 @@ const int avoidduration = 10;
          * @param Pose pos: The position from where to start looking.
          * @param double range: The range that the robot can travel.
          * @param bool ds: Whether the given position is a docking station or not.
+         *
          * @return vector< vector <int> >: A vector containing an element for every frontier. Each element ist a vector with the two coordinates of that frontier.
          */
         vector< vector <int> > FrontiersReachable(Pose pos, double range, bool ds);
+
+        /**
+         * Compute the distance from the current location to a point.
+         *
+         * @param double to_x: X-coordinate of end point.
+         * @param double to_y: Y-coordinate of end point.
+         *
+         * @return int: The distance, -1 if plan fails.
+         */
+        int Distance(double to_x, double to_y);
 
         /**
          * Update the local grid map with a given map.
@@ -306,28 +314,6 @@ const int avoidduration = 10;
          * Update the map with local sensor readings.
          */
         void UpdateMap();
-
-        /**
-         * Compute distance between two points.
-         *
-         * @param double from_x: X-coordinate of starting point.
-         * @param double from_y: Y-coordinate of starting point.
-         * @param double to_x: X-coordinate of end point.
-         * @param double to_y: Y-coordinate of end point.
-         *
-         * @return int: The distance, -1 if plan fails.
-         */
-        int Distance(double from_x, double from_y, double to_x, double to_y);
-
-        /**
-         * Compute the distance from the current location to a point.
-         *
-         * @param double to_x: X-coordinate of end point.
-         * @param double to_y: Y-coordinate of end point.
-         *
-         * @return int: The distance, -1 if plan fails.
-         */
-        int Distance(double to_x, double to_y);
 
         /**
          * Compute the angle between two points starting from the positive x-axis.
@@ -352,6 +338,7 @@ const int avoidduration = 10;
          * Estimate the remaining distance that the robot can drive with a given battery charge.
          *
          * @param joules_t charge: The charge of the robots battery.
+         *
          * @return double: The remaining distance in meters.
          */
         double RemainingDist(joules_t charge);
@@ -515,10 +502,15 @@ const int avoidduration = 10;
         usec_t last_charge;
 
         /**
-         * Countdown for avoiding obstacle.
+         * Countdown for avoiding an obstacle.
          * It stores the number of iterations a robot sticks to its decision of avoiding an obstacle in a certain direction.
          */
-        int avoidcount;
+        int avoid_count;
+
+        /**
+         * Direction in which the robot is avoiding an obstacle.
+         */
+        double avoid_direction;
 
         /**
          * The path planned by the path planner.

@@ -14,13 +14,14 @@ using namespace std;
 namespace eae
 {
     /**
-     * Possible optimization goals.
+     * Policy of a robot for selecting a docking station.
      */
     typedef enum{
-        OPT_ENERGY = 0,
-        OPT_TIME,
-        OPT_STABILITY
-    } opt_t;
+        POL_CLOSEST = 0,
+        POL_VACANT,
+        POL_OPPORTUNISTIC,
+        POL_COMBINED
+    } pol_t;
 
     /**
      * Possible coordination strategies for recharging at docking stations.
@@ -67,10 +68,9 @@ namespace eae
     const usec_t TO_BEACON = 1000000;
 
     /**
-     * Optimization goal.
-     * Some decisions are made e.g. to either have a fast exploration or an energy efficient optimization.
+     * Docking station selection policy.
      */
-    const opt_t OPT = OPT_ENERGY;
+    const pol_t POL = POL_CLOSEST;
 
     /**
      * Tolerance when calculating the distance to the closest docking station.
@@ -157,6 +157,7 @@ namespace eae
          * Returns the distance from a given pose to the closest robot.
          *
          * @param Pose pose: The pose to calculate the distance from.
+         *
          * @return double: The distance to the closest robot.
          */
         double DistRobot(Pose pose);
@@ -171,30 +172,12 @@ namespace eae
         void UpdateDs(int id, Pose pose, ds_state_t state=STATE_UNDEFINED_DS);
 
         /**
-         * Get the docking station closest to the robot's current position.
+         * Select a docking station for recharging.
          *
-         * @param Pose pose: The pose of the robot.
-         * @return ds_t: The closest docking station.
+         * @param double range: The range of the robot, not required for all policies.
+         * @param pol_t policy: Override the global policy for selecting a docking station.
          */
-        ds_t ClosestDs(Pose pose);
-
-        /**
-         * Get the docking station closest to the robot's current position that is free and in range of the robot.
-         *
-         * @param Pose pose: The pose of the robot.
-         * @param double range: The range of the robot.
-         * @return ds_t: The closest free docking station.
-         */
-        ds_t ClosestFreeDs(Pose pose, double range);
-
-        /**
-         * Get the docking station closest to the robots current location where there are frontiers nearby that the robot can reach after recharging. If this is not possible get the closest docking station where another docking station with frontiers nearby can be reached in the next step.
-         *
-         * @param Pose pose: The pose of the robot.
-         * @param double range: The range of the robot.
-         * @return ds_t: The docking station.
-         */
-        ds_t NextClosestDs(Pose pose, double range);
+        ds_t SelectDs(double range=0, pol_t policy=POL);
 
         /**
          * Set a docking station to the state vacant.
@@ -237,6 +220,31 @@ namespace eae
         static int auction_id;
 
     private:
+        /**
+         * Get the docking station closest to the robot's current position.
+         *
+         * @return ds_t: The closest docking station.
+         */
+        ds_t ClosestDs();
+
+        /**
+         * Get the docking station closest to the robot's current position that is vacant and in range of the robot.
+         *
+         * @param double range: The range of the robot.
+         *
+         * @return ds_t: The closest free docking station.
+         */
+        ds_t VacantDs(double range);
+
+        /**
+         * Get the docking station closest to the robots current location where there are frontiers nearby that the robot can reach after recharging. If this is not possible get the closest docking station where another docking station with frontiers nearby can be reached in the next step.
+         *
+         * @param double range: The range of the robot.
+         *
+         * @return ds_t: The docking station.
+         */
+        ds_t OpportunisticDs(double range);
+
         /**
          * Update the vector of robots.
          *
@@ -343,6 +351,7 @@ namespace eae
          * Get the position of a docking station.
          *
          * @param int id: The ID of the docking station.
+         *
          * @return Pose: The position of the docking station.
          */
         Pose DsPose(int id);
@@ -358,10 +367,10 @@ namespace eae
          * Calculate the bid for a docking station.
          *
          * @param int ds: The ID of the docking station.
-         * @param Pose pose: The position of the robot.
+         *
          * @return double: The bid.
          */
-        double DockingBid(int ds, Pose pose);
+        double DockingBid(int ds);
 
         /**
          * Callback function that is called when @todo

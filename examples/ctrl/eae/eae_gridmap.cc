@@ -373,6 +373,36 @@ namespace eae
         return *this;
     }
 
+    int GridMap::Distance(double from_x, double from_y, double to_x, double to_y)
+    {
+        // execute a* algorithm
+        vector<ast::point_t> path;
+        if(AStar(Pose(from_x, from_y, 0, 0), Pose(to_x, to_y, 0, 0), &path) == false)
+            return -1;
+
+        return (int)path.size();
+    }
+
+    bool GridMap::AStar(Pose start_pose, Pose goal_pose, vector<ast::point_t>* path)
+    {
+        // start and goal
+        grid_cell_t start_cell = M2C(start_pose);
+        grid_cell_t goal_cell = M2C(goal_pose);
+        ast::point_t start(start_cell.x, start_cell.y);
+        ast::point_t goal(goal_cell.x, goal_cell.y);
+
+        // find path
+        bool result = ast::astar(Rasterize(), (uint32_t)Width(), (uint32_t)Height(), start, goal, *path);
+
+        // error
+        if(!result){
+            printf("[%s:%d] [robot %d]: failed to find path from (%.2f,%.2f) to (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, robot, start_pose.x, start_pose.y, goal_pose.x, goal_pose.y);
+            return false;
+        }
+
+        return true;
+    }
+
     grid_cell_t GridMap::M2C(Pose m)
     {
         // scale
@@ -442,16 +472,25 @@ namespace eae
                 // free
                 if(it->at(i) == CELL_FREE){
                     // inflate walls to keep path planner from going too close to walls
-                    if((it-1)->at(i-1) == CELL_FREE && (it-1)->at(i) == CELL_FREE && (it-1)->at(i+1) == CELL_FREE
-                        && it->at(i-1) == CELL_FREE && it->at(i+1) == CELL_FREE
-                        && (it+1)->at(i-1) == CELL_FREE && (it+1)->at(i) == CELL_FREE && (it+1)->at(i+1) == CELL_FREE)
-                        data[idx] = 1;
-                    else if((it-1)->at(i) == CELL_FREE
-                        && it->at(i-1) == CELL_FREE && it->at(i+1) == CELL_FREE
-                        && (it+1)->at(i) == CELL_FREE)
-                        data[idx] = 3;
-                    else
+                    try{
+                        // all eight neighbors are free, set lowest cost for path planner
+                        if((it-1)->at(i-1) == CELL_FREE && (it-1)->at(i) == CELL_FREE && (it-1)->at(i+1) == CELL_FREE
+                            && it->at(i-1) == CELL_FREE && it->at(i+1) == CELL_FREE
+                            && (it+1)->at(i-1) == CELL_FREE && (it+1)->at(i) == CELL_FREE && (it+1)->at(i+1) == CELL_FREE)
+                            data[idx] = 1;
+                        // a wall is diagonally adjacent, medium cost for planner
+                        else if((it-1)->at(i) == CELL_FREE
+                            && it->at(i-1) == CELL_FREE && it->at(i+1) == CELL_FREE
+                            && (it+1)->at(i) == CELL_FREE)
+                            data[idx] = 3;
+                        // directly adjacent to a wall, highest cost for planner
+                        else
+                            data[idx] = 5;
+                    }
+                    // at border of map, highest cost for planner
+                    catch(const out_of_range& e){
                         data[idx] = 5;
+                    }
                 }
 
                 // occupied

@@ -59,6 +59,7 @@ namespace eae
          *
          * @param Pose pos: The position of the robot.
          * @param vector<meters_t> scan: The laser scan data.
+         *
          * @return GridMap*: A map containing only the updated cells.
          */
         GridMap* Clear(Pose pos, vector<meters_t> scan);
@@ -95,14 +96,39 @@ namespace eae
          * Assignment operator.
          *
          * @param GridMap& toCopy: The object that should be copied.
+         *
          * @return GridMap&: A pointer to this object.
          */
         GridMap& operator=(const GridMap& toCopy);
 
         /**
+         * Compute distance between two points.
+         *
+         * @param double from_x: X-coordinate of starting point.
+         * @param double from_y: Y-coordinate of starting point.
+         * @param double to_x: X-coordinate of end point.
+         * @param double to_y: Y-coordinate of end point.
+         *
+         * @return int: The distance, -1 if plan fails.
+         */
+        int Distance(double from_x, double from_y, double to_x, double to_y);
+
+        /**
+         * Generate a path from start to goal using the A* algorithm.
+         *
+         * @param Pose start_pose: The starting point.
+         * @param Pose goal_pose: The end point.
+         * @param vector<ast::point_t>* path: The resulting path will be stored here.
+         *
+         * @return bool: Success of path generation.
+         */
+        bool AStar(Pose start_pose, Pose goal_pose, vector<ast::point_t>* path);
+
+        /**
          * Convert meters to cell indexes.
          *
          * @param Pose m: A position in meters.
+         *
          * @return grid_cell_t: The cell index in x and y coordinates.
          */
         grid_cell_t M2C(Pose m);
@@ -111,6 +137,7 @@ namespace eae
          * Convert cell indexes to meters.
          *
          * @param grid_cell_t c: A cell index in x and y coordinates.
+         *
          * @return Pose: The position in meters.
          */
         Pose C2M(grid_cell_t c);
@@ -119,6 +146,7 @@ namespace eae
          * Convert a distance in cells to a distance in meters.
          *
          * @param unsigned int c: A distance in number of cells.
+         *
          * @return double: The distance in meters.
          */
         double C2M(unsigned int c);

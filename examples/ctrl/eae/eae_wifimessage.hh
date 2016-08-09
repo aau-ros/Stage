@@ -61,6 +61,7 @@ namespace eae
          * Assignment operator.
          *
          * @param WifiMessage& toCopy: The object that should be copied.
+         *
          * @return WifiMessage&: A pointer to this object.
          */
         WifiMessage& operator=(const WifiMessage& toCopy);

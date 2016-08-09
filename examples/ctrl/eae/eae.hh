@@ -139,6 +139,7 @@ namespace eae
      * Remove the path from a file name.
      *
      * @param string file: The complete file name including path.
+     *
      * @return const char*: The file name without path.
      */
     inline const char* StripPath(string file)

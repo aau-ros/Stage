@@ -9,7 +9,7 @@ floorplan
 (
     pose [100 0 0 0]
     size [250.000 50.000 1]
-    bitmap "bitmaps/lines_l.png"
+    bitmap "bitmaps/lines_2.png"
     obstacle_return 1
 )
 

@@ -247,6 +247,16 @@ namespace eae
          * Position model of the robot.
          */
         ModelPosition* pos;
+
+        /**
+         * The rasterized grid map.
+         */
+        uint8_t* raster;
+
+        /**
+         * Whether the rasterized grid map is still valid.
+         */
+        bool raster_valid;
     };
 }
 

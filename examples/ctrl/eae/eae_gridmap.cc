@@ -64,6 +64,9 @@ namespace eae
         // read resolution from world file
         Worldfile* wf = world->GetWorldFile();
         resolution = wf->ReadFloat(0, "resolution", resolution);
+
+        // no rasterization performed yet
+        raster_valid = false;
     }
 
     void GridMap::Visualize(Pose pose)
@@ -465,59 +468,86 @@ namespace eae
 
     uint8_t* GridMap::Rasterize()
     {
-        uint8_t* data = new uint8_t[x_dim*y_dim];
-        int idx = 0;
+        // valid raster existent
+        if(raster_valid == false){
+            // new raster needs to be created
+            raster = new uint8_t[x_dim*y_dim];
+            int idx = 0;
 
-        for(unsigned int i=0; i<grid.at(0).size(); ++i){
-            vector< vector<grid_cell_v> >::iterator it;
+            for(unsigned int i=0; i<grid.at(0).size(); ++i){
+                vector< vector<grid_cell_v> >::iterator it;
 
-            for(it = grid.begin(); it<grid.end(); ++it){
-                // free
-                if(it->at(i) == CELL_FREE){
-                    // inflate walls to keep path planner from going too close to walls
-                    try{
+                for(it = grid.begin(); it<grid.end(); ++it){
+                    // free
+                    if(it->at(i) == CELL_FREE){
+                        int occupied = 0;
+                        // inflate walls to keep path planner from going too close to walls
+                        try{
+                            // at border of map, highest cost for planner
+                            if(it == grid.begin() || it == grid.end()-1 || i == 0 || i == grid.at(0).size()-1)
+                                raster[idx] = 5;
+                            else{
+                                // calculate metric depending on number of occupied neighbor cells
+                                // direct neighbors are worse than diagonal ones
+                                if((it-1)->at(i-1) == CELL_OCCUPIED)
+                                    ++occupied;
+                                if((it-1)->at(i) == CELL_OCCUPIED)
+                                    occupied += 2;
+                                if((it-1)->at(i+1) == CELL_OCCUPIED)
+                                    ++occupied;
+                                if(it->at(i-1) == CELL_OCCUPIED)
+                                    occupied += 2;
+                                if(it->at(i+1) == CELL_OCCUPIED)
+                                    occupied += 2;
+                                if((it+1)->at(i-1) == CELL_OCCUPIED)
+                                    ++occupied;
+                                if((it+1)->at(i) == CELL_OCCUPIED)
+                                    occupied += 2;
+                                if((it+1)->at(i+1) == CELL_OCCUPIED)
+                                    ++occupied;
+
+                                // no occupied neighbors, lowest cost
+                                if(occupied == 0)
+                                    raster[idx] = 1;
+
+                                // many neighbors occupied, mark as occupied
+                                else if(occupied > 4)
+                                    raster[idx] = 9;
+
+                                // some neighbors occupied, set cost according to
+                                else
+                                    raster[idx] = occupied + 1;
+                            }
+                        }
                         // at border of map, highest cost for planner
-                        if(it == grid.begin() || it == grid.end()-1 || i == 0 || i == grid.at(0).size()-1)
-                            data[idx] = 5;
-                        // all eight neighbors are free, set lowest cost for path planner
-                        else if((it-1)->at(i-1) == CELL_FREE && (it-1)->at(i) == CELL_FREE && (it-1)->at(i+1) == CELL_FREE
-                            && it->at(i-1) == CELL_FREE && it->at(i+1) == CELL_FREE
-                            && (it+1)->at(i-1) == CELL_FREE && (it+1)->at(i) == CELL_FREE && (it+1)->at(i+1) == CELL_FREE)
-                            data[idx] = 1;
-                        // a wall is diagonally adjacent, medium cost for planner
-                        else if((it-1)->at(i) == CELL_FREE
-                            && it->at(i-1) == CELL_FREE && it->at(i+1) == CELL_FREE
-                            && (it+1)->at(i) == CELL_FREE)
-                            data[idx] = 3;
-                        // directly adjacent to a wall, highest cost for planner
-                        else
-                            data[idx] = 5;
+                        catch(const out_of_range& e){
+                            raster[idx] = 5;
+                        }
                     }
-                    // at border of map, highest cost for planner
-                    catch(const out_of_range& e){
-                        data[idx] = 5;
-                    }
-                }
 
-                // occupied
-                else if(it->at(i) == CELL_OCCUPIED){
-                    data[idx] = 9;
-                }
-
-                // unknown
-                else{
-                    if(PLAN_UNKNOWN){
-                        data[idx] = 1;
+                    // occupied
+                    else if(it->at(i) == CELL_OCCUPIED){
+                        raster[idx] = 9;
                     }
+
+                    // unknown
                     else{
-                        data[idx] = 9;
+                        if(PLAN_UNKNOWN){
+                            raster[idx] = 1;
+                        }
+                        else{
+                            raster[idx] = 9;
+                        }
                     }
+                    ++idx;
                 }
-                ++idx;
             }
+
+            // make raster valid
+            raster_valid = true;
         }
 
-        return data;
+        return raster;
     }
 
     grid_cell_v GridMap::Read(int x, int y)
@@ -527,7 +557,15 @@ namespace eae
 
     void GridMap::Write(int x, int y, grid_cell_v val)
     {
-        grid.at(x+x_offset).at(y+y_offset) = val;
+        // only write if value changed
+        if(grid.at(x+x_offset).at(y+y_offset) != val){
+            grid.at(x+x_offset).at(y+y_offset) = val;
+            // invalidate rasterized map
+            if(raster_valid){
+                raster_valid = false;
+                delete raster;
+            }
+        }
     }
 
     bool GridMap::Frontier(int x, int y)

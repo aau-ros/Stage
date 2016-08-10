@@ -238,12 +238,12 @@ namespace eae
         map->Rasterize(data, w, h, 1, 1);
 
         // iterate over all angles of fov
-        for(int a=0; a<360; ++a){
+        for(int a=-135; a<=135; ++a){
             // iterate until laser range or obstacle
             for(int r=0; r<LASER_RANGE; ++r){
                 // coordinates in local map
-                int x = pos.x + floor(r*cos(a));
-                int y = pos.y + floor(r*sin(a));
+                int x = pos.x + floor(r*cos((double)a/180*PI));
+                int y = pos.y + floor(r*sin((double)a/180*PI));
 
                 // index in global map
                 int i = (y-origin.y+h/2)*w + x-origin.x+w/2;

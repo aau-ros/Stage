@@ -22,7 +22,7 @@ namespace eae
     /**
      * Distance that the robot can be away from goal.
      */
-    const double GOAL_TOLERANCE = 0.5;
+    const double GOAL_TOLERANCE = 1;
 
     /**
      * Math constant π.

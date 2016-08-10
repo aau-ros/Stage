@@ -226,7 +226,7 @@ namespace eae
         GridMap* local = new GridMap(this->pos, robot);
 
         // get global from underlying floorplan model
-        Model * map = this->pos->GetWorld()->GetModel("floorplan");
+        Model* map = this->pos->GetWorld()->GetModel("floorplan");
 
         // read global map size
         int w = round(map->GetGeom().size.x);
@@ -248,8 +248,8 @@ namespace eae
             // iterate until laser range or obstacle
             for(int r=0; r<LASER_RANGE; ++r){
                 // coordinates in local map
-                int x = pos.x + floor(r*cos((double)a/180*PI));
-                int y = pos.y + floor(r*sin((double)a/180*PI));
+                int x = floor(pos.x) + floor(r*cos((double)a/180*PI));
+                int y = floor(pos.y) + floor(r*sin((double)a/180*PI));
 
                 // index in global map
                 int i = (y-origin.y+h/2)*w + x-origin.x+w/2;
@@ -486,25 +486,26 @@ namespace eae
                             // at border of map, highest cost for planner
                             if(it == grid.begin() || it == grid.end()-1 || i == 0 || i == grid.at(0).size()-1)
                                 raster[idx] = 5;
+                            // count occupied neighbor cells
                             else{
                                 // calculate metric depending on number of occupied neighbor cells
                                 // direct neighbors are worse than diagonal ones
                                 if((it-1)->at(i-1) == CELL_OCCUPIED)
-                                    ++occupied;
+                                    occupied += 5; // bottom left must be clear
                                 if((it-1)->at(i) == CELL_OCCUPIED)
-                                    occupied += 2;
+                                    occupied += 5; // bottom left must be clear
                                 if((it-1)->at(i+1) == CELL_OCCUPIED)
-                                    ++occupied;
+                                    occupied += 1;
                                 if(it->at(i-1) == CELL_OCCUPIED)
-                                    occupied += 2;
+                                    occupied += 5; // bottom left must be clear
                                 if(it->at(i+1) == CELL_OCCUPIED)
                                     occupied += 2;
                                 if((it+1)->at(i-1) == CELL_OCCUPIED)
-                                    ++occupied;
+                                    occupied += 1;
                                 if((it+1)->at(i) == CELL_OCCUPIED)
                                     occupied += 2;
                                 if((it+1)->at(i+1) == CELL_OCCUPIED)
-                                    ++occupied;
+                                    occupied += 1;
 
                                 // no occupied neighbors, lowest cost
                                 if(occupied == 0)

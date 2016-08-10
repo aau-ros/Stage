@@ -57,6 +57,7 @@ namespace eae
         valid_path = false;
 
         // obstacle avoidance variables
+        stall_count = 0;
         avoid_count = 0;
         avoid_direction = 0;
 
@@ -189,6 +190,19 @@ namespace eae
             if(clear){
                 // plan path to goal
                 valid_path = Plan(pos->GetPose(), goal);
+
+                // no plan found, choose next goal
+                if(!valid_path){
+                    // go to next goal if there is one
+                    if(GoalQueue())
+                        SetGoalNext();
+                    // otherwise find a new goal
+                    else
+                        Explore();
+
+                    return;
+                }
+
                 // store goal for visualization
                 pos->waypoints.push_back(ModelPosition::Waypoint(goal, wpcolor));
 
@@ -587,10 +601,17 @@ namespace eae
 
     void Robot::SetMotorSpeed(double direction)
     {
-        // if the robot crashed, move gently backwards
+        // if the robot crashed, recover by moving backwards in random direction
         if(pos->Stalled()){
-            pos->SetXSpeed(-0.1);
-            pos->SetTurnSpeed(0);
+            pos->SetXSpeed(-pos->velocity_bounds->max);
+            pos->SetTurnSpeed((double)(random() % 100) / 100 * 2*PI - PI);
+            stall_count = avoid_duration;
+            return;
+        }
+
+        // keep recovering from crash
+        if(stall_count > 0){
+            --stall_count;
             return;
         }
 
@@ -699,16 +720,12 @@ namespace eae
 
         // calculate forward speed according to turning speed
         // the more the robot turns, the slower it goes forward
-        if(abs(turn_speed) < 1)
-            x_speed = pos->velocity_bounds->max * (1- abs(turn_speed));
+        if(abs(turn_speed) < 0.5)
+            x_speed = pos->velocity_bounds->max;
+        else if(0.5 <= abs(turn_speed) && abs(turn_speed) < 1.5)
+            x_speed = pos->velocity_bounds->max * (1.5 - abs(turn_speed));
         else
             x_speed = 0;
-//         if(abs(turn_speed) < 0.5)
-//             x_speed = pos->velocity_bounds->max;
-//         else if(0.5 <= abs(turn_speed) && abs(turn_speed) < 1.5)
-//             x_speed = pos->velocity_bounds->max * (1.5 - abs(turn_speed));
-//         else
-//             x_speed = 0;
 
 
         // set speed

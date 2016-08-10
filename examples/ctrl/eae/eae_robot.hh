@@ -74,13 +74,13 @@ namespace eae
     /**
      * The amount the robot turns away from an obstacle in radians.
      */
-    const double avoid_turn = 0.5;
+    const double avoid_turn = PI/8;
 
     /**
      * The number of iterations a robot keeps avoiding an obstacle after passing it.
      * This makes sure that the robot does not crash into an obstacle when it is still next to it.
      */
-    const int avoid_duration = 5;
+    const int avoid_duration = 10;
 
     /**
      * A class that defines the behavior of a robot.
@@ -505,6 +505,11 @@ namespace eae
          * The latest time at which the robot was recharged.
          */
         usec_t last_charge;
+
+        /**
+         * Countdown for recovering from a crash.
+         */
+        int stall_count;
 
         /**
          * Countdown for avoiding an obstacle.

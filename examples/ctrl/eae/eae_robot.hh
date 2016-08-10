@@ -61,6 +61,11 @@ namespace eae
     const double MAP_UPDATE_DIST = 1.41;
 
     /**
+     * The amount the robot has to turn until another map update is performed.
+     */
+    const double MAP_UPDATE_ANGLE = PI/4;
+
+    /**
      * Rate for charging robot.
      * This is supposed to be one second since the unit of power is watts (= joules / second).
      */
@@ -75,7 +80,7 @@ namespace eae
      * The number of iterations a robot keeps avoiding an obstacle after passing it.
      * This makes sure that the robot does not crash into an obstacle when it is still next to it.
      */
-    const int avoid_duration = 10;
+    const int avoid_duration = 5;
 
     /**
      * A class that defines the behavior of a robot.

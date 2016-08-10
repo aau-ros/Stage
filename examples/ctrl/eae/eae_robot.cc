@@ -587,6 +587,16 @@ namespace eae
 
     void Robot::SetMotorSpeed(double direction)
     {
+        // if the robot crashed, move gently backwards
+        if(pos->Stalled()){
+            pos->SetXSpeed(-0.1);
+            pos->SetTurnSpeed(0);
+            return;
+        }
+
+        // whether robot is currently avoiding an obstacle
+        bool obstacle = false;
+
         // current position of the robot
         int rx = round(pos->GetPose().x);
         int ry = round(pos->GetPose().y);
@@ -610,45 +620,61 @@ namespace eae
                 // check first quadrant
                 if(0 <= ra && ra < PI/2){
                     // right is blocked
-                    if(map->Read(ceil(cx),floor(cy)) != CELL_FREE)
+                    if(map->Read(ceil(cx),floor(cy)) != CELL_FREE){
                         turn_speed += avoid_turn * (r_max - r - 1);
+                        obstacle = true;
+                    }
 
                     // left is blocked
-                    if(map->Read(floor(cx),ceil(cy)) != CELL_FREE)
+                    if(map->Read(floor(cx),ceil(cy)) != CELL_FREE){
                         turn_speed -= avoid_turn * (r_max - r - 1);
+                        obstacle = true;
+                    }
                 }
 
                 // check second quadrant
                 if(PI/2 <= ra && ra < PI){
                     // right is blocked
-                    if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE)
+                    if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE){
                         turn_speed += avoid_turn * (r_max - r - 1);
+                        obstacle = true;
+                    }
 
                     // left is blocked
-                    if(map->Read(floor(cx),floor(cy)) != CELL_FREE)
+                    if(map->Read(floor(cx),floor(cy)) != CELL_FREE){
                         turn_speed -= avoid_turn * (r_max - r - 1);
+                        obstacle = true;
+                    }
                 }
 
                 // check third quadrant
                 if(-PI <= ra && ra < -PI/2){
                     // right is blocked
-                    if(map->Read(floor(cx),ceil(cy)) != CELL_FREE)
+                    if(map->Read(floor(cx),ceil(cy)) != CELL_FREE){
                         turn_speed += avoid_turn * (r_max - r - 1);
+                        obstacle = true;
+                    }
 
                     // left is blocked
-                    if(map->Read(ceil(cx),floor(cy)) != CELL_FREE)
+                    if(map->Read(ceil(cx),floor(cy)) != CELL_FREE){
                         turn_speed -= avoid_turn * (r_max - r - 1);
+                        obstacle = true;
+                    }
                 }
 
                 // check fourth quadrant
                 if(-PI/2 <= ra && ra < 0){
                     // right is blocked
-                    if(map->Read(floor(cx),floor(cy)) != CELL_FREE)
+                    if(map->Read(floor(cx),floor(cy)) != CELL_FREE){
                         turn_speed += avoid_turn * (r_max - r - 1);
+                        obstacle = true;
+                    }
 
                     // left is blocked
-                    if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE)
+                    if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE){
                         turn_speed -= avoid_turn * (r_max - r - 1);
+                        obstacle = true;
+                    }
                 }
             }
         }
@@ -660,13 +686,13 @@ namespace eae
         }
 
         // started turning to avoid obstacle, store direction
-        if(turn_speed != direction){
+        if(obstacle){
             avoid_count = avoid_duration;
             avoid_direction = turn_speed - direction;
         }
 
         // keep turning the same way for a few more iterations
-        if(turn_speed == direction && avoid_count > 0){
+        else if(avoid_count > 0){
             turn_speed += avoid_direction;
             --avoid_count;
         }
@@ -674,9 +700,16 @@ namespace eae
         // calculate forward speed according to turning speed
         // the more the robot turns, the slower it goes forward
         if(abs(turn_speed) < 1)
-            x_speed = pos->velocity_bounds->max;
+            x_speed = pos->velocity_bounds->max * (1- abs(turn_speed));
         else
-            x_speed = pos->velocity_bounds->max / abs(turn_speed);
+            x_speed = 0;
+//         if(abs(turn_speed) < 0.5)
+//             x_speed = pos->velocity_bounds->max;
+//         else if(0.5 <= abs(turn_speed) && abs(turn_speed) < 1.5)
+//             x_speed = pos->velocity_bounds->max * (1.5 - abs(turn_speed));
+//         else
+//             x_speed = 0;
+
 
         // set speed
         pos->SetXSpeed(x_speed);
@@ -703,7 +736,7 @@ namespace eae
         // clear map and compute traveled distance while traveling (not too often)
         Pose pose = pos->GetPose();
         double dist = pose.Distance(robot->last_pose); // euclidean
-        if(dist > MAP_UPDATE_DIST){
+        if(dist > MAP_UPDATE_DIST || abs(pose.a-robot->last_pose.a) > MAP_UPDATE_ANGLE){
             // clear map
             robot->UpdateMap();
 

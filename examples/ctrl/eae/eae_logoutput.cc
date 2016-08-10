@@ -50,7 +50,7 @@ namespace eae
         stringstream output;
         output << "# robot\t" << robot << endl << "# number of robots\t" << robots << endl << "# number of docking stations\t" << dss << endl <<"# communication type\t" <<  comm << endl << "# coordination type\t" << s_cord << endl << "# battery capacity\t" << battery << endl;
         Write(output.str());
-        Write("time\tdistance\tarea\tx position\ty position\tstate");
+        Write("time\tdistance\tarea\tx position\ty position\tstate\twaiting\tds");
     }
 
     LogOutput::~LogOutput()
@@ -58,10 +58,10 @@ namespace eae
         file.close();
     }
 
-    void LogOutput::Log(usec_t time, double distance, int area, double x, double y, string state)
+    void LogOutput::Log(usec_t time, double distance, int area, double x, double y, string state, int waiting, int ds)
     {
         stringstream output;
-        output << time/1000000 << "\t" << distance << "\t" << area << "\t" << x << "\t" << y << "\t" << state;
+        output << time/1000000 << "\t" << distance << "\t" << area << "\t" << x << "\t" << y << "\t" << state << "\t" << waiting << "\t" << ds;
         Write(output.str());
     }
 

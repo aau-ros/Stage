@@ -521,6 +521,16 @@ namespace eae
          * Whether the planned path is valid or not.
          */
         bool valid_path;
+
+        /**
+         * The accumulated time that the robot has to wait for recharging.
+         */
+        int waiting_time;
+
+        /**
+         * The time in seconds when the robot started to wait for recharging.
+         */
+        int waiting_start;
     };
 }
 

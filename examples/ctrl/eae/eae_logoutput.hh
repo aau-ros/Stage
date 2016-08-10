@@ -51,8 +51,10 @@ namespace eae
          * @param double x: The current location of the robot (x-coordinate).
          * @param double y: The current location of the robot (y-coordinate).
          * @param string state: The current state of the robot.
+         * @param int waiting: The accumulated waiting time at docking stations.
+         * @param int ds: The docking station ID that is currently selected by the robot.
          */
-        void Log(usec_t time, double distance, int area, double x, double y, string state);
+        void Log(usec_t time, double distance, int area, double x, double y, string state, int waiting, int ds);
 
         /**
          * Write a string as one line to the log file.

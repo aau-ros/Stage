@@ -59,6 +59,10 @@ namespace eae
         // obstacle avoidance variables
         avoid_count = 0;
         avoid_direction = 0;
+
+        // waiting time at docking stations
+        waiting_time = 0;
+        waiting_start = 0;
     }
 
     void Robot::Init()
@@ -369,6 +373,12 @@ namespace eae
         if(this->ds.id == ds.id && state == STATE_CHARGE)
             return;
 
+        // measure waiting time
+        if(state == STATE_CHARGE_QUEUE && waiting_start > 0){
+            waiting_time += pos->GetWorld()->SimTimeNow() / 1000000 - waiting_start;
+            waiting_start = 0;
+        }
+
         this->ds = ds;
         state = STATE_GOING_CHARGING;
         SetGoal(ds.pose, bid);
@@ -383,6 +393,7 @@ namespace eae
         this->ds = ds;
         state = STATE_CHARGE_QUEUE;
         SetGoal(ds.pose, bid);
+        waiting_start = pos->GetWorld()->SimTimeNow() / 1000000;
     }
 
     void Robot::UnDock()
@@ -556,7 +567,7 @@ namespace eae
 
     void Robot::Log()
     {
-        log->Log(pos->GetWorld()->SimTimeNow(), dist_travel, map->Explored(), goal.x, goal.y, STATE_STRING[state]);
+        log->Log(pos->GetWorld()->SimTimeNow(), dist_travel, map->Explored(), goal.x, goal.y, STATE_STRING[state], waiting_time, ds.id);
     }
 
     void Robot::Finalize()

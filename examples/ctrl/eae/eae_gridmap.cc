@@ -476,8 +476,11 @@ namespace eae
                 if(it->at(i) == CELL_FREE){
                     // inflate walls to keep path planner from going too close to walls
                     try{
+                        // at border of map, highest cost for planner
+                        if(it == grid.begin() || it == grid.end()-1 || i == 0 || i == grid.at(0).size()-1)
+                            data[idx] = 5;
                         // all eight neighbors are free, set lowest cost for path planner
-                        if((it-1)->at(i-1) == CELL_FREE && (it-1)->at(i) == CELL_FREE && (it-1)->at(i+1) == CELL_FREE
+                        else if((it-1)->at(i-1) == CELL_FREE && (it-1)->at(i) == CELL_FREE && (it-1)->at(i+1) == CELL_FREE
                             && it->at(i-1) == CELL_FREE && it->at(i+1) == CELL_FREE
                             && (it+1)->at(i-1) == CELL_FREE && (it+1)->at(i) == CELL_FREE && (it+1)->at(i+1) == CELL_FREE)
                             data[idx] = 1;

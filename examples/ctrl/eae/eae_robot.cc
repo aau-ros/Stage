@@ -601,32 +601,33 @@ namespace eae
                 if(0 <= ra && ra < PI/2){
                     // right is blocked
                     if(map->Read(ceil(cx),floor(cy)) != CELL_FREE)
-                        turn_speed += avoid_turn;
+                        turn_speed += avoid_turn * (r_max - r);
 
                     // left is blocked
                     if(map->Read(floor(cx),ceil(cy)) != CELL_FREE)
-                        turn_speed -= avoid_turn;
+                        turn_speed -= avoid_turn * (r_max - r);
                 }
 
                 // check second quadrant
                 if(PI/2 <= ra && ra < PI){
                     // right is blocked
                     if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE)
+                        turn_speed += avoid_turn * (r_max - r);
 
                     // left is blocked
                     if(map->Read(floor(cx),floor(cy)) != CELL_FREE)
-                        turn_speed -= avoid_turn;
+                        turn_speed -= avoid_turn * (r_max - r);
                 }
 
                 // check third quadrant
                 if(-PI <= ra && ra < -PI/2){
                     // right is blocked
                     if(map->Read(floor(cx),ceil(cy)) != CELL_FREE)
-                        turn_speed += avoid_turn;
+                        turn_speed += avoid_turn * (r_max - r);
 
                     // left is blocked
                     if(map->Read(ceil(cx),floor(cy)) != CELL_FREE)
-                        turn_speed -= avoid_turn;
+                        turn_speed -= avoid_turn * (r_max - r);
                 }
 
                 // check fourth quadrant
@@ -637,7 +638,7 @@ namespace eae
 
                     // left is blocked
                     if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE)
-                        turn_speed -= avoid_turn;
+                        turn_speed -= avoid_turn * (r_max - r);
                 }
             }
         }

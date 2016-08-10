@@ -189,7 +189,6 @@ namespace eae
             if(clear){
                 // plan path to goal
                 valid_path = Plan(pos->GetPose(), goal);
-
                 // store goal for visualization
                 pos->waypoints.push_back(ModelPosition::Waypoint(goal, wpcolor));
 
@@ -612,44 +611,44 @@ namespace eae
                 if(0 <= ra && ra < PI/2){
                     // right is blocked
                     if(map->Read(ceil(cx),floor(cy)) != CELL_FREE)
-                        turn_speed += avoid_turn * (r_max - r);
+                        turn_speed += avoid_turn * (r_max - r - 1);
 
                     // left is blocked
                     if(map->Read(floor(cx),ceil(cy)) != CELL_FREE)
-                        turn_speed -= avoid_turn * (r_max - r);
+                        turn_speed -= avoid_turn * (r_max - r - 1);
                 }
 
                 // check second quadrant
                 if(PI/2 <= ra && ra < PI){
                     // right is blocked
                     if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE)
-                        turn_speed += avoid_turn * (r_max - r);
+                        turn_speed += avoid_turn * (r_max - r - 1);
 
                     // left is blocked
                     if(map->Read(floor(cx),floor(cy)) != CELL_FREE)
-                        turn_speed -= avoid_turn * (r_max - r);
+                        turn_speed -= avoid_turn * (r_max - r - 1);
                 }
 
                 // check third quadrant
                 if(-PI <= ra && ra < -PI/2){
                     // right is blocked
                     if(map->Read(floor(cx),ceil(cy)) != CELL_FREE)
-                        turn_speed += avoid_turn * (r_max - r);
+                        turn_speed += avoid_turn * (r_max - r - 1);
 
                     // left is blocked
                     if(map->Read(ceil(cx),floor(cy)) != CELL_FREE)
-                        turn_speed -= avoid_turn * (r_max - r);
+                        turn_speed -= avoid_turn * (r_max - r - 1);
                 }
 
                 // check fourth quadrant
                 if(-PI/2 <= ra && ra < 0){
                     // right is blocked
                     if(map->Read(floor(cx),floor(cy)) != CELL_FREE)
-                        turn_speed += avoid_turn * (r_max - r);
+                        turn_speed += avoid_turn * (r_max - r - 1);
 
                     // left is blocked
                     if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE)
-                        turn_speed -= avoid_turn * (r_max - r);
+                        turn_speed -= avoid_turn * (r_max - r - 1);
                 }
             }
         }

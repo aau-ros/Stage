@@ -237,8 +237,11 @@ namespace eae
         memset(data, 0, sizeof(uint8_t)*w*h);
         map->Rasterize(data, w, h, 1, 1);
 
+        // robot direction in degree
+        int ra = (int)round(pos.a/PI*180);
+
         // iterate over all angles of fov
-        for(int a=-135; a<=135; ++a){
+        for(int a=ra-135; a<=ra+135; ++a){
             // iterate until laser range or obstacle
             for(int r=0; r<LASER_RANGE; ++r){
                 // coordinates in local map

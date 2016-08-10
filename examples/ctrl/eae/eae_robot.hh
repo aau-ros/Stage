@@ -47,13 +47,13 @@ namespace eae
      * Power consumption in watts per (meter per second) per kg.
      * See also libstage/model_position.cc line 88.
      */
-    static const double WATTS_KGMS = 4.0;
+    static const double WATTS_KGMS = 2.0;
 
     /**
      * Power consumption in watts when robot is stationary.
      * See also libstage/model_position.cc line 89.
      */
-    static const double WATTS = 10.5;
+    static const double WATTS = 9.2;
 
     /**
      * Distance that the robot has to travel until another map update is performed.

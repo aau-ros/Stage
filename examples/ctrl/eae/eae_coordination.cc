@@ -227,7 +227,9 @@ namespace eae
         // iterate over all docking stations to find closest free / occupied
         for(it=dss.begin(); it<dss.end(); ++it){
             dist_temp = robot->Distance(it->pose.x, it->pose.y);
-            if(it->state != STATE_OCCUPIED && (dist_temp < dist_free || dist_free == 0)){
+            if(dist_temp < 0)
+                printf("[%s:%d] [robot %d]: could not compute distance to DS %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), it->id);
+            else if(it->state != STATE_OCCUPIED && (dist_temp < dist_free || dist_free == 0)){
                 ds_free = *it;
                 dist_free = dist_temp;
             }

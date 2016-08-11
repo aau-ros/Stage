@@ -72,6 +72,11 @@ namespace eae
     const usec_t CHARGE_RATE = 1000000;
 
     /**
+     * Allowed distance between two points for them to be still at the same location.
+     */
+    const double EPSILON = 0.1;
+
+    /**
      * A class that defines the behavior of a robot.
      */
     class Robot
@@ -355,11 +360,14 @@ namespace eae
         void SetMotorSpeed(double direction);
 
         /**
-         * Check whether the robot is currently following a planned path.
+         * Compare two points whether the X and Y-coordinates are within EPSILON.
          *
-         * @return bool: True if the robot has a valid path, false otherwise.
+         * @param Pose point1: The first point.
+         * @param Pose point2: The second point.
+         *
+         * @return bool: True if the two points are within distance EPSILON of each other.
          */
-        bool HasPlan();
+        bool SamePoint(Pose point1, Pose point2);
 
         /**
          * Callback function that is called when the robot changes position.
@@ -447,6 +455,11 @@ namespace eae
          * This gets set when the robot wins an auction but is currently still navigating.
          */
         Pose goal_next;
+
+        /**
+         * The previous goal that the robot navigated to.
+         */
+        Pose goal_prev;
 
         /**
          * The bid the robot submitted for the next goal.

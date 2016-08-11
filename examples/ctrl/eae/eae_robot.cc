@@ -85,6 +85,12 @@ namespace eae
         // get current position
         Pose pose = pos->GetPose();
 
+        // find docking station and store in private variable
+        ds = cord->SelectDs(RemainingDist());
+
+        // visualize map progress
+        map->VisualizeGui(pos->GetPose());
+
 
         /******************
          * determine goal *
@@ -103,7 +109,7 @@ namespace eae
         // iterate through all frontiers
         vector< vector<int> >::iterator it;
         for(it=frontiers.begin(); it<frontiers.end(); ++it){
-            if(it->at(0) == pose.x && it->at(1) == pose.y)
+            if(SamePoint(pose, Pose(it->at(0), it->at(1), 0, 0)) || SamePoint(goal_prev, Pose(it->at(0), it->at(1), 0, 0)))
                 continue;
 
             // make pose of coordinates
@@ -132,7 +138,7 @@ namespace eae
          ********************************/
 
         // no new goal was found, coordinate docking with other robots
-        if(goal == pose){
+        if(SamePoint(goal, pose) || SamePoint(goal, goal_prev)){
             // no reachable goal with full battery
             if(FullyCharged()){
                 // try finding another docking station from where it is still possible to explore
@@ -153,17 +159,16 @@ namespace eae
             else{
                 state = STATE_PRECHARGE;
 
-                // select docking station and store in private variable
-                ds = cord->SelectDs(RemainingDist());
-
                 // start docking station auction
                 if(ds.id > 0){
                     cord->DockingAuction(pos->GetPose(), ds.id);
                 }
 
                 // no docking station found
-                else
+                else{
                     printf("[%s:%d] [robot %d]: no docking station found\n", StripPath(__FILE__), __LINE__, id);
+                    Finalize();
+                }
             }
         }
 
@@ -188,6 +193,8 @@ namespace eae
 
                 // no plan found, choose next goal
                 if(!valid_path){
+                    printf("[%s:%d] [robot %d]: failed to find path from (%.2f,%.2f) to (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, pos->GetPose().x, pos->GetPose().y, goal.x, goal.y);
+
                     // go to next goal if there is one
                     if(GoalQueue())
                         SetGoalNext();
@@ -229,6 +236,9 @@ namespace eae
         // or does not have a goal
         // use euclidean distance
         if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE || ((state == STATE_EXPLORE || state == STATE_GOING_CHARGING) && valid_path == false)){
+            // store previous goal
+            goal_prev = goal;
+
             // goal in queue
             if(GoalQueue()){
                 // go to goal in queue
@@ -260,6 +270,9 @@ namespace eae
 
     void Robot::SetGoalNext()
     {
+        // store previous goal
+        goal_prev = goal;
+
         // set new goal
         goal = goal_next;
 
@@ -273,9 +286,6 @@ namespace eae
     double Robot::CalcBid(Pose frontier)
     {
         Pose pose = pos->GetPose();
-
-        // find closest docking station and store in private variable
-        ds = cord->SelectDs();
 
         // calculate distances
         int dg = Distance(frontier.x, frontier.y);
@@ -584,6 +594,10 @@ namespace eae
         state = STATE_FINISHED;
         printf("[%s:%d] [robot %d]: exploration finished\n", StripPath(__FILE__), __LINE__, id);
 
+        // stop moving
+        pos->SetXSpeed(0);
+        pos->SetTurnSpeed(0);
+
         // log data
         Log();
 
@@ -615,6 +629,10 @@ namespace eae
         pos->SetTurnSpeed(turn_speed);
     }
 
+    bool Robot::SamePoint(Pose point1, Pose point2){
+        return point1.Distance(point2) <= EPSILON; // euclidean
+    }
+
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)
     {
         // robot is done
@@ -625,16 +643,19 @@ namespace eae
         // initialize robot
         if(robot->state == STATE_INIT){
             robot->Init();
+            return 0;
         }
 
         // start exploration
         if(robot->state == STATE_IDLE){
             robot->Explore();
+            return 0;
         }
 
         // clear map and compute traveled distance while traveling (not too often)
         Pose pose = pos->GetPose();
         double dist = pose.Distance(robot->last_pose); // euclidean
+        bool map_update = false;
         if(dist > MAP_UPDATE_DIST || abs(pose.a-robot->last_pose.a) > MAP_UPDATE_ANGLE){
             // clear map
             robot->UpdateMap();
@@ -644,6 +665,9 @@ namespace eae
 
             // store last pose
             robot->last_pose = pose;
+
+            // remember that the map was updated
+            map_update = true;
         }
 
         // no action required when charging
@@ -706,6 +730,10 @@ namespace eae
 
             // continue exploration
             else if(robot->state == STATE_EXPLORE){
+                // clear map, in case the two goals where closer than MAP_UPDATE_DIST
+                if(!map_update)
+                    robot->UpdateMap();
+
                 robot->Explore();
             }
 

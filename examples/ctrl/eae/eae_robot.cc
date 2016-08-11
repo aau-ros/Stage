@@ -56,11 +56,6 @@ namespace eae
         // no path planned yet
         valid_path = false;
 
-        // obstacle avoidance variables
-        stall_count = 0;
-        avoid_count = 0;
-        avoid_direction = 0;
-
         // waiting time at docking stations
         waiting_time = 0;
         waiting_start = 0;
@@ -208,8 +203,9 @@ namespace eae
 
                 // visualize path TODO: not working!
                 if(valid_path){
-                    GraphVis* vis_path = new GraphVis(&path);
-                    vis_path->Visualize(pos, cam);
+                    //GraphVis* vis_path = new GraphVis(&path);
+                    //vis_path->Visualize(pos, cam);
+                    this->path->Draw();
                 }
             }
 
@@ -324,7 +320,7 @@ namespace eae
         }
 
         // generate path as graph
-        this->path = new Graph();
+        this->path = new Graph(id);
         unsigned int dist = 0;
         Node* last_node = NULL;
         vector<ast::point_t>::reverse_iterator rit;
@@ -537,7 +533,7 @@ namespace eae
         GridMap* local = map->Clear(pose, laser->GetSensors()[0].ranges);
 
         // visualize map progress
-        map->VisualizeGui(pose);
+        //map->VisualizeGui(pose);
         //map->Visualize(pose);
 
         // share map with other robots in range
@@ -601,122 +597,9 @@ namespace eae
 
     void Robot::SetMotorSpeed(double direction)
     {
-        // if the robot crashed, recover by moving backwards in random direction
-        if(pos->Stalled()){
-            pos->SetXSpeed(-pos->velocity_bounds->max);
-            pos->SetTurnSpeed((double)(random() % 100) / 100 * 2*PI - PI);
-            stall_count = avoid_duration;
-            return;
-        }
-
-        // keep recovering from crash
-        if(stall_count > 0){
-            --stall_count;
-            return;
-        }
-
-        // whether robot is currently avoiding an obstacle
-        bool obstacle = false;
-
-        // current position of the robot
-        int rx = round(pos->GetPose().x);
-        int ry = round(pos->GetPose().y);
-        double ra = pos->GetPose().a + direction;
-
         // speed of the robot
         double turn_speed = direction;
         double x_speed;
-
-        // maximum distance to look ahead
-        int r_max = 5;
-
-        // check adjacent cells in direction of robot
-        // and adapt turn speed
-        try{
-            for(int r=1; r<r_max; ++r){
-                // cell in driving direction
-                double cx = rx + r*cos(ra);
-                double cy = ry + r*sin(ra);
-
-                // check first quadrant
-                if(0 <= ra && ra < PI/2){
-                    // right is blocked
-                    if(map->Read(ceil(cx),floor(cy)) != CELL_FREE){
-                        turn_speed += avoid_turn * (r_max - r - 1);
-                        obstacle = true;
-                    }
-
-                    // left is blocked
-                    if(map->Read(floor(cx),ceil(cy)) != CELL_FREE){
-                        turn_speed -= avoid_turn * (r_max - r - 1);
-                        obstacle = true;
-                    }
-                }
-
-                // check second quadrant
-                if(PI/2 <= ra && ra < PI){
-                    // right is blocked
-                    if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE){
-                        turn_speed += avoid_turn * (r_max - r - 1);
-                        obstacle = true;
-                    }
-
-                    // left is blocked
-                    if(map->Read(floor(cx),floor(cy)) != CELL_FREE){
-                        turn_speed -= avoid_turn * (r_max - r - 1);
-                        obstacle = true;
-                    }
-                }
-
-                // check third quadrant
-                if(-PI <= ra && ra < -PI/2){
-                    // right is blocked
-                    if(map->Read(floor(cx),ceil(cy)) != CELL_FREE){
-                        turn_speed += avoid_turn * (r_max - r - 1);
-                        obstacle = true;
-                    }
-
-                    // left is blocked
-                    if(map->Read(ceil(cx),floor(cy)) != CELL_FREE){
-                        turn_speed -= avoid_turn * (r_max - r - 1);
-                        obstacle = true;
-                    }
-                }
-
-                // check fourth quadrant
-                if(-PI/2 <= ra && ra < 0){
-                    // right is blocked
-                    if(map->Read(floor(cx),floor(cy)) != CELL_FREE){
-                        turn_speed += avoid_turn * (r_max - r - 1);
-                        obstacle = true;
-                    }
-
-                    // left is blocked
-                    if(map->Read(ceil(cx),ceil(cy)) != CELL_FREE){
-                        turn_speed -= avoid_turn * (r_max - r - 1);
-                        obstacle = true;
-                    }
-                }
-            }
-        }
-
-        // tried to read cell outside of map
-        catch(const out_of_range& e){
-            // just continue to set speed
-            // and hope it works :)
-        }
-
-        // started turning to avoid obstacle, store direction
-        if(obstacle){
-            avoid_count = avoid_duration;
-            avoid_direction = turn_speed - direction;
-        }
-
-        // keep turning the same way for a few more iterations
-        else if(avoid_count > 0){
-            turn_speed += avoid_direction;
-            --avoid_count;
-        }
 
         // calculate forward speed according to turning speed
         // the more the robot turns, the slower it goes forward
@@ -726,7 +609,6 @@ namespace eae
             x_speed = pos->velocity_bounds->max * (1.5 - abs(turn_speed));
         else
             x_speed = 0;
-
 
         // set speed
         pos->SetXSpeed(x_speed);
@@ -772,8 +654,10 @@ namespace eae
         // robot reached goal
         if(pos->GetPose().Distance(robot->goal) < GOAL_TOLERANCE){ // euclidean
             // remove current path plan
-            delete robot->path;
-            robot->valid_path = false;
+            if(robot->valid_path){
+                delete robot->path;
+                robot->valid_path = false;
+            }
 
             // log data
             robot->Log();

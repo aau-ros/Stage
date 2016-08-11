@@ -94,8 +94,8 @@ define robot pioneer2dx_front_sonar
     # cannot be detected by fiducial sensors
     fiducial_return 0
 
-    # can collide with other obstacles
-    obstacle_return 1
+    # cannot collide with other obstacles
+    obstacle_return 0
 
     # charging connector
     charging_bump()

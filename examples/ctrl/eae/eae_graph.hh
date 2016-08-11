@@ -91,34 +91,15 @@ namespace eae
     public:
         /**
          * Constructor.
+         *
+         * @param int robot: ID of the robot that uses this graph for path planning.
          */
-        Graph();
+        Graph(int robot);
 
         /**
          * Destructor.
          */
         ~Graph();
-
-        /**
-         * Add a node to the graph.
-         *
-         * @param Node* node: The node.
-         */
-        void AddNode(Node* node);
-
-        /**
-         * Remove a node from the beginning and return it.
-         *
-         * @return Node*: The node that has been removed.
-         */
-        Node* PopFront();
-
-        /**
-         * Remove a node from the end and return it.
-         *
-         * @return Node*: The node that has been removed.
-         */
-        Node* PopBack();
 
         /**
          * Draw the graph.
@@ -138,6 +119,28 @@ namespace eae
         bool GoodDirection(const Pose& pose, meters_t range, radians_t& heading_result);
 
         /**
+         * Add a node to the graph.
+         *
+         * @param Node* node: The node.
+         */
+        void AddNode(Node* node);
+
+    private:
+        /**
+         * Remove a node from the beginning and return it.
+         *
+         * @return Node*: The node that has been removed.
+         */
+        Node* PopFront();
+
+        /**
+         * Remove a node from the end and return it.
+         *
+         * @return Node*: The node that has been removed.
+         */
+        Node* PopBack();
+
+        /**
          * Get the size of the graph.
          *
          * @return unsigned int: The size of the graph in number of nodes.
@@ -148,6 +151,11 @@ namespace eae
          * All the nodes in the graph.
          */
         vector<Node*> nodes;
+
+        /**
+         * ID of the robot that uses this graph for path planning.
+         */
+        int robot;
     };
 
     /**

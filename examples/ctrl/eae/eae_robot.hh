@@ -72,17 +72,6 @@ namespace eae
     const usec_t CHARGE_RATE = 1000000;
 
     /**
-     * The amount the robot turns away from an obstacle in radians.
-     */
-    const double avoid_turn = PI/8;
-
-    /**
-     * The number of iterations a robot keeps avoiding an obstacle after passing it.
-     * This makes sure that the robot does not crash into an obstacle when it is still next to it.
-     */
-    const int avoid_duration = 10;
-
-    /**
      * A class that defines the behavior of a robot.
      */
     class Robot
@@ -505,22 +494,6 @@ namespace eae
          * The latest time at which the robot was recharged.
          */
         usec_t last_charge;
-
-        /**
-         * Countdown for recovering from a crash.
-         */
-        int stall_count;
-
-        /**
-         * Countdown for avoiding an obstacle.
-         * It stores the number of iterations a robot sticks to its decision of avoiding an obstacle in a certain direction.
-         */
-        int avoid_count;
-
-        /**
-         * Direction in which the robot is avoiding an obstacle.
-         */
-        double avoid_direction;
 
         /**
          * The path planned by the path planner.

@@ -39,7 +39,9 @@ namespace eae
         glEnd();
     }
 
-    Graph::Graph(){}
+    Graph::Graph(int robot){
+        this->robot = robot;
+    }
 
     Graph::~Graph()
     {
@@ -94,7 +96,7 @@ namespace eae
         }
 
         if(best_node == NULL){
-            fprintf(stderr, "FASR warning: no nodes in range" );
+            printf("[%s:%d] [robot %d]: path planner: no nodes in range\n", StripPath(__FILE__), __LINE__, robot);
             return false;
         }
 

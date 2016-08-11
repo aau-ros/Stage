@@ -491,21 +491,21 @@ namespace eae
                                 // calculate metric depending on number of occupied neighbor cells
                                 // direct neighbors are worse than diagonal ones
                                 if((it-1)->at(i-1) == CELL_OCCUPIED)
-                                    occupied += 5; // bottom left must be clear
+                                    ++occupied;
                                 if((it-1)->at(i) == CELL_OCCUPIED)
-                                    occupied += 5; // bottom left must be clear
+                                    occupied += 2;
                                 if((it-1)->at(i+1) == CELL_OCCUPIED)
-                                    occupied += 1;
+                                    ++occupied;
                                 if(it->at(i-1) == CELL_OCCUPIED)
-                                    occupied += 5; // bottom left must be clear
+                                    occupied += 2;
                                 if(it->at(i+1) == CELL_OCCUPIED)
                                     occupied += 2;
                                 if((it+1)->at(i-1) == CELL_OCCUPIED)
-                                    occupied += 1;
+                                    ++occupied;
                                 if((it+1)->at(i) == CELL_OCCUPIED)
                                     occupied += 2;
                                 if((it+1)->at(i+1) == CELL_OCCUPIED)
-                                    occupied += 1;
+                                    ++occupied;
 
                                 // no occupied neighbors, lowest cost
                                 if(occupied == 0)
@@ -515,7 +515,7 @@ namespace eae
                                 else if(occupied > 4)
                                     raster[idx] = 9;
 
-                                // some neighbors occupied, set cost according to
+                                // some neighbors occupied, set cost according to metric
                                 else
                                     raster[idx] = occupied + 1;
                             }

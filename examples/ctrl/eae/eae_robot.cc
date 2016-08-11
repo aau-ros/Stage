@@ -235,7 +235,7 @@ namespace eae
         // robot is at goal
         // or does not have a goal
         // use euclidean distance
-        if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE || ((state == STATE_EXPLORE || state == STATE_GOING_CHARGING) && valid_path == false)){
+        if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE || ((state == STATE_EXPLORE || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE) && valid_path == false)){
             // store previous goal
             goal_prev = goal;
 
@@ -262,7 +262,7 @@ namespace eae
         // store as next goal only
         // - if my bid is higher than for the other goal already stored
         // - if robot needs recharging (goal should be a docking station)
-        else if(GoalQueue() == false || goal_next_bid < bid || state == STATE_GOING_CHARGING || STATE_CHARGE_QUEUE){
+        else if(GoalQueue() == false || goal_next_bid < bid || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE){
             goal_next = to;
             goal_next_bid = bid;
         }
@@ -309,7 +309,7 @@ namespace eae
         // calculate angular parameter
         double theta = 1/PI * (PI - abs(abs(pose.a - Angle(pose.x, pose.y, frontier.x, frontier.y)) - PI));
 
-        // calculate distance to other robots
+        // calculate distance to other robot's goals
         double dr = -cord->DistRobot(frontier);
 
         // calculate bid
@@ -364,16 +364,6 @@ namespace eae
     robot_state_t Robot::GetState()
     {
         return state;
-    }
-
-    void Robot::SetState(robot_state_t state)
-    {
-        this->state = state;
-    }
-
-    void Robot::SetPose(Pose pose)
-    {
-        pos->SetPose(pose);
     }
 
     Pose Robot::GetPose()
@@ -531,7 +521,7 @@ namespace eae
         this->map->Update(map);
 
         // visualize map progress
-        map->VisualizeGui(pos->GetPose());
+        //this->map->VisualizeGui(pos->GetPose());
     }
 
     void Robot::UpdateMap()
@@ -689,7 +679,7 @@ namespace eae
             // robot needs recharging
             if(robot->state == STATE_GOING_CHARGING){
                 // already at docking station
-                if(robot->goal == robot->ds.pose){
+                if(robot->SamePoint(robot->goal, robot->ds.pose)){
                     // stop moving
                     pos->Stop();
 
@@ -702,7 +692,7 @@ namespace eae
                 }
 
                 // next goal is docking station
-                else if(robot->GoalQueue() && robot->goal_next == robot->ds.pose){
+                else if(robot->GoalQueue() && robot->SamePoint(robot->goal_next, robot->ds.pose)){
                     robot->SetGoalNext();
                 }
             }
@@ -710,7 +700,7 @@ namespace eae
             // robot waits for recharging at docking station
             else if(robot->state == STATE_CHARGE_QUEUE){
                 // already at docking station
-                if(robot->goal == robot->ds.pose){
+                if(robot->SamePoint(robot->goal, robot->ds.pose)){
                     // stop moving
                     pos->Stop();
 
@@ -719,8 +709,9 @@ namespace eae
                 }
 
                 // next goal is docking station
-                else if(robot->GoalQueue() && robot->goal_next == robot->ds.pose)
+                else if(robot->GoalQueue() && robot->SamePoint(robot->goal_next, robot->ds.pose)){
                     robot->SetGoalNext();
+                }
             }
 
             // go to next goal
@@ -759,30 +750,8 @@ namespace eae
         std::vector<ModelFiducial::Fiducial>& fids = fid->GetFiducials();
         std::vector<ModelFiducial::Fiducial>::iterator it;
 
-        // robots is on its way for recharging
-        if(robot->state == STATE_GOING_CHARGING){
-            // check fiducial return signal
-            for(it = fids.begin(); it<fids.end(); ++it){
-                // fiducial is my docking station
-                if(it->id == robot->ds.id && robot->goal != robot->ds.pose){
-                    // move robot to docking station
-                    robot->goal.x = it->pose.x;
-                    robot->goal.y = it->pose.y;
-                    robot->goal.a = it->bearing;
-                    robot->SetGoal(robot->goal, 0);
-                }
-            }
-        }
-
-        // robot is currently recharging
-        else if(robot->state == STATE_CHARGE){
-            // robot is done charging
-            if(robot->FullyCharged()){
-            }
-        }
-
         // store docking stations
-        else{
+        if(robot->state != STATE_GOING_CHARGING && robot->state != STATE_CHARGE_QUEUE && robot->state != STATE_CHARGE){
             for(it = fids.begin(); it<fids.end(); ++it){
                 robot->cord->UpdateDs(it->id, it->pose);
             }

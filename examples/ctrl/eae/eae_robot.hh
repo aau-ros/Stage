@@ -162,20 +162,6 @@ namespace eae
         robot_state_t GetState();
 
         /**
-         * Set the state of the robot.
-         *
-         * @param robot_state_t state: The state of the robot.
-         */
-        void SetState(robot_state_t state);
-
-        /**
-         * Set the position of the robot.
-         *
-         * @param Pose pose: The position of the robot.
-         */
-        void SetPose(Pose pose);
-
-        /**
          * Get the position of the robot.
          *
          * @return Pose: The position of the robot.

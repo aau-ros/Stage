@@ -402,7 +402,6 @@ namespace eae
 
         // error
         if(!result){
-            printf("[%s:%d] [robot %d]: failed to find path from (%.2f,%.2f) to (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, robot, start_pose.x, start_pose.y, goal_pose.x, goal_pose.y);
             return false;
         }
 
@@ -480,50 +479,7 @@ namespace eae
                 for(it = grid.begin(); it<grid.end(); ++it){
                     // free
                     if(it->at(i) == CELL_FREE){
-                        int occupied = 0;
-                        // inflate walls to keep path planner from going too close to walls
-                        try{
-                            // at border of map, highest cost for planner
-                            if(it == grid.begin() || it == grid.end()-1 || i == 0 || i == grid.at(0).size()-1)
-                                raster[idx] = 5;
-                            // count occupied neighbor cells
-                            else{
-                                // calculate metric depending on number of occupied neighbor cells
-                                // direct neighbors are worse than diagonal ones
-                                if((it-1)->at(i-1) == CELL_OCCUPIED)
-                                    ++occupied;
-                                if((it-1)->at(i) == CELL_OCCUPIED)
-                                    occupied += 2;
-                                if((it-1)->at(i+1) == CELL_OCCUPIED)
-                                    ++occupied;
-                                if(it->at(i-1) == CELL_OCCUPIED)
-                                    occupied += 2;
-                                if(it->at(i+1) == CELL_OCCUPIED)
-                                    occupied += 2;
-                                if((it+1)->at(i-1) == CELL_OCCUPIED)
-                                    ++occupied;
-                                if((it+1)->at(i) == CELL_OCCUPIED)
-                                    occupied += 2;
-                                if((it+1)->at(i+1) == CELL_OCCUPIED)
-                                    ++occupied;
-
-                                // no occupied neighbors, lowest cost
-                                if(occupied == 0)
-                                    raster[idx] = 1;
-
-                                // many neighbors occupied, mark as occupied
-                                else if(occupied > 4)
-                                    raster[idx] = 9;
-
-                                // some neighbors occupied, set cost according to metric
-                                else
-                                    raster[idx] = occupied + 1;
-                            }
-                        }
-                        // at border of map, highest cost for planner
-                        catch(const out_of_range& e){
-                            raster[idx] = 5;
-                        }
+                        raster[idx] = 1;
                     }
 
                     // occupied

@@ -98,13 +98,16 @@ namespace eae
     double Coordination::DistRobot(Pose pose)
     {
         double dist = 0;
-        double dist_temp;
-        vector<robot_t>::iterator it;
-        for(it=robots.begin(); it<robots.end(); ++it){
-            dist_temp = robot->Distance(it->pose.x, it->pose.y);
-            if(dist_temp < dist || dist == 0)
-                dist = dist_temp;
+
+        // iterator
+        vector<fr_auction_t>::iterator it;
+
+        // accumulated distance to all frontiers that have been auctioned/won by other robots
+        for(it=fr_auctions.begin(); it<fr_auctions.end(); ++it){
+            if(it->winner != robot->GetId())
+                dist += pose.Distance(it->pose); // euclidean distance to speed it up
         }
+
         return dist;
     }
 

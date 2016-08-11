@@ -62,8 +62,8 @@ define charging_bump model
         pose [ 0 0 -0.050 0 ]
 
         # range of sensor
-        range_max 20
-        range_max_id 20
+        range_max 18
+        range_max_id 18
 
         # field of view of sensor
         fov 360

@@ -89,7 +89,7 @@ namespace eae
         ds = cord->SelectDs(RemainingDist());
 
         // visualize map progress
-        //map->VisualizeGui(pos->GetPose());
+        map->VisualizeGui(pos->GetPose());
 
 
         /******************
@@ -194,6 +194,9 @@ namespace eae
                 // no plan found, choose next goal
                 if(!valid_path){
                     printf("[%s:%d] [robot %d]: failed to find path from (%.2f,%.2f) to (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, pos->GetPose().x, pos->GetPose().y, goal.x, goal.y);
+
+                    // stop moving
+                    pos->Stop();
 
                     // go to next goal if there is one
                     if(GoalQueue())
@@ -585,8 +588,7 @@ namespace eae
         printf("[%s:%d] [robot %d]: exploration finished\n", StripPath(__FILE__), __LINE__, id);
 
         // stop moving
-        pos->SetXSpeed(0);
-        pos->SetTurnSpeed(0);
+        pos->Stop();
 
         // log data
         Log();

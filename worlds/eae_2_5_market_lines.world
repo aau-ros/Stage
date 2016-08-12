@@ -10,13 +10,10 @@ floorplan
     pose [100 0 0 0]
     size [250.000 50.000 1]
     bitmap "bitmaps/lines_2.png"
-    obstacle_return 0
 )
 
 robot( pose [ 1 0 0 0 ] )
 robot( pose [ -1 0 0 180 ] )
-#robot( pose [ 0 1 0 90 ] )
-#robot( pose [ 0 -1 0 270 ] )
 
 docking_station( pose [ 0 0 0 0 ] fiducial_return 2 name "ds2" )
 docking_station( pose [ 25 0 0 0 ] fiducial_return 3 name "ds3" )

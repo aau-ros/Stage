@@ -62,8 +62,8 @@ define charging_bump model
         pose [ 0 0 -0.050 0 ]
 
         # range of sensor
-        range_max 18
-        range_max_id 18
+        range_max 9
+        range_max_id 9
 
         # field of view of sensor
         fov 360
@@ -112,7 +112,7 @@ define robot pioneer2dx_front_sonar
     sickbase(
         sensor(
             samples 135 # angular resolution
-            range [0 20] # range in meters (check also ../examples/ctrl/eae/eae.hh)
+            range [0 10] # range in meters (check also ../examples/ctrl/eae/eae.hh)
             fov 270 # field of view (check also ../examples/ctrl/eae/eae.hh)
         )
         color "blue"

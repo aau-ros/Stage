@@ -47,7 +47,7 @@ namespace eae
     /**
      * Range of laser scanner in grid cells.
      */
-    const int LASER_RANGE = 20;
+    const int LASER_RANGE = 10;
 
     /**
      * Map grid cell values.

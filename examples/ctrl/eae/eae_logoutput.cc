@@ -52,7 +52,7 @@ namespace eae
 
         // write header
         stringstream output;
-        output << "# robot\t" << robot << endl << "# number of robots\t" << robots << endl << "# number of docking stations\t" << dss << endl <<"# communication type\t" <<  comm << endl << "# coordination type\t" << s_cord << endl << "# battery capacity\t" << battery << endl;
+        output << "# robot\t" << robot << endl << "# number of robots\t" << robots << endl << "# number of docking stations\t" << dss << endl <<"# communication type\t" <<  comm << endl << "# coordination type\t" << s_cord << endl << "# ds selection policy\t" << s_pol << endl << "# battery capacity\t" << battery << endl;
         Write(output.str());
         Write("time\tdistance\tarea\tx position\ty position\tstate\twaiting\tds");
     }

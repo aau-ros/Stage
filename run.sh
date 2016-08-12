@@ -106,6 +106,14 @@ do
     # write contents to world file
     echo -e ${world} > $file
 
+    # output progress
+    echo
+    echo
+    echo "--------------"
+    echo " RUN ${i} OF ${maps}"
+    echo "--------------"
+    echo
+
     # run stage
     stage $file
 done

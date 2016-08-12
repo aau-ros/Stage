@@ -115,6 +115,6 @@ do
     echo
 
     # run stage
-    stage $file
+    stage -g $file
 done
 

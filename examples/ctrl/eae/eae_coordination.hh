@@ -17,7 +17,8 @@ namespace eae
      * Policy of a robot for selecting a docking station.
      */
     typedef enum{
-        POL_CLOSEST = 0,
+        POL_UNDEFINED = 0,
+        POL_CLOSEST,
         POL_VACANT,
         POL_OPPORTUNISTIC,
         POL_COMBINED
@@ -66,11 +67,6 @@ namespace eae
      * It defines the interval at which robot beacons are send.
      */
     const usec_t TO_BEACON = 1000000;
-
-    /**
-     * Docking station selection policy.
-     */
-    const pol_t POL = POL_CLOSEST;
 
     /**
      * Tolerance when calculating the distance to the closest docking station.
@@ -177,7 +173,7 @@ namespace eae
          * @param double range: The range of the robot, not required for all policies.
          * @param pol_t policy: Override the global policy for selecting a docking station.
          */
-        ds_t SelectDs(double range=0, pol_t policy=POL);
+        ds_t SelectDs(double range=0, pol_t policy=POL_UNDEFINED);
 
         /**
          * Set a docking station to the state vacant.
@@ -394,6 +390,11 @@ namespace eae
          * The coordination strategy for coordinating the recharging at docking stations.
          */
         cord_t strategy;
+
+        /**
+         * The policy for selecting a docking station for recharging.
+         */
+        pol_t policy;
 
         /**
          * The wifi model of the robot.

@@ -10,9 +10,12 @@ namespace eae
         // position model to access wifi
         this->pos = pos;
 
-        // read exploration strategy from world file
+        // read coordination strategy from world file
         Worldfile* wf = pos->GetWorld()->GetWorldFile();
-        strategy = (cord_t)wf->ReadInt(0, "coordination", strategy);
+        strategy = (cord_t)wf->ReadInt(0, "strategy", strategy);
+
+        // read docking station selection policy from world file
+        policy = (pol_t)wf->ReadInt(0, "policy", policy);
 
         // initialize wifi adapter
         wifi = (ModelWifi*)pos->GetChild("wifi:0");
@@ -153,6 +156,10 @@ namespace eae
 
     ds_t Coordination::SelectDs(double range, pol_t policy)
     {
+        // select global policy
+        if(policy == POL_UNDEFINED)
+            policy = this->policy;
+
         switch(policy){
             case POL_CLOSEST:
                 return ClosestDs();
@@ -480,7 +487,7 @@ namespace eae
             return;
 
         // for closest policy, only respond to auctions for closest docking station
-        if(POL == POL_CLOSEST){
+        if(policy == POL_CLOSEST){
             if(ds != ClosestDs().id)
                 return;
         }

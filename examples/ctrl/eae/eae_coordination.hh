@@ -25,6 +25,12 @@ namespace eae
     } pol_t;
 
     /**
+     * Strings describing the policy.
+     * Make sure they match the pol_t enum!
+     */
+    const string POL_STRING[] = {"undefined", "closest", "vacant", "opportunistic", "combined"};
+
+    /**
      * Possible coordination strategies for recharging at docking stations.
      *
      * @todo: Implement optimal coordination strategy.
@@ -209,6 +215,20 @@ namespace eae
          * @return string: A string describing the coordination strategy.
          */
         string GetStrategyString();
+
+        /**
+         * Get the policy for selecting docking stations.
+         *
+         * @return pol_t: The index of the policy.
+         */
+        pol_t GetPolicy();
+
+        /**
+         * Get the policy for selecting docking stations.
+         *
+         * @return string: A string describing the policy.
+         */
+        string GetPolicyString();
 
         /**
          * ID of auction.

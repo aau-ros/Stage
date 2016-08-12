@@ -5,7 +5,7 @@ using namespace std;
 
 namespace eae
 {
-    LogOutput::LogOutput(int robot, int robots, int dss, string comm, int i_cord, string s_cord, double battery)
+    LogOutput::LogOutput(int robot, int robots, int dss, string comm, int i_cord, string s_cord, int i_pol, string s_pol, double battery)
     {
         // get current time
         std::time_t now = time(NULL);
@@ -35,12 +35,16 @@ namespace eae
         ostringstream ss_cord;
         ss_cord << i_cord;
 
+        // add policy index to file name
+        ostringstream ss_pol;
+        ss_pol << i_pol;
+
         // add robot id to file name
         ostringstream ss_robot;
         ss_robot << robot;
 
         // complete path of file
-        string filepath = path + string(timestring) + "-" + ss_cord.str() + "-" + ss_robot.str() + ".log";
+        string filepath = path + string(timestring) + "-" + ss_cord.str() + "-" + ss_pol.str() + "-" + ss_robot.str() + ".log";
         printf("log file: %s\n", filepath.c_str());
 
         // open log file

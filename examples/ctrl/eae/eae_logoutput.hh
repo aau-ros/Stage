@@ -32,9 +32,11 @@ namespace eae
          * @param string comm: The communication model used for the wifi connections.
          * @param int i_cord: The coordination strategy.
          * @param string s_cord: The coordination strategy as a string.
+         * @param int i_pol: The policy for selecting docking stations.
+         * @param string s_pol: The policy for selecting docking stations as a string.
          * @param double battery: The battery capacity.
          */
-        LogOutput(int robot, int robots, int dss, string comm, int i_cord, string s_cord, double battery);
+        LogOutput(int robot, int robots, int dss, string comm, int i_cord, string s_cord, int i_pol, string s_pol, double battery);
 
         /**
          * Destructor.

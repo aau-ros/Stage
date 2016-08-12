@@ -225,6 +225,16 @@ namespace eae
         return CORD_STRING[strategy];
     }
 
+    pol_t Coordination::GetPolicy()
+    {
+        return policy;
+    }
+
+    string Coordination::GetPolicyString()
+    {
+        return POL_STRING[policy];
+    }
+
     ds_t Coordination::ClosestDs()
     {
         ds_t ds_free = ds_t();

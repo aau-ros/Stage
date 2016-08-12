@@ -17,7 +17,7 @@ namespace eae
         sonar = (ModelRanger*)pos->GetChild("ranger:0");
         map = new GridMap(pos, id);
         cord = new Coordination(pos, this);
-        log = new LogOutput(id, robots, dss, cord->GetWifiModel(), cord->GetStrategy(), cord->GetStrategyString(), pos->FindPowerPack()->GetCapacity());
+        log = new LogOutput(id, robots, dss, cord->GetWifiModel(), cord->GetStrategy(), cord->GetStrategyString(), cord->GetPolicy(), cord->GetPolicyString(), pos->FindPowerPack()->GetCapacity());
         cam = new OrthoCamera();
         wpcolor = Color(0,1,0); // waypoint color is green
 

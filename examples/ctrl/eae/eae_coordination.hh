@@ -156,11 +156,11 @@ namespace eae
         void BroadcastMap(GridMap* local);
 
         /**
-         * Returns the distance from a given pose to the closest robot.
+         * Returns the distance from a given pose to the closest goal another robot has been to.
          *
          * @param Pose pose: The pose to calculate the distance from.
          *
-         * @return double: The distance to the closest robot.
+         * @return double: The distance to the closest goal.
          */
         double DistRobot(Pose pose);
 
@@ -194,6 +194,15 @@ namespace eae
          * @return bool: True if all other robots are in state STATE_FINISHED.
          */
         bool Finished();
+
+        /**
+         * Check if a frontier has already been auctioned.
+         *
+         * @param Pose frontier: The frontier to check.
+         *
+         * @return bool: True if the frontier is in the list of auctioned frontiers.
+         */
+        bool OldFrontier(Pose frontier);
 
         /**
          * Get the wifi model.

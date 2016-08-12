@@ -101,14 +101,19 @@ namespace eae
     double Coordination::DistRobot(Pose pose)
     {
         double dist = 0;
+        double dist_temp;
 
         // iterator
         vector<fr_auction_t>::iterator it;
 
-        // accumulated distance to all frontiers that have been auctioned/won by other robots
+        // closest distance to any frontier that has been auctioned/won by another robot
         for(it=fr_auctions.begin(); it<fr_auctions.end(); ++it){
-            if(it->winner != robot->GetId())
-                dist += pose.Distance(it->pose); // euclidean distance to speed it up
+            if(it->winner != robot->GetId()){
+                dist_temp = pose.Distance(it->pose); // euclidean distance to speed it up
+                if(dist_temp < dist || dist == 0)
+                    dist = dist_temp;
+            }
+
         }
 
         return dist;
@@ -210,6 +215,22 @@ namespace eae
         return true;
     }
 
+    bool Coordination::OldFrontier(Pose frontier)
+    {
+        // iterator
+        vector<fr_auction_t>::iterator it;
+
+        // iterate through all auctions
+        for(it=fr_auctions.begin(); it<fr_auctions.end(); ++it){
+            // return true if frontier is in the list of frontier auctions
+            if(robot->SamePoint(frontier, it->pose)){
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     string Coordination::GetWifiModel()
     {
         return wifi->GetConfig()->GetModelString();
@@ -308,7 +329,6 @@ namespace eae
 
     ds_t Coordination::OpportunisticDs(double range)
     {
-//         printf("[%s:%d] [robot %d]: looking for next closest ds\n", StripPath(__FILE__), __LINE__, robot->GetId());
         bool frontiers; // true if there are frontiers in range of the docking station
         bool reachable; // true if one docking station is reachable by another
         ds_t ds = ds_t();
@@ -445,6 +465,7 @@ namespace eae
         // don't respond to frontier auctions if robot is charging or on the way
         ds_t ds_dock;
         if(this->robot->Docking(ds_dock)){
+            StoreNewFrAuction(id, bid, -1, robot, pos->GetWorld()->SimTimeNow(), false, frontier);
             return;
         }
 
@@ -455,6 +476,7 @@ namespace eae
 
             // invalid bid, robot cannot reach frontier
             if(my_bid == BID_INV){
+                StoreNewFrAuction(id, bid, -1, robot, pos->GetWorld()->SimTimeNow(), false, frontier);
                 return;
             }
 

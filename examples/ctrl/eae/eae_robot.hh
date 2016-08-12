@@ -287,6 +287,16 @@ namespace eae
         int Distance(double to_x, double to_y);
 
         /**
+         * Compare two points whether the X and Y-coordinates are within EPSILON.
+         *
+         * @param Pose point1: The first point.
+         * @param Pose point2: The second point.
+         *
+         * @return bool: True if the two points are within distance EPSILON of each other.
+         */
+        bool SamePoint(Pose point1, Pose point2);
+
+        /**
          * Update the local grid map with a given map.
          * Only non existent or unknown cells in the local map will be written.
          *
@@ -344,16 +354,6 @@ namespace eae
          * @param double direction: The relative direction the robot would go without obstacles.
          */
         void SetMotorSpeed(double direction);
-
-        /**
-         * Compare two points whether the X and Y-coordinates are within EPSILON.
-         *
-         * @param Pose point1: The first point.
-         * @param Pose point2: The second point.
-         *
-         * @return bool: True if the two points are within distance EPSILON of each other.
-         */
-        bool SamePoint(Pose point1, Pose point2);
 
         /**
          * Callback function that is called when the robot changes position.

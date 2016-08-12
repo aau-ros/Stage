@@ -167,7 +167,7 @@ namespace eae
                 // no docking station found
                 else{
                     printf("[%s:%d] [robot %d]: no docking station found\n", StripPath(__FILE__), __LINE__, id);
-                    Finalize();
+                    Explore();
                 }
             }
         }
@@ -496,6 +496,12 @@ namespace eae
         // iterate through all frontiers
         vector< vector<int> >::iterator it;
         for(it=frontiers.end()-1; it>=frontiers.begin(); --it){
+            // remove frontier if it has been auctioned already
+            if(cord->OldFrontier(Pose(it->at(0), it->at(1), 0, 0))){
+                frontiers.erase(it);
+                continue;
+            }
+
             // calculate distance
             double dist1 = map->Distance(pos.x, pos.y, it->at(0), it->at(1));
             double dist2;
@@ -516,6 +522,10 @@ namespace eae
     int Robot::Distance(double to_x, double to_y)
     {
         return map->Distance(pos->GetPose().x, pos->GetPose().y, to_x, to_y);
+    }
+
+    bool Robot::SamePoint(Pose point1, Pose point2){
+        return point1.Distance(point2) <= EPSILON; // euclidean
     }
 
     void Robot::UpdateMap(GridMap* map)
@@ -619,10 +629,6 @@ namespace eae
         // set speed
         pos->SetXSpeed(x_speed);
         pos->SetTurnSpeed(turn_speed);
-    }
-
-    bool Robot::SamePoint(Pose point1, Pose point2){
-        return point1.Distance(point2) <= EPSILON; // euclidean
     }
 
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)

@@ -11,7 +11,15 @@ docking_stations 1
 # 0: marked based
 # 1: greedy
 # 2: optimal (not yet implemented)
-coordination 1
+strategy 1
+
+# policy for selecting a docking station
+# 0: undefined
+# 1: always select closest docking station
+# 2: prefer vacant docking stations
+# 3: prefer docking stations where there are still frontiers in reach
+# 4: a combination of the above
+policy 1
 
 # a robot
 robot(
@@ -31,4 +39,17 @@ docking_station(
     # name of the docking station
     # must be ds + fiducial id
     name "ds2"
+)
+
+# the map
+floorplan
+(
+    # shift of the map
+    pose [100 0 0 0]
+
+    # size of the map
+    size [250 50 1]
+
+    # path to the underlying bitmap
+    bitmap "bitmaps/lines_1.png"
 )

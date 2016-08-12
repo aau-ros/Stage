@@ -747,7 +747,8 @@ Model* Model::TestCollision()
       }
   
   //printf( "mod %s test collision done.\n", token );
-  return hitmod;  
+  //return hitmod; 
+  return NULL;
 }  
 
 void Model::UpdateCharge()

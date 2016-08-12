@@ -89,7 +89,7 @@ namespace eae
         ds = cord->SelectDs(RemainingDist());
 
         // visualize map progress
-        map->VisualizeGui(pos->GetPose());
+        //map->VisualizeGui(pos->GetPose());
 
 
         /******************
@@ -221,7 +221,7 @@ namespace eae
                 double a_goal, a_error;
 
                 // get angular velocity to reach next node on path
-                path->GoodDirection(pos->GetPose(), 3, a_goal);
+                path->GoodDirection(pos->GetPose(), 2, a_goal);
                 a_error = normalize(a_goal - pos->GetPose().a);
 
                 // set velocities and avoid obstacles

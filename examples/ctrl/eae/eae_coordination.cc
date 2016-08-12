@@ -276,21 +276,34 @@ namespace eae
 
     ds_t Coordination::VacantDs(double range)
     {
-        ds_t ds = ds_t();
-        double dist = 0;
+        ds_t ds_free = ds_t();
+        ds_t ds_occ = ds_t();
+        double dist_free = 0;
+        double dist_occ = 0;
         double dist_temp;
         vector<ds_t>::iterator it;
 
-        // iterate over all docking stations to find closest free in range
+        // iterate over all docking stations to find closest free / occupied
         for(it=dss.begin(); it<dss.end(); ++it){
             dist_temp = robot->Distance(it->pose.x, it->pose.y);
-            if(it->state != STATE_OCCUPIED && dist_temp <= range && (dist_temp < dist || dist == 0)){
-                ds = *it;
-                dist = dist_temp;
+            if(dist_temp < 0)
+                printf("[%s:%d] [robot %d]: could not compute distance to DS %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), it->id);
+            else if(it->state != STATE_OCCUPIED && (dist_temp < dist_free || dist_free == 0)){
+                ds_free = *it;
+                dist_free = dist_temp;
+            }
+            else if(it->state == STATE_OCCUPIED && (dist_temp < dist_occ || dist_occ == 0)){
+                ds_occ = *it;
+                dist_occ = dist_temp;
             }
         }
 
-        return ds;
+        // return free docking station
+        if(dist_free > 0)
+            return ds_free;
+
+        // return occupied docking station (or invalid one)
+        return ds_occ;
     }
 
     ds_t Coordination::OpportunisticDs(double range)
@@ -311,8 +324,11 @@ namespace eae
             dist_temp = robot->Distance(it->pose.x, it->pose.y);
             frontiers = (robot->FrontiersReachable(it->pose, robot->MaxDist(), true).empty() == false);
 
+            if(dist_temp < 0)
+                printf("[%s:%d] [robot %d]: could not compute distance to DS %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), it->id);
+
             // docking station is reachable and has frontiers in range
-            if(dist_temp <= range && frontiers){
+            else if(dist_temp <= range && frontiers){
                 dss_reach_front.push_back(*it);
             }
 
@@ -330,7 +346,9 @@ namespace eae
         // return closest docking station in range of robot with frontiers in range
         for(it=dss_reach_front.begin(); it<dss_reach_front.end(); ++it){
             dist_temp = robot->Distance(it->pose.x, it->pose.y);
-            if(dist_temp < dist || dist == 0){
+            if(dist_temp < 0)
+                printf("[%s:%d] [robot %d]: could not compute distance to DS %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), it->id);
+            else if(dist_temp < dist || dist == 0){
                 ds = *it;
                 dist = dist_temp;
             }
@@ -353,7 +371,9 @@ namespace eae
             // minimize distance
             if(reachable){
                 dist_temp = robot->Distance(it->pose.x, it->pose.y);
-                if(dist_temp < dist || dist == 0){
+                if(dist_temp < 0)
+                    printf("[%s:%d] [robot %d]: could not compute distance to DS %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), it->id);
+                else if(dist_temp < dist || dist == 0){
                     ds = *it;
                     dist = dist_temp;
                 }

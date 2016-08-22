@@ -586,16 +586,17 @@ namespace eae
 
     double Robot::RemainingDist(joules_t charge)
     {
-        double velocity; // average velocity
-        double power;    // power consumption at average velocity
+        double velocity = 0; // average velocity
+        double power; // power consumption at average velocity
         World* world = pos->GetWorld();
 
         // calculate average velocity
         if(dist_travel > 0 && world->SimTimeNow() > 0){
             velocity = dist_travel/world->SimTimeNow()*1000000;
         }
-        // at beginning of simulation take max velocity
-        else{
+
+        // at beginning of simulation take half of max velocity
+        if(velocity < pos->velocity_bounds->max / 2){
             velocity = pos->velocity_bounds->max / 2;
         }
 

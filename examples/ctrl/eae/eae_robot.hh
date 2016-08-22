@@ -513,6 +513,19 @@ namespace eae
          * The time in seconds when the robot started to wait for recharging.
          */
         int waiting_start;
+
+        /**
+         * If the robot cannot compute a path, it turns 90° and tries again.
+         * This variable stores whether the robot is currently turning.
+         * It is reset to false if it was successfull.
+         */
+        bool turning;
+
+        /**
+         * This variable stores the angle the robot tried turning already.
+         * It is reset to 0 if it was successfull.
+         */
+        double turned;
     };
 }
 

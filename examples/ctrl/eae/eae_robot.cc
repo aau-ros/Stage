@@ -59,6 +59,10 @@ namespace eae
         // waiting time at docking stations
         waiting_time = 0;
         waiting_start = 0;
+
+        // robot did not try turning to fix computing path
+        turning = false;
+        turned = 0;
     }
 
     void Robot::Init()
@@ -186,14 +190,24 @@ namespace eae
 
         // move robot to frontier / docking station
         if(state == STATE_EXPLORE || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE){
+            // current pose
+            Pose pose = pos->GetPose();
+
             // make a new plan
             if(clear){
                 // plan path to goal
-                valid_path = Plan(pos->GetPose(), goal);
+                valid_path = Plan(pose, goal);
 
                 // no plan found, choose next goal
                 if(!valid_path){
-                    printf("[%s:%d] [robot %d]: failed to find path from (%.2f,%.2f) to (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, pos->GetPose().x, pos->GetPose().y, goal.x, goal.y);
+                    // try if turning 180° fixes the problem
+                    if(turning == false){
+                        turning = true;
+                        pos->GoTo(pose.x, pose.y, pose.a+PI);
+                        return;
+                    }
+
+                    printf("[%s:%d] [robot %d]: failed to find path from (%.2f,%.2f) to (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, pose.x, pose.y, goal.x, goal.y);
 
                     // stop moving
                     pos->Stop();
@@ -201,6 +215,7 @@ namespace eae
                     // go to next goal if there is one
                     if(GoalQueue())
                         SetGoalNext();
+
                     // otherwise find a new goal
                     else
                         Explore();
@@ -208,15 +223,19 @@ namespace eae
                     return;
                 }
 
+                // try turning again next time a path cannot be computed
+                turning = false;
+                turned = 0;
+
                 // store goal for visualization
                 pos->waypoints.push_back(ModelPosition::Waypoint(goal, wpcolor));
 
                 // visualize path TODO: not working!
-                if(valid_path){
-                    //GraphVis* vis_path = new GraphVis(&path);
-                    //vis_path->Visualize(pos, cam);
-                    this->path->Draw();
-                }
+//                 if(valid_path){
+//                     GraphVis* vis_path = new GraphVis(&path);
+//                     vis_path->Visualize(pos, cam);
+//                     this->path->Draw();
+//                 }
             }
 
             // robot has a path, keep following
@@ -224,8 +243,8 @@ namespace eae
                 double a_goal, a_error;
 
                 // get angular velocity to reach next node on path
-                path->GoodDirection(pos->GetPose(), 2, a_goal);
-                a_error = normalize(a_goal - pos->GetPose().a);
+                path->GoodDirection(pose, 2, a_goal);
+                a_error = normalize(a_goal - pose.a);
 
                 // set velocities and avoid obstacles
                 SetMotorSpeed(a_error);
@@ -666,6 +685,17 @@ namespace eae
 
             // remember that the map was updated
             map_update = true;
+
+            // measure angle the robot has turned to fix path computation
+            if(robot->turning){
+                robot->turned += MAP_UPDATE_ANGLE;
+
+                // try again to compute path
+                if(robot->turned > PI/2){
+                    robot->Move(true);
+                    return 0;
+                }
+            }
         }
 
         // no action required when charging

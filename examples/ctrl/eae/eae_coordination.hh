@@ -55,7 +55,7 @@ namespace eae
     const int L1 = 1;
     const int L2 = 3;
     const int L3 = 1;
-    const int L4 = 1;
+    const int L4 = 7;
 
     /**
      * Timeout for auctions.

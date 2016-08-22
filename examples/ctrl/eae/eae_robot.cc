@@ -61,7 +61,7 @@ namespace eae
         waiting_start = 0;
 
         // robot did not try turning to fix computing path
-        turning = false;
+        turning = 0;
         turned = 0;
     }
 
@@ -93,7 +93,7 @@ namespace eae
         ds = cord->SelectDs(RemainingDist());
 
         // visualize map progress
-        map->VisualizeGui(pos->GetPose());
+//         map->VisualizeGui(pos->GetPose());
 
 
         /******************
@@ -200,31 +200,40 @@ namespace eae
 
                 // no plan found, choose next goal
                 if(!valid_path){
-                    // try if turning 180° fixes the problem
-                    if(turning == false){
-                        turning = true;
+                    // try if turning fixes the problem
+                    // try at least a couple of times
+                    if(turning < TURN_TRIALS){
+                        ++turning;
+
                         pos->GoTo(pose.x, pose.y, pose.a+PI);
                         return;
                     }
 
-                    printf("[%s:%d] [robot %d]: failed to find path from (%.2f,%.2f) to (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, pose.x, pose.y, goal.x, goal.y);
+                    // it didn't work
+                    else{
+                        printf("[%s:%d] [robot %d]: failed to find path from (%.2f,%.2f) to (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, pose.x, pose.y, goal.x, goal.y);
 
-                    // stop moving
-                    pos->Stop();
+                        // stop moving
+                        pos->Stop();
 
-                    // go to next goal if there is one
-                    if(GoalQueue())
-                        SetGoalNext();
+                        // go to next goal if there is one
+                        if(GoalQueue())
+                            SetGoalNext();
 
-                    // otherwise find a new goal
-                    else
-                        Explore();
+                        // find a new goal if the robot is exploring
+                        else if(state == STATE_EXPLORE)
+                            Explore();
+
+                        // it just didn't work, go on a straight line towards goal
+                        else
+                            pos->GoTo(goal);
+                    }
 
                     return;
                 }
 
                 // try turning again next time a path cannot be computed
-                turning = false;
+                turning = 0;
                 turned = 0;
 
                 // store goal for visualization
@@ -688,11 +697,11 @@ namespace eae
             map_update = true;
 
             // measure angle the robot has turned to fix path computation
-            if(robot->turning){
+            if(robot->turning > 0){
                 robot->turned += MAP_UPDATE_ANGLE;
 
                 // try again to compute path
-                if(robot->turned > PI/2){
+                if(robot->turned > robot->turning*PI/2){
                     robot->Move(true);
                     return 0;
                 }

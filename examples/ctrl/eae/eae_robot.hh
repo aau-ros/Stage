@@ -77,6 +77,11 @@ namespace eae
     const double EPSILON = 0.1;
 
     /**
+     * How many times the robot should try turning to help computing a path before giving up.
+     */
+    const int TURN_TRIALS = 4;
+
+    /**
      * A class that defines the behavior of a robot.
      */
     class Robot
@@ -516,10 +521,10 @@ namespace eae
 
         /**
          * If the robot cannot compute a path, it turns 90° and tries again.
-         * This variable stores whether the robot is currently turning.
-         * It is reset to false if it was successfull.
+         * This variable stores how many times the robot tried turning.
+         * It is reset to 0 if it was successfull.
          */
-        bool turning;
+        int turning;
 
         /**
          * This variable stores the angle the robot tried turning already.

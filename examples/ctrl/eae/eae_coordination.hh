@@ -398,7 +398,7 @@ namespace eae
         double DockingBid(int ds);
 
         /**
-         * Callback function that is called when @todo
+         * Callback function that is called when the wifi model is updated (happens frequently).
          *
          * @param ModelWifi* wifi: The instantiated wifi model of the robot.
          * @param Robot* robot: The instantiated robot object which attached the callback.

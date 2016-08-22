@@ -265,29 +265,36 @@ namespace eae
         double dist_temp;
         vector<ds_t>::iterator it;
 
-        // iterate over all docking stations to find closest free / occupied
+        // iterate over all docking stations to find closest vacant / occupied
         for(it=dss.begin(); it<dss.end(); ++it){
+            // compute path distance
             dist_temp = robot->Distance(it->pose.x, it->pose.y);
+
+            // could not compute distance, take euclidean distance
             if(dist_temp < 0)
-                printf("[%s:%d] [robot %d]: could not compute distance to DS %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), it->id);
-            else if(it->state != STATE_OCCUPIED && (dist_temp < dist_free || dist_free == 0)){
+                dist_temp = it->pose.Distance(robot->GetPose());
+
+            // found vacant docking station
+            if(it->state != STATE_OCCUPIED && (dist_temp < dist_free || dist_free == 0)){
                 ds_free = *it;
                 dist_free = dist_temp;
             }
+
+            // found occupied docking station
             else if(it->state == STATE_OCCUPIED && (dist_temp < dist_occ || dist_occ == 0)){
                 ds_occ = *it;
                 dist_occ = dist_temp;
             }
         }
 
-        // return free if it is closer than occupied or maximum DS_TOLERANCE further away
+        // return vacant if it is closer than occupied or maximum DS_TOLERANCE further away
         if(dist_free > 0 && dist_occ > 0){
             if(dist_free < dist_occ + DS_TOLERANCE )
                 return ds_free;
             return ds_occ;
         }
 
-        // return free docking station
+        // return vacant docking station
         if(dist_free > 0)
             return ds_free;
 
@@ -304,22 +311,29 @@ namespace eae
         double dist_temp;
         vector<ds_t>::iterator it;
 
-        // iterate over all docking stations to find closest free / occupied
+        // iterate over all docking stations to find closest vacant / occupied
         for(it=dss.begin(); it<dss.end(); ++it){
+            // compute path distance
             dist_temp = robot->Distance(it->pose.x, it->pose.y);
+
+            // could not compute distance, take euclidean distance
             if(dist_temp < 0)
-                printf("[%s:%d] [robot %d]: could not compute distance to DS %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), it->id);
-            else if(it->state != STATE_OCCUPIED && (dist_temp < dist_free || dist_free == 0)){
+                dist_temp = it->pose.Distance(robot->GetPose());
+
+            // found vacant docking station
+            if(it->state != STATE_OCCUPIED && (dist_temp < dist_free || dist_free == 0)){
                 ds_free = *it;
                 dist_free = dist_temp;
             }
-            else if(it->state == STATE_OCCUPIED && (dist_temp < dist_occ || dist_occ == 0)){
+
+            // found occupied docking station
+            if(it->state == STATE_OCCUPIED && (dist_temp < dist_occ || dist_occ == 0)){
                 ds_occ = *it;
                 dist_occ = dist_temp;
             }
         }
 
-        // return free docking station
+        // return vacant docking station
         if(dist_free > 0)
             return ds_free;
 
@@ -341,14 +355,18 @@ namespace eae
 
         // iterate over all docking stations and sort into different vectors
         for(it=dss.begin(); it<dss.end(); ++it){
+            // compute path distance
             dist_temp = robot->Distance(it->pose.x, it->pose.y);
+
+            // check for reachable frontiers
             frontiers = (robot->FrontiersReachable(it->pose, robot->MaxDist(), true).empty() == false);
 
+            // could not compute distance, take euclidean distance
             if(dist_temp < 0)
-                printf("[%s:%d] [robot %d]: could not compute distance to DS %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), it->id);
+                dist_temp = it->pose.Distance(robot->GetPose());
 
             // docking station is reachable and has frontiers in range
-            else if(dist_temp <= range && frontiers){
+            if(dist_temp <= range && frontiers){
                 dss_reach_front.push_back(*it);
             }
 
@@ -365,10 +383,15 @@ namespace eae
 
         // return closest docking station in range of robot with frontiers in range
         for(it=dss_reach_front.begin(); it<dss_reach_front.end(); ++it){
+            // compute path distance
             dist_temp = robot->Distance(it->pose.x, it->pose.y);
+
+            // could not compute distance, take euclidean distance
             if(dist_temp < 0)
-                printf("[%s:%d] [robot %d]: could not compute distance to DS %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), it->id);
-            else if(dist_temp < dist || dist == 0){
+                dist_temp = it->pose.Distance(robot->GetPose());
+
+            // found docking station
+            if(dist_temp < dist || dist == 0){
                 ds = *it;
                 dist = dist_temp;
             }
@@ -390,10 +413,15 @@ namespace eae
 
             // minimize distance
             if(reachable){
+                // compute path distance
                 dist_temp = robot->Distance(it->pose.x, it->pose.y);
+
+                // could not compute distance, take euclidean distance
                 if(dist_temp < 0)
-                    printf("[%s:%d] [robot %d]: could not compute distance to DS %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), it->id);
-                else if(dist_temp < dist || dist == 0){
+                    dist_temp = it->pose.Distance(robot->GetPose());
+
+                // found docking station
+                if(dist_temp < dist || dist == 0){
                     ds = *it;
                     dist = dist_temp;
                 }
@@ -863,7 +891,13 @@ namespace eae
         double dist_ds = 0;
         for(itd=dss.begin(); itd<dss.end(); ++itd){
             if(itd->id == ds){
+                // compute path distance
                 dist_ds = robot->Distance(itd->pose.x, itd->pose.y);
+
+                // could not compute distance, take euclidean distance
+                if(dist_ds < 0)
+                    dist_ds = itd->pose.Distance(robot->GetPose());
+
                 break;
             }
         }
@@ -880,7 +914,14 @@ namespace eae
             double dist_job = 0;
             double dist_temp;
             for(itf=frontiers_close.begin(); itf<frontiers_close.end(); ++itf){
+                // compute path distance
                 dist_temp = robot->Distance(itf->at(0), itf->at(1));
+
+                // could not compute distance, take euclidean distance
+                if(dist_temp < 0)
+                    dist_temp = robot->GetPose().Distance(Pose(itf->at(0), itf->at(1), 0, 0));
+
+                // found frontier
                 if(dist_temp < dist_job || dist_job == 0){
                     dist_job = dist_temp;
                 }

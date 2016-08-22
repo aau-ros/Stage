@@ -2,20 +2,23 @@
 
 # function to print help page for this script
 function usage(){
-    echo -e "Usage: $0 [Options]"
-    echo -e "Run the energy-aware exploration simulation in stage.\n"
+    echo -e "Usage: $0 <Options> "
+    echo -e "Run the energy-aware exploration simulation in stage."
     echo -e "Make sure not to run multiple instances of this script with the exact same parameters!\n"
     echo -e "Options:"
     echo -e "\t-h, --help\t\tPrint this help."
-    echo -e "\t-r, --robots\t\tNumber of robots (max 8)."
-    echo -e "\t-d, --docking-stations\tNumber of docking stations (max 9)."
-    echo -e "\t-s, --strategy\t\tCoordination strategy (0-2)."
-    echo -e "\t-p, --policy\t\tDocking station selection policy (1-4)."
+    echo -e "\t-r, --robots\t\tNumber of robots, max 8, mandatory."
+    echo -e "\t-d, --docking-stations\tNumber of docking stations, max 9, mandatory."
+    echo -e "\t-s, --strategy\t\tCoordination strategy, mandatory:\n\t\t\t\t0:\tmarked based\n\t\t\t\t1:\tgreedy\n\t\t\t\t2:\toptimal (not yet implemented)"
+    echo -e "\t-p, --policy\t\tDocking station selection policy, mandatory:\n\t\t\t\t1:\tclosest\n\t\t\t\t2:\tvacant\n\t\t\t\t3:\topportunistic\n\t\t\t\t4:\tcombined (not yet implemented)"
     echo
 }
 
 # define command line options
 opts=$(getopt -o hr:d:s:p: --long help,robots:,docking-stations:,strategy:,policy: -n 'run.sh' -- "$@")
+
+# mandatory command line options
+mandatory=(-r -d -s -p)
 
 # print help for unknown option
 if [ $? != 0 ]
@@ -26,8 +29,14 @@ fi
 # assign options to positional parameters
 eval set -- "$opts"
 
-# extract options and their arguments into variables.
+# loop through all options
 while true ; do
+    # mark option as given
+    for ((i = 0 ; i < ${#mandatory[@]} ; i++ )); do
+        [[ $1 == ${mandatory[$i]} ]] && mandatory[$i]="-"
+    done
+
+    # extract option and its argument into a variable
     case "$1" in
         -r|--robots)
             robots=$2 ; shift 2 ;;
@@ -38,8 +47,17 @@ while true ; do
         -p|--policy)
             policy=$2 ; shift 2 ;;
         --) shift ; break ;;
-        *) echo "Internal error!" ; exit 1 ;;
+        *) usage; exit 1 ;;
     esac
+done
+
+# check if all mandatory options where given
+for ((i = 0 ; i < ${#mandatory[@]} ; i++ )); do
+  if [[ ${mandatory[$i]} != '-' ]]; then
+    echo "Option ${mandatory[$i]} was not given."
+    usage
+    exit 1
+  fi
 done
 
 # define robots

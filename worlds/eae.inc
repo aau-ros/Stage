@@ -140,7 +140,7 @@ define docking_station model
     kjoules -1
 
     # power output in W
-    give_watts 1000
+    give_watts 250
 
     # provide power also without any explicit subscriber
     alwayson 1

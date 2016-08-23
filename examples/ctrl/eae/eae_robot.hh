@@ -37,13 +37,6 @@ namespace eae
     const double CHARGE_TURN = 0.5;
 
     /**
-     * The power provided by the charger in watts.
-     *
-     * @todo: Read from world file instead.
-     */
-    const int WATTS_CHARGE = 1000;
-
-    /**
      * Power consumption in watts per (meter per second) per kg.
      * See also libstage/model_position.cc line 88.
      */
@@ -85,7 +78,7 @@ namespace eae
      * The time to wait at the end of the exploration before stopping.
      * Other robots might still find a new docking station and then the exploration can continue.
      */
-    const usec_t FINISH_TIMER = 1000000;
+    const usec_t FINISH_TIMER = 500000;
 
     /**
      * A class that defines the behavior of a robot.

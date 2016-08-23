@@ -47,8 +47,13 @@ namespace eae
         // goal queue is empty
         goal_next_bid = BID_INV;
 
-        // charging power
+        // charging power, look for power output of docking station in world file
         charging_watt = 0;
+        for(int i=0; i<pos->GetWorld()->GetWorldFile()->GetEntityCount(); ++i){
+            charging_watt = pos->GetWorld()->GetWorldFile()->ReadFloat(i, "give_watts", charging_watt);
+            if(charging_watt > 0)
+                break;
+        }
 
         // last charging time
         last_charge = 0;
@@ -149,13 +154,18 @@ namespace eae
 
         // no new goal was found, coordinate docking with other robots
         if(SamePoint(goal, pose) || SamePoint(goal, goal_prev)){
+            if(DEBUG)
+                printf("[%s:%d] [robot %d]: no reachable frontiers\n", StripPath(__FILE__), __LINE__, id);
+
             // no reachable goal with full battery
             if(FullyCharged()){
                 // try finding another docking station from where it is still possible to explore
-                ds = cord->SelectDs(RemainingDist(), POL_OPPORTUNISTIC);
+                ds_t ds_op = cord->SelectDs(RemainingDist(), POL_OPPORTUNISTIC);
 
                 // start docking station auction
-                if(ds.id > 0){
+                if(ds_op.id > 0 && SamePoint(ds.pose, ds_op.pose) == false){
+                    ds = ds_op;
+
                     state = STATE_PRECHARGE;
 
                     // start docking station auction
@@ -174,7 +184,7 @@ namespace eae
                     }
 
                     // start timer before finalizing
-                    if(finish_time <= 0){
+                    if(finish_time == 0){
                         finish_time = pos->GetWorld()->SimTimeNow();
                     }
 
@@ -187,6 +197,9 @@ namespace eae
 
             // needs recharging, coordinate with other robots
             else{
+                if(DEBUG)
+                    printf("[%s:%d] [robot %d]: needs recharging\n", StripPath(__FILE__), __LINE__, id);
+
                 state = STATE_PRECHARGE;
 
                 // start docking station auction
@@ -507,7 +520,7 @@ namespace eae
 
     double Robot::RemainingChargeTime()
     {
-        return pos->FindPowerPack()->RemainingCapacity() / WATTS_CHARGE;
+        return pos->FindPowerPack()->RemainingCapacity() / charging_watt;
     }
 
     double Robot::MaxDist()
@@ -879,15 +892,6 @@ namespace eae
             return 0;
         }
         robot->last_charge = robot->pos->GetWorld()->SimTimeNow();
-
-        // look for power output of docking station in world file
-        if(robot->charging_watt <= 0){
-            for(int i=0; i<robot->pos->GetWorld()->GetWorldFile()->GetEntityCount(); ++i){
-                robot->charging_watt = robot->pos->GetWorld()->GetWorldFile()->ReadFloat(i, "give_watts", robot->charging_watt);
-                if(robot->charging_watt > 0)
-                    break;
-            }
-        }
 
         // add watts to robot's power pack according to rate
         robot->pos->FindPowerPack()->Add(robot->charging_watt);

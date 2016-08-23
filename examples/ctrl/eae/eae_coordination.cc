@@ -157,6 +157,11 @@ namespace eae
         WifiMessageDs* msg = new WifiMessageDs(id, state, pose);
         WifiMessageBase* base_ptr = msg;
         wifi->comm.SendBroadcastMessage(base_ptr);
+
+        // try to continue exploration
+        if(robot->GetState() == STATE_FINISHED){
+            robot->Continue();
+        }
     }
 
     ds_t Coordination::SelectDs(double range, pol_t policy)

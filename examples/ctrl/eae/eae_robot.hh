@@ -34,7 +34,7 @@ namespace eae
     /**
      * SOC at which the robot will head home.
      */
-    const double CHARGE_TURN = 0.45;
+    const double CHARGE_TURN = 0.5;
 
     /**
      * The power provided by the charger in watts.
@@ -80,6 +80,12 @@ namespace eae
      * How many times the robot should try turning to help computing a path before giving up.
      */
     const int TURN_TRIALS = 4;
+
+    /**
+     * The time to wait at the end of the exploration before stopping.
+     * Other robots might still find a new docking station and then the exploration can continue.
+     */
+    const usec_t FINISH_TIMER = 1000000;
 
     /**
      * A class that defines the behavior of a robot.
@@ -300,6 +306,11 @@ namespace eae
          * @return bool: True if the two points are within distance EPSILON of each other.
          */
         bool SamePoint(Pose point1, Pose point2);
+
+        /**
+         * Continue exploration after finalizing too early.
+         */
+        void Continue();
 
         /**
          * Update the local grid map with a given map.
@@ -531,6 +542,12 @@ namespace eae
          * It is reset to 0 if it was successfull.
          */
         double turned;
+
+        /**
+         * Time that the robot stopped working.
+         * The robot then waits FINISH_TIMER before finalizing exploration.
+         */
+        usec_t finish_time;
     };
 }
 

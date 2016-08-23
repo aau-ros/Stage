@@ -63,6 +63,9 @@ namespace eae
         // robot did not try turning to fix computing path
         turning = 0;
         turned = 0;
+
+        // set finish timer
+        finish_time = 0;
     }
 
     void Robot::Init()
@@ -151,12 +154,32 @@ namespace eae
                 // start docking station auction
                 if(ds.id > 0){
                     state = STATE_PRECHARGE;
+
+                    // start docking station auction
                     cord->DockingAuction(pos->GetPose(), ds.id);
+
+                    // reset finish timer
+                    finish_time = 0;
                 }
 
                 // end of exploration
-                else
-                    Finalize();
+                else{
+                    // other robots are done, also stop exploration
+                    if(cord->Finished()){
+                        Finalize();
+                        return;
+                    }
+
+                    // start timer before finalizing
+                    if(finish_time <= 0){
+                        finish_time = pos->GetWorld()->SimTimeNow();
+                    }
+
+                    // timer expired, stop exploration
+                    if(pos->GetWorld()->SimTimeNow() > finish_time + FINISH_TIMER){
+                        Finalize();
+                    }
+                }
             }
 
             // needs recharging, coordinate with other robots
@@ -263,7 +286,7 @@ namespace eae
 
     void Robot::SetGoal(Pose to, double bid)
     {
-        // robot is at goal
+        // robot is at current goal
         // or does not have a goal
         // use euclidean distance
         if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE || ((state == STATE_EXPLORE || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE) && valid_path == false)){
@@ -552,8 +575,17 @@ namespace eae
         return map->Distance(pos->GetPose().x, pos->GetPose().y, to_x, to_y);
     }
 
-    bool Robot::SamePoint(Pose point1, Pose point2){
+    bool Robot::SamePoint(Pose point1, Pose point2)
+    {
         return point1.Distance(point2) <= EPSILON; // euclidean
+    }
+
+    void Robot::Continue()
+    {
+        state = STATE_IDLE;
+        pos->AddCallback(Model::CB_UPDATE, (model_callback_t)PositionUpdate, this);
+        pos->Subscribe();
+        Explore();
     }
 
     void Robot::UpdateMap(GridMap* map)
@@ -662,6 +694,7 @@ namespace eae
 
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)
     {
+
         // robot is done
         if(robot->state == STATE_FINISHED){
             return -1; // no more updates

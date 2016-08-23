@@ -140,6 +140,9 @@ namespace eae
             }
         }
 
+        if(DEBUG)
+            printf("[%s:%d] [robot %d]: add docking station %d (%.0f,%.0f)\n", StripPath(__FILE__), __LINE__, robot->GetId(), id, pose.x, pose.y);
+
         // get model of docking station
         stringstream ds_name;
         ds_name << "ds" << id;

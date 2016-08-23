@@ -853,10 +853,8 @@ namespace eae
         std::vector<ModelFiducial::Fiducial>::iterator it;
 
         // store docking stations
-        if(robot->state != STATE_GOING_CHARGING && robot->state != STATE_CHARGE_QUEUE && robot->state != STATE_CHARGE){
-            for(it = fids.begin(); it<fids.end(); ++it){
-                robot->cord->UpdateDs(it->id, it->pose);
-            }
+        for(it = fids.begin(); it<fids.end(); ++it){
+            robot->cord->UpdateDs(it->id, it->pose);
         }
 
         return 0; // run again

@@ -20,6 +20,11 @@ using namespace std;
 namespace eae
 {
     /**
+     * Display additional output for debugging.
+     */
+    const bool DEBUG = true;
+    
+    /**
      * Distance that the robot can be away from goal.
      */
     const double GOAL_TOLERANCE = 1;

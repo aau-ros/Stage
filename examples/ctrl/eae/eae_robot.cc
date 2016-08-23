@@ -89,6 +89,9 @@ namespace eae
             state = STATE_EXPLORE;
         }
 
+        if(DEBUG)
+            printf("[%s:%d] [robot %d]: exploring\n", StripPath(__FILE__), __LINE__, id);
+
         // get current position
         Pose pose = pos->GetPose();
 
@@ -218,6 +221,9 @@ namespace eae
 
             // make a new plan
             if(clear){
+                if(DEBUG)
+                    printf("[%s:%d] [robot %d]: moving on new path\n", StripPath(__FILE__), __LINE__, id);
+
                 // plan path to goal
                 valid_path = Plan(pose, goal);
 
@@ -286,6 +292,9 @@ namespace eae
 
     void Robot::SetGoal(Pose to, double bid)
     {
+        if(DEBUG)
+            printf("[%s:%d] [robot %d]: set goal (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, to.x, to.y);
+
         // robot is at current goal
         // or does not have a goal
         // use euclidean distance
@@ -324,6 +333,9 @@ namespace eae
 
     void Robot::SetGoalNext()
     {
+        if(DEBUG)
+            printf("[%s:%d] [robot %d]: set goal next\n", StripPath(__FILE__), __LINE__, id);
+
         // store previous goal
         goal_prev = goal;
 
@@ -432,6 +444,9 @@ namespace eae
 
     void Robot::Dock(ds_t ds, double bid)
     {
+        if(DEBUG)
+            printf("[%s:%d] [robot %d]: docking\n", StripPath(__FILE__), __LINE__, id);
+
         // already charging, no docking required
         if(this->ds.id == ds.id && state == STATE_CHARGE)
             return;
@@ -449,6 +464,9 @@ namespace eae
 
     void Robot::DockQueue(ds_t ds, double bid)
     {
+        if(DEBUG)
+            printf("[%s:%d] [robot %d]: docking queue\n", StripPath(__FILE__), __LINE__, id);
+
         // already charging, no queueing required
         if(this->ds.id == ds.id && state == STATE_CHARGE)
             return;
@@ -461,6 +479,9 @@ namespace eae
 
     void Robot::UnDock()
     {
+        if(DEBUG)
+            printf("[%s:%d] [robot %d]: undock\n", StripPath(__FILE__), __LINE__, id);
+
         // log data
         Log();
 

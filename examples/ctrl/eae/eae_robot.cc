@@ -871,25 +871,27 @@ namespace eae
     int Robot::ChargingUpdate(Model* mod, Robot* robot)
     {
         // stop recharging
-        if(robot->FullyCharged() || robot->state != STATE_CHARGE){
+        if(robot->pos->FindPowerPack()->ProportionRemaining() >= CHARGE_UNTIL || robot->state != STATE_CHARGE){
             robot->pos->FindPowerPack()->ChargeStop();
             robot->UnDock();
             return -1; // no more updates
         }
 
+        // time since last charging cycle
+        usec_t time = robot->pos->GetWorld()->SimTimeNow() - robot->last_charge;
+        robot->last_charge = robot->pos->GetWorld()->SimTimeNow();
+
         // start recharging
         if(robot->pos->FindPowerPack()->GetCharging() == false){
             robot->pos->FindPowerPack()->ChargeStart();
-        }
-
-        // charge with a constant rate
-        if(robot->pos->GetWorld()->SimTimeNow() < robot->last_charge + CHARGE_RATE){
             return 0;
         }
-        robot->last_charge = robot->pos->GetWorld()->SimTimeNow();
 
-        // add watts to robot's power pack according to rate
-        robot->pos->FindPowerPack()->Add(robot->charging_watt);
+        // calculate joules for this charging cylce
+        joules_t joules = robot->charging_watt * (double)time / 1000000.0;
+
+        // add joules to robot's power pack
+        robot->pos->FindPowerPack()->Add(joules);
 
         return 0; // run again
     }

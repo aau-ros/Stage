@@ -32,6 +32,11 @@ namespace eae
     const double CHARGE_FULL = 0.95;
 
     /**
+     * SOC to which the battery will be charged.
+     */
+    const double CHARGE_UNTIL = 0.99;
+
+    /**
      * SOC at which the robot will head home.
      */
     const double CHARGE_TURN = 0.5;
@@ -57,12 +62,6 @@ namespace eae
      * The amount the robot has to turn until another map update is performed.
      */
     const double MAP_UPDATE_ANGLE = PI/4;
-
-    /**
-     * Rate for charging robot.
-     * This is supposed to be one second since the unit of power is watts (= joules / second).
-     */
-    const usec_t CHARGE_RATE = 1000000;
 
     /**
      * Allowed distance between two points for them to be still at the same location.

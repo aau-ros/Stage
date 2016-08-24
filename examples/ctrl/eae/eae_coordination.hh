@@ -55,7 +55,7 @@ namespace eae
     const int L1 = 1;
     const int L2 = 3;
     const int L3 = 1;
-    const int L4 = 7;
+    const int L4 = 5;
 
     /**
      * Timeout for auctions.
@@ -140,8 +140,11 @@ namespace eae
          *
          * @param Pose pose: The position of the robot.
          * @param int ds: ID of the docking station to start the auction for.
+         *
+         * @return: Success of auction generation. True if new auction was started,
+         * false if there was not enough time since last auction for the same docking station.
          */
-        void DockingAuction(Pose pose, int ds);
+        bool DockingAuction(Pose pose, int ds);
 
         /**
          * Send a map update to the other robots containing the complete map.

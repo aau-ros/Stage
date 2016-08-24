@@ -169,7 +169,9 @@ namespace eae
                     state = STATE_PRECHARGE;
 
                     // start docking station auction
-                    cord->DockingAuction(pos->GetPose(), ds.id);
+                    // and queue if unsuccessful
+                    if(cord->DockingAuction(pos->GetPose(), ds.id) == false)
+                        DockQueue(ds, BID_INV);
 
                     // reset finish timer
                     finish_time = 0;
@@ -203,8 +205,10 @@ namespace eae
                 state = STATE_PRECHARGE;
 
                 // start docking station auction
+                // and queue if unsuccessful
                 if(ds.id > 0){
-                    cord->DockingAuction(pos->GetPose(), ds.id);
+                    if(cord->DockingAuction(pos->GetPose(), ds.id) == false)
+                        DockQueue(ds, BID_INV);
                 }
 
                 // no docking station found
@@ -347,7 +351,7 @@ namespace eae
     void Robot::SetGoalNext()
     {
         if(DEBUG)
-            printf("[%s:%d] [robot %d]: set goal next\n", StripPath(__FILE__), __LINE__, id);
+            printf("[%s:%d] [robot %d]: set goal next (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, goal_next.x, goal_next.y);
 
         // store previous goal
         goal_prev = goal;
@@ -494,6 +498,9 @@ namespace eae
     {
         if(DEBUG)
             printf("[%s:%d] [robot %d]: undock\n", StripPath(__FILE__), __LINE__, id);
+
+        // stop moving
+        pos->Stop();
 
         // log data
         Log();
@@ -856,14 +863,19 @@ namespace eae
             return 0;
         }
 
+        // stop moving
+        else{
+            robot->pos->Stop();
+        }
+
         return 0; // run again
     }
 
     int Robot::FiducialUpdate(ModelFiducial* fid, Robot* robot)
     {
         // get all fiducials
-        std::vector<ModelFiducial::Fiducial>& fids = fid->GetFiducials();
-        std::vector<ModelFiducial::Fiducial>::iterator it;
+        vector<ModelFiducial::Fiducial>& fids = fid->GetFiducials();
+        vector<ModelFiducial::Fiducial>::iterator it;
 
         // store docking stations
         for(it = fids.begin(); it<fids.end(); ++it){

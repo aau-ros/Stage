@@ -48,17 +48,17 @@ namespace eae
         BroadcastFrAuction(id);
     }
 
-    void Coordination::DockingAuction(Pose pose, int ds)
+    bool Coordination::DockingAuction(Pose pose, int ds)
     {
         // check if enough time between auctions
         if(ds_auctions.size() > 0){
             vector<ds_auction_t>::iterator it;
             for(it=ds_auctions.end()-1; it>=ds_auctions.begin(); --it){
-                // i started auction for same docking station
-                if(it->initiator == robot->GetId() && it->ds_id == ds){
+                // auction for same docking station
+                if(it->ds_id == ds){
                     // not enough time between auctions
                     if(pos->GetWorld()->SimTimeNow() < it->time + TO_NEXT_AUCTION){
-                        return;
+                        return false;
                     }
 
                     // enough time between auctions
@@ -79,11 +79,17 @@ namespace eae
         else
             printf("[%s:%d] [robot %d]: invalid coordination strategy: %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), strategy);
 
+        if(DEBUG)
+            printf("[%s:%d] [robot %d]: start docking auction %d, bid %.2f\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), id, bid);
+
         // create and store auction
         StoreNewDsAuction(id, bid, robot->GetId(), robot->GetId(), pos->GetWorld()->SimTimeNow(), true, ds);
 
         // notify other robots
         BroadcastDsAuction(id);
+
+        // started auction successfully
+        return true;
     }
 
     void Coordination::BroadcastMap()
@@ -596,10 +602,13 @@ namespace eae
             return;
         }
 
+        // update auction information
+        UpdateDsAuction(id, this->robot->GetId(), ds, my_bid);
+
         // my bid is higher
         if(my_bid > bid){
-            // update auction information
-            UpdateDsAuction(id, this->robot->GetId(), ds, my_bid);
+            if(DEBUG)
+                printf("[%s:%d] [robot %d]: participate in docking auction %d, bid %.2f\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), id, my_bid);
 
             // notify other robots
             BroadcastDsAuction(id);
@@ -608,9 +617,8 @@ namespace eae
 
     void Coordination::CheckAuctions()
     {
-        // iterators
+        // iterator
         vector<fr_auction_t>::iterator it;
-        vector<ds_auction_t>::iterator jt;
 
         // store frontier of won frontier auction
         fr_auction_t goal;
@@ -663,6 +671,21 @@ namespace eae
             return; // only dock if i didn't start any frontier auction
         }
 
+        // iterator
+        vector<ds_auction_t>::iterator jt;
+
+        // docking station auctions relevant for this robot
+        ds_auction_t ds_dock; // dock at this ds
+        ds_dock.id = -1;
+        ds_dock.ds_id = -1;
+        ds_dock.highest_bid = -1;
+        ds_auction_t ds_queue; // queue at this ds
+        ds_queue.id = -1;
+        ds_queue.ds_id = -1;
+        ds_queue.highest_bid = -1;
+        ds_auction_t ds_undock; // undock from this ds
+        ds_undock.id = -1;
+
         // iterate through all docking station auctions
         for(jt=ds_auctions.begin(); jt<ds_auctions.end(); ++jt){
             // check if auction is open and timeout expired
@@ -675,26 +698,39 @@ namespace eae
 
                 // i won, move to docking station
                 if(jt->winner == robot->GetId()){
-                    robot->Dock(GetDs(jt->ds_id), jt->highest_bid);
+                    ds_dock = *jt;
                     continue;
                 }
 
                 // i lost and am currently charging at that docking station
                 // now i have to move away
                 ds_t ds;
-                if(robot->Charging(ds)){
+                if(robot->Docking(ds)){
                     if(ds.id == jt->ds_id){
-                        robot->UnDock();
+                        ds_undock = *jt;
                         continue;
                     }
                 }
 
                 // i lost my own auction, queue at the docking station
                 if(jt->initiator == robot->GetId()){
-                    robot->DockQueue(GetDs(jt->ds_id), jt->highest_bid);
+                    ds_queue = *jt;
+                    continue;
                 }
             }
         }
+
+        // start docking
+        if(ds_dock.id > 0)
+            robot->Dock(GetDs(ds_dock.ds_id), ds_dock.highest_bid);
+
+        // queue at the docking station
+        else if(ds_queue.id > 0)
+            robot->DockQueue(GetDs(ds_queue.ds_id), ds_queue.highest_bid);
+
+        // undock :(
+        if(ds_undock.id > 0)
+            robot->UnDock();
     }
 
     void Coordination::StoreNewFrAuction(int id, double bid, int initiator, int winner, usec_t time, bool open, Pose pose)
@@ -828,7 +864,7 @@ namespace eae
         }
     }
 
-    double Coordination::DockingBid(int ds)
+    double Coordination::DockingBid(int id)
     {
         double l1, l2, l3, l4;
         vector<ds_t>::iterator itd;
@@ -848,17 +884,23 @@ namespace eae
             if(itd->state !=  STATE_OCCUPIED)
                 ++num_dss;
 
-        // number of active robots
+        // number of active robots, i.e. robots that are willing to charge
         int num_robs = 0;
         for(itr=robots.begin(); itr<robots.end(); ++itr)
-            if(itr->state == STATE_EXPLORE || itr->state == STATE_IDLE || itr->state == STATE_PRECHARGE)
+            if(itr->state == STATE_IDLE || itr->state == STATE_EXPLORE || itr->state == STATE_CHARGE_QUEUE || itr->state == STATE_PRECHARGE || itr->state == STATE_GOING_CHARGING)
                 ++num_robs;
 
+        // check this' robot status
+        if(robot->GetState() == STATE_IDLE || robot->GetState() == STATE_EXPLORE || robot->GetState() == STATE_CHARGE_QUEUE || robot->GetState() == STATE_PRECHARGE || robot->GetState() == STATE_GOING_CHARGING)
+            ++num_robs;
+
         // calculate first parameter
-        if(num_dss > num_robs)
+        if(num_dss > num_robs) // enough docking stations
+            l1 = 1;
+        else if(robot->GetState() == STATE_CHARGE) // put a bias when this robot is charging
             l1 = 1;
         else
-            l1 = (double)num_dss / (num_robs + 1); // +1 since this robot is not in the vector
+            l1 = (double)num_dss / (double)num_robs;
 
         /********************
          * second parameter *
@@ -871,7 +913,7 @@ namespace eae
         double time_run = robot->RemainingTime();
 
         // calculate second parameter
-        l2 = (double)time_charge / (time_charge + time_run);
+        l2 = time_charge / (time_charge + time_run);
 
 
         /*******************
@@ -895,33 +937,36 @@ namespace eae
          * fourth parameter *
          ********************/
 
-        // distance to docking station
-        double dist_ds = 0;
-        for(itd=dss.begin(); itd<dss.end(); ++itd){
-            if(itd->id == ds){
-                // compute path distance
-                dist_ds = robot->Distance(itd->pose.x, itd->pose.y);
-
-                // could not compute distance, take euclidean distance
-                if(dist_ds < 0)
-                    dist_ds = itd->pose.Distance(robot->GetPose());
-
-                break;
-            }
-        }
+        // get docking station from id
+        ds_t ds = GetDs(id);
 
         // docking station not found
-        if(itd == dss.end()){
-            printf("[%s:%d] [robot %d]: invalid docking station id: %d\n", StripPath(__FILE__), __LINE__, robot->GetId(), ds);
+        if(ds.id <= 0){
+            printf("[%s:%d] [robot %d]: invalid docking station id: %d\n", StripPath(__FILE__), __LINE__, robot->GetId(), id);
             l4 = 0.5;
         }
 
         // docking station found
         else{
+            // distance to docking station
+            // compute path distance
+            double dist_ds = robot->Distance(ds.pose.x, ds.pose.y);
+
+            // could not compute distance, take euclidean distance
+            if(dist_ds < 0)
+                dist_ds = robot->GetPose().Distance(ds.pose);
+
+            // get frontiers, try smaller vector first
+            vector< vector <int> > frontiers_temp;
+            if(frontiers_close.empty())
+                frontiers_temp = frontiers;
+            else
+                frontiers_temp = frontiers_close;
+
             // distance to closest frontier (job)
             double dist_job = 0;
             double dist_temp;
-            for(itf=frontiers_close.begin(); itf<frontiers_close.end(); ++itf){
+            for(itf=frontiers_temp.begin(); itf<frontiers_temp.end(); ++itf){
                 // compute path distance
                 dist_temp = robot->Distance(itf->at(0), itf->at(1));
 
@@ -935,8 +980,16 @@ namespace eae
                 }
             }
 
+            // no frontier found
+            if(dist_job == 0){
+                printf("[%s:%d] [robot %d]: could not comput distance to any frontier\n", StripPath(__FILE__), __LINE__, robot->GetId());
+                l4 = 0.5;
+            }
+
             // calculate fourth parameter
-            l4 = dist_job / (dist_job + dist_ds);
+            else{
+                l4 = dist_job / (dist_job + dist_ds);
+            }
         }
 
 

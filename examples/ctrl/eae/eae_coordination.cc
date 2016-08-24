@@ -488,6 +488,10 @@ namespace eae
             return;
         }
 
+        // robot is not active
+        if(this->robot->GetState() == STATE_UNDEFINED_ROBOT || this->robot->GetState() == STATE_INIT || this->robot->GetState() == STATE_DEAD || this->robot->GetState() == STATE_FINISHED)
+            return;
+
         // iterator
         vector<fr_auction_t>::iterator it;
 
@@ -545,6 +549,10 @@ namespace eae
             printf("[%s:%d] [robot %d]: invalid bid\n", StripPath(__FILE__), __LINE__, this->robot->GetId());
             return;
         }
+
+        // robot is not active
+        if(this->robot->GetState() == STATE_UNDEFINED_ROBOT || this->robot->GetState() == STATE_INIT || this->robot->GetState() == STATE_DEAD || this->robot->GetState() == STATE_FINISHED)
+            return;
 
         // iterator
         vector<ds_auction_t>::iterator it;

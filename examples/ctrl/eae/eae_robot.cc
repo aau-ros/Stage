@@ -239,7 +239,7 @@ namespace eae
             // make a new plan
             if(clear){
                 if(DEBUG)
-                    printf("[%s:%d] [robot %d]: moving on new path\n", StripPath(__FILE__), __LINE__, id);
+                    printf("[%s:%d] [robot %d]: moving on new path to (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, goal.x, goal.y);
 
                 // plan path to goal
                 valid_path = Plan(pose, goal);
@@ -345,6 +345,10 @@ namespace eae
         else if(GoalQueue() == false || goal_next_bid < bid || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE){
             goal_next = to;
             goal_next_bid = bid;
+        }
+        else{
+            if(DEBUG)
+                printf("[%s:%d] [robot %d]: discard goal (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, to.x, to.y);
         }
     }
 
@@ -502,6 +506,12 @@ namespace eae
         // stop moving
         pos->Stop();
 
+        // remove current path plan
+        if(valid_path){
+            delete path;
+            valid_path = false;
+        }
+
         // log data
         Log();
 
@@ -623,9 +633,14 @@ namespace eae
 
     void Robot::Continue()
     {
+        // reset state
         state = STATE_IDLE;
+
+        // subscribe to position update again
         pos->AddCallback(Model::CB_UPDATE, (model_callback_t)PositionUpdate, this);
         pos->Subscribe();
+
+        // continue exploration
         Explore();
     }
 
@@ -668,25 +683,11 @@ namespace eae
 
     double Robot::RemainingDist(joules_t charge)
     {
-        double velocity = 0; // average velocity
-        double power; // power consumption at average velocity
-        World* world = pos->GetWorld();
-
-        // calculate average velocity
-        if(dist_travel > 0 && world->SimTimeNow() > 0){
-            velocity = dist_travel/world->SimTimeNow()*1000000;
-        }
-
-        // at beginning of simulation take half of max velocity
-        if(velocity < pos->velocity_bounds->max / 2){
-            velocity = pos->velocity_bounds->max / 2;
-        }
-
         // calculate power consumption (according to stage model: libstage/model_position:496)
-        power = velocity * WATTS_KGMS * pos->GetTotalMass() + WATTS;
+        double power = pos->velocity_bounds->max * WATTS_KGMS * pos->GetTotalMass() + WATTS;
 
         // calculate remaining distance
-        return charge / power * velocity;
+        return charge / power * pos->velocity_bounds->max;
     }
 
     void Robot::Log()

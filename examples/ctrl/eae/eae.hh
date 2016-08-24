@@ -22,8 +22,8 @@ namespace eae
     /**
      * Display additional output for debugging.
      */
-    const bool DEBUG = true;
-    
+    const bool DEBUG = false;
+
     /**
      * Distance that the robot can be away from goal.
      */

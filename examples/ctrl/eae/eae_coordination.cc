@@ -365,6 +365,7 @@ namespace eae
         vector<ds_t> dss_reachable; // docking stations in range of robot
         vector<ds_t> dss_frontiers; // docking stations that have frontiers in range
         vector<ds_t> dss_reach_front; // docking stations in range of robot with frontiers in range
+        vector<ds_t> dss_else; // docking stations not in any of the above vectors
         vector<ds_t>::iterator it, jt;
 
         // iterate over all docking stations and sort into different vectors
@@ -393,6 +394,11 @@ namespace eae
             else if(frontiers){
                 dss_frontiers.push_back(*it);
             }
+
+            // other docking stations
+            else{
+                dss_else.push_back(*it);
+            }
         }
 
         // return closest docking station in range of robot with frontiers in range
@@ -413,13 +419,21 @@ namespace eae
         if(dist > 0)
             return ds;
 
-        // return closest docking station in range of robot
+        // return closest docking station in range of robot that has another docking station in range with frontiers in range
         for(it=dss_reachable.begin(); it<dss_reachable.end(); ++it){
             // check if docking station is in the right direction
             // i.e. it is possible to reach a docking station from there which has frontiers in range
             reachable = false;
             for(jt=dss_frontiers.begin(); jt<dss_frontiers.end(); ++jt){
-                if(hypot(jt->pose.x - it->pose.x, jt->pose.y - it->pose.y) <= range){
+                // comput path distance to other docking station
+                dist_temp = robot->GetMap()->Distance(jt->pose.x, jt->pose.y, it->pose.x, it->pose.y);
+
+                // could not compute distance, take euclidean distance
+                if(dist_temp < 0)
+                    dist_temp = jt->pose.Distance(it->pose);
+
+                // check if this docking station is reachable from the current one
+                if(dist_temp <= range){
                     reachable = true;
                     break;
                 }
@@ -439,6 +453,60 @@ namespace eae
                     ds = *it;
                     dist = dist_temp;
                 }
+            }
+        }
+        if(dist > 0)
+            return ds;
+
+        // return closest docking station in range of robot
+        for(it=dss_reachable.begin(); it<dss_reachable.end(); ++it){
+            // compute path distance
+            dist_temp = robot->Distance(it->pose.x, it->pose.y);
+
+            // could not compute distance, take euclidean distance
+            if(dist_temp < 0)
+                dist_temp = it->pose.Distance(robot->GetPose());
+
+            // found docking station
+            if(dist_temp < dist || dist == 0){
+                ds = *it;
+                dist = dist_temp;
+            }
+        }
+        if(dist > 0)
+            return ds;
+
+        // return closest docking station with frontiers in range
+        for(it=dss_frontiers.begin(); it<dss_frontiers.end(); ++it){
+            // compute path distance
+            dist_temp = robot->Distance(it->pose.x, it->pose.y);
+
+            // could not compute distance, take euclidean distance
+            if(dist_temp < 0)
+                dist_temp = it->pose.Distance(robot->GetPose());
+
+            // found docking station
+            if(dist_temp < dist || dist == 0){
+                ds = *it;
+                dist = dist_temp;
+            }
+        }
+        if(dist > 0)
+            return ds;
+
+        // return closest docking station
+        for(it=dss_else.begin(); it<dss_else.end(); ++it){
+            // compute path distance
+            dist_temp = robot->Distance(it->pose.x, it->pose.y);
+
+            // could not compute distance, take euclidean distance
+            if(dist_temp < 0)
+                dist_temp = it->pose.Distance(robot->GetPose());
+
+            // found docking station
+            if(dist_temp < dist || dist == 0){
+                ds = *it;
+                dist = dist_temp;
             }
         }
         return ds;

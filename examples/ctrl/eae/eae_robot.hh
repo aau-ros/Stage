@@ -75,12 +75,6 @@ namespace eae
     const int TURN_TRIALS = 4;
 
     /**
-     * The time to wait at the end of the exploration before stopping.
-     * Other robots might still find a new docking station and then the exploration can continue.
-     */
-    const usec_t FINISH_TIMER = 500000;
-
-    /**
      * A class that defines the behavior of a robot.
      */
     class Robot
@@ -535,12 +529,6 @@ namespace eae
          * It is reset to 0 if it was successfull.
          */
         double turned;
-
-        /**
-         * Time that the robot stopped working.
-         * The robot then waits FINISH_TIMER before finalizing exploration.
-         */
-        usec_t finish_time;
     };
 }
 

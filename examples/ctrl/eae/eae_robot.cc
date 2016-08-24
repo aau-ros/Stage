@@ -68,9 +68,6 @@ namespace eae
         // robot did not try turning to fix computing path
         turning = 0;
         turned = 0;
-
-        // set finish timer
-        finish_time = 0;
     }
 
     void Robot::Init()
@@ -172,28 +169,11 @@ namespace eae
                     // and queue if unsuccessful
                     if(cord->DockingAuction(pos->GetPose(), ds.id) == false)
                         DockQueue(ds, BID_INV);
-
-                    // reset finish timer
-                    finish_time = 0;
                 }
 
                 // end of exploration
                 else{
-                    // other robots are done, also stop exploration
-                    if(cord->Finished()){
-                        Finalize();
-                        return;
-                    }
-
-                    // start timer before finalizing
-                    if(finish_time == 0){
-                        finish_time = pos->GetWorld()->SimTimeNow();
-                    }
-
-                    // timer expired, stop exploration
-                    if(pos->GetWorld()->SimTimeNow() > finish_time + FINISH_TIMER){
-                        Finalize();
-                    }
+                    Finalize();
                 }
             }
 
@@ -633,6 +613,8 @@ namespace eae
 
     void Robot::Continue()
     {
+        printf("[%s:%d] [robot %d]: continue exploration\n", StripPath(__FILE__), __LINE__, id);
+
         // reset state
         state = STATE_IDLE;
 

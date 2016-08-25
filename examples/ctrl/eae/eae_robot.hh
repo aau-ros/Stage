@@ -358,6 +358,13 @@ namespace eae
         void SetMotorSpeed(double direction);
 
         /**
+         * Get the name of the bitmap of the underlying map.
+         *
+         * @return string: The name of the map.
+         */
+        string MapName();
+
+        /**
          * Callback function that is called when the robot changes position.
          * When the robot reached it's goal, it directs the robot to continue exploration.
          *

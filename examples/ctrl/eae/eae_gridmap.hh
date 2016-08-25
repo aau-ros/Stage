@@ -166,6 +166,13 @@ namespace eae
         unsigned int Height();
 
         /**
+         * Get the size of the map in number of bytes.
+         *
+         * @return unsigned int: The size of the map.
+         */
+        unsigned int Size();
+
+        /**
          * Converts the local grid map into a uint8_t* where
          * 1-5 represent free cells (with different cost) and
          * 9 represents an occupied cell.

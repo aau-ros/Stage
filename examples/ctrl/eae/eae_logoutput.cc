@@ -5,7 +5,7 @@ using namespace std;
 
 namespace eae
 {
-    LogOutput::LogOutput(int robot, int robots, int dss, string comm, int i_cord, string s_cord, int i_pol, string s_pol, double battery)
+    LogOutput::LogOutput(int robot, int robots, int dss, string comm, int i_cord, string s_cord, int i_pol, string s_pol, double battery, string map)
     {
         // get current time
         std::time_t now = time(NULL);
@@ -52,9 +52,9 @@ namespace eae
 
         // write header
         stringstream output;
-        output << "# robot\t" << robot << endl << "# number of robots\t" << robots << endl << "# number of docking stations\t" << dss << endl <<"# communication type\t" <<  comm << endl << "# coordination type\t" << s_cord << endl << "# ds selection policy\t" << s_pol << endl << "# battery capacity\t" << battery << endl;
+        output << "# robot\t" << robot << endl << "# number of robots\t" << robots << endl << "# number of docking stations\t" << dss << endl <<"# communication type\t" <<  comm << endl << "# coordination type\t" << s_cord << endl << "# ds selection policy\t" << s_pol << endl << "# battery capacity\t" << battery << endl << "# bitmap\t" << map << endl;
         Write(output.str());
-        Write("time\tdistance\tarea\tx position\ty position\tstate\twaiting\tds");
+        Write("time\tdistance\tarea\tx position\ty position\tstate\twaiting\tds\tmessages sent\tmessasges received\tbytes sent\tbytes received");
     }
 
     LogOutput::~LogOutput()
@@ -62,10 +62,10 @@ namespace eae
         file.close();
     }
 
-    void LogOutput::Log(usec_t time, double distance, int area, double x, double y, string state, int waiting, int ds)
+    void LogOutput::Log(usec_t time, double distance, int area, double x, double y, string state, int waiting, int ds, unsigned int msgs_sent, unsigned int msgs_received, unsigned int bytes_sent, unsigned int bytes_received)
     {
         stringstream output;
-        output << time/1000000 << "\t" << distance << "\t" << area << "\t" << x << "\t" << y << "\t" << state << "\t" << waiting << "\t" << ds;
+        output << time/1000000 << "\t" << distance << "\t" << area << "\t" << x << "\t" << y << "\t" << state << "\t" << waiting << "\t" << ds << "\t" << msgs_sent << "\t" << msgs_received << "\t" << bytes_sent << "\t" << bytes_received;
         Write(output.str());
     }
 

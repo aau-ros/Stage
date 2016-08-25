@@ -465,6 +465,11 @@ namespace eae
         return y_dim;
     }
 
+    unsigned int GridMap::Size()
+    {
+        return sizeof(this) + Width() * Height() * sizeof(grid_cell_v);
+    }
+
     uint8_t* GridMap::Rasterize()
     {
         // valid raster existent

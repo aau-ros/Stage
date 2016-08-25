@@ -247,6 +247,26 @@ namespace eae
          */
         static int auction_id;
 
+        /**
+         * Number of messages sent over wifi.
+         */
+        unsigned int msgs_sent;
+
+        /**
+         * Number of messages received over wifi.
+         */
+        unsigned int msgs_received;
+
+        /**
+         * Number of bytes sent over wifi.
+         */
+        unsigned int bytes_sent;
+
+        /**
+         * Number of bytes received over wifi.
+         */
+        unsigned int bytes_received;
+
     private:
         /**
          * Get the docking station closest to the robot's current position.

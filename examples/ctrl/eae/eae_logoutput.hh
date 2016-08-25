@@ -35,8 +35,9 @@ namespace eae
          * @param int i_pol: The policy for selecting docking stations.
          * @param string s_pol: The policy for selecting docking stations as a string.
          * @param double battery: The battery capacity.
+         * @param string map: The name of the bitmap of the underlying map.
          */
-        LogOutput(int robot, int robots, int dss, string comm, int i_cord, string s_cord, int i_pol, string s_pol, double battery);
+        LogOutput(int robot, int robots, int dss, string comm, int i_cord, string s_cord, int i_pol, string s_pol, double battery, string map);
 
         /**
          * Destructor.
@@ -55,8 +56,12 @@ namespace eae
          * @param string state: The current state of the robot.
          * @param int waiting: The accumulated waiting time at docking stations.
          * @param int ds: The docking station ID that is currently selected by the robot.
+         * @param unsigned int msgs_sent: Number of messages sent over wifi.
+         * @param unsigned int msgs_received: Number of messages received over wifi.
+         * @param unsigned int bytes_sent: Number of bytes sent over wifi.
+         * @param unsigned int bytes_received: Number of bytes received over wifi.
          */
-        void Log(usec_t time, double distance, int area, double x, double y, string state, int waiting, int ds);
+        void Log(usec_t time, double distance, int area, double x, double y, string state, int waiting, int ds, unsigned int msgs_sent, unsigned int msgs_received, unsigned int bytes_sent, unsigned int bytes_received);
 
         /**
          * Write a string as one line to the log file.

@@ -17,7 +17,7 @@ namespace eae
         sonar = (ModelRanger*)pos->GetChild("ranger:0");
         map = new GridMap(pos, id);
         cord = new Coordination(pos, this);
-        log = new LogOutput(id, robots, dss, cord->GetWifiModel(), cord->GetStrategy(), cord->GetStrategyString(), cord->GetPolicy(), cord->GetPolicyString(), pos->FindPowerPack()->GetCapacity());
+        log = new LogOutput(id, robots, dss, cord->GetWifiModel(), cord->GetStrategy(), cord->GetStrategyString(), cord->GetPolicy(), cord->GetPolicyString(), pos->FindPowerPack()->GetCapacity(), MapName());
         cam = new OrthoCamera();
         wpcolor = Color(0,1,0); // waypoint color is green
 
@@ -679,7 +679,7 @@ namespace eae
 
     void Robot::Log()
     {
-        log->Log(pos->GetWorld()->SimTimeNow(), dist_travel, map->Explored(), goal.x, goal.y, STATE_STRING[state], waiting_time, ds.id);
+        log->Log(pos->GetWorld()->SimTimeNow(), dist_travel, map->Explored(), goal.x, goal.y, STATE_STRING[state], waiting_time, ds.id, cord->msgs_sent, cord->msgs_received, cord->bytes_sent, cord->bytes_received);
     }
 
     void Robot::Finalize()
@@ -719,6 +719,17 @@ namespace eae
         // set speed
         pos->SetXSpeed(x_speed);
         pos->SetTurnSpeed(turn_speed);
+    }
+
+    string Robot::MapName()
+    {
+        string name = "";
+        for(int i=0; i<pos->GetWorld()->GetWorldFile()->GetEntityCount(); ++i){
+            name = pos->GetWorld()->GetWorldFile()->ReadString(i, "bitmap", name);
+            if(name != "")
+                break;
+        }
+        return name;
     }
 
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)

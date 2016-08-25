@@ -28,6 +28,12 @@ namespace eae
 
         // beacon timeout
         to_beacon = 0;
+
+        // statistics
+        msgs_sent = 0;
+        msgs_received = 0;
+        bytes_sent = 0;
+        bytes_received = 0;
     }
 
     void Coordination::FrontierAuction(Pose frontier, double bid)
@@ -99,9 +105,14 @@ namespace eae
 
     void Coordination::BroadcastMap(GridMap* local)
     {
+        // create and send message
         WifiMessageMap* msg = new WifiMessageMap(local);
         WifiMessageBase* base_ptr = msg;
         wifi->comm.SendBroadcastMessage(base_ptr);
+
+        // statistics
+        ++msgs_sent;
+        bytes_sent += local->Size();
     }
 
     double Coordination::DistRobot(Pose pose)
@@ -167,6 +178,10 @@ namespace eae
         WifiMessageBase* base_ptr = msg;
         wifi->comm.SendBroadcastMessage(base_ptr);
 
+        // statistics
+        ++msgs_sent;
+        bytes_sent += sizeof(id) + sizeof(state) + sizeof(pose);
+
         // try to continue exploration
         if(robot->GetState() == STATE_FINISHED){
             robot->Continue();
@@ -207,6 +222,10 @@ namespace eae
                 WifiMessageDs* msg = new WifiMessageDs(id, STATE_VACANT, DsPose(id));
                 WifiMessageBase* base_ptr = msg;
                 wifi->comm.SendBroadcastMessage(base_ptr);
+
+                // statistics
+                ++msgs_sent;
+                bytes_sent += sizeof(id) + sizeof(STATE_VACANT) + sizeof(Pose);
 
                 break;
             }
@@ -857,9 +876,15 @@ namespace eae
         // iterate through all auctions
         for(it=fr_auctions.begin(); it<fr_auctions.end(); ++it){
             if(it->id == id){
+                // create and send message
                 WifiMessageFrontierAuction* msg = new WifiMessageFrontierAuction(id, robot->GetId(), it->highest_bid, it->pose);
                 WifiMessageBase* base_ptr = msg;
                 wifi->comm.SendBroadcastMessage(base_ptr);
+
+                // statistics
+                ++msgs_sent;
+                bytes_sent += sizeof(id) + sizeof(int) + sizeof(it->highest_bid) + sizeof(it->pose);
+
                 break;
             }
         }
@@ -878,9 +903,15 @@ namespace eae
         // iterate through all auctions
         for(it=ds_auctions.begin(); it<ds_auctions.end(); ++it){
             if(it->id == id){
+                // create and send message
                 WifiMessageDsAuction* msg = new WifiMessageDsAuction(id, robot->GetId(), robot->GetState(), it->ds_id, DsState(it->ds_id), it->highest_bid, DsPose(it->ds_id));
                 WifiMessageBase* base_ptr = msg;
                 wifi->comm.SendBroadcastMessage(base_ptr);
+
+                // statistics
+                ++msgs_sent;
+                bytes_sent += sizeof(id) + sizeof(int) + sizeof(robot_state_t) + sizeof(it->ds_id) + sizeof(ds_state_t) + sizeof(it->highest_bid) + sizeof(Pose);
+
                 break;
             }
         }
@@ -894,10 +925,15 @@ namespace eae
     void Coordination::BroadcastBeacon()
     {
         if(to_beacon <= pos->GetWorld()->SimTimeNow()){
+            // create and send message
             WifiMessageRobot* msg = new WifiMessageRobot(robot->GetId(), robot->GetState(), pos->GetPose());
             WifiMessageBase* base_ptr = msg;
             wifi->comm.SendBroadcastMessage(base_ptr);
             to_beacon = pos->GetWorld()->SimTimeNow() + TO_BEACON;
+
+            // statistics
+            ++msgs_sent;
+            bytes_sent += sizeof(int) + sizeof(robot_state_t) + sizeof(Pose);
         }
     }
 
@@ -1096,30 +1132,37 @@ namespace eae
         WifiMessage* msg = dynamic_cast<WifiMessage*>(incoming);
         Coordination* cord = static_cast<Coordination*>(coordination);
 
+        ++cord->msgs_received;
+
         switch(msg->type){
             case MSG_ROBOT:
                 // add/update robot in the private vector of robots
                 cord->UpdateRobots(msg->id_robot, msg->state_robot, msg->pose);
+                cord->bytes_received += sizeof(msg->id_robot) + sizeof(msg->state_robot) + sizeof(msg->pose);
                 break;
 
             case MSG_DS:
                 // add/update docking station in the private vector of docking stations
                 cord->UpdateDs(msg->id_ds, msg->pose, msg->state_ds);
+                cord->bytes_received += sizeof(msg->id_ds) + sizeof(msg->pose) + sizeof(msg->state_ds);
                 break;
 
             case MSG_FRONTIER_AUCTION:
                 // update auction information and respond if necessary
                 cord->UpdateFrAuction(msg->id_auction, msg->id_robot, msg->bid, msg->pose);
+                cord->bytes_received += sizeof(msg->id_auction) + sizeof(msg->id_robot) + sizeof(msg->bid) + sizeof(msg->pose);
                 break;
 
             case MSG_DS_AUCTION:
                 // update auction information and respond if necessary
                 cord->UpdateDsAuction(msg->id_auction, msg->id_robot, msg->id_ds, msg->bid);
+                cord->bytes_received += sizeof(msg->id_auction) + sizeof(msg->id_robot) + sizeof(msg->id_ds) + sizeof(msg->bid);
                 break;
 
             case MSG_MAP:
                 // update local map
                 cord->UpdateMap(msg->map);
+                cord->bytes_received += msg->map->Size();
                 break;
 
             default:

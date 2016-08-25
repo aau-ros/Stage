@@ -91,7 +91,11 @@ namespace eae
             state = STATE_EXPLORE;
         }
 
-        if(DEBUG)
+        // only explore if currently not traveling on a path
+        if(valid_path)
+            return;
+
+        if(DEBUG && InArray(id, DEBUG_ROBOTS))
             printf("[%s:%d] [robot %d]: exploring\n", StripPath(__FILE__), __LINE__, id);
 
         // get current position
@@ -151,7 +155,7 @@ namespace eae
 
         // no new goal was found, coordinate docking with other robots
         if(SamePoint(goal, pose) || SamePoint(goal, goal_prev)){
-            if(DEBUG)
+            if(DEBUG && InArray(id, DEBUG_ROBOTS))
                 printf("[%s:%d] [robot %d]: no reachable frontiers\n", StripPath(__FILE__), __LINE__, id);
 
             // no reachable goal with full battery
@@ -179,7 +183,7 @@ namespace eae
 
             // needs recharging, coordinate with other robots
             else{
-                if(DEBUG)
+                if(DEBUG && InArray(id, DEBUG_ROBOTS))
                     printf("[%s:%d] [robot %d]: needs recharging\n", StripPath(__FILE__), __LINE__, id);
 
                 state = STATE_PRECHARGE;
@@ -218,7 +222,7 @@ namespace eae
 
             // make a new plan
             if(clear){
-                if(DEBUG)
+                if(DEBUG && InArray(id, DEBUG_ROBOTS))
                     printf("[%s:%d] [robot %d]: moving on new path to (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, goal.x, goal.y);
 
                 // plan path to goal
@@ -289,13 +293,13 @@ namespace eae
 
     void Robot::SetGoal(Pose to, double bid)
     {
-        if(DEBUG)
-            printf("[%s:%d] [robot %d]: set goal (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, to.x, to.y);
-
         // robot is at current goal
         // or does not have a goal
         // use euclidean distance
         if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE || ((state == STATE_EXPLORE || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE) && valid_path == false)){
+            if(DEBUG && InArray(id, DEBUG_ROBOTS))
+                printf("[%s:%d] [robot %d]: set goal (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, to.x, to.y);
+
             // store previous goal
             goal_prev = goal;
 
@@ -323,18 +327,20 @@ namespace eae
         // - if my bid is higher than for the other goal already stored
         // - if robot needs recharging (goal should be a docking station)
         else if(GoalQueue() == false || goal_next_bid < bid || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE){
+            if(DEBUG && InArray(id, DEBUG_ROBOTS))
+                printf("[%s:%d] [robot %d]: enqueue goal (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, to.x, to.y);
             goal_next = to;
             goal_next_bid = bid;
         }
         else{
-            if(DEBUG)
+            if(DEBUG && InArray(id, DEBUG_ROBOTS))
                 printf("[%s:%d] [robot %d]: discard goal (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, to.x, to.y);
         }
     }
 
     void Robot::SetGoalNext()
     {
-        if(DEBUG)
+        if(DEBUG && InArray(id, DEBUG_ROBOTS))
             printf("[%s:%d] [robot %d]: set goal next (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, goal_next.x, goal_next.y);
 
         // store previous goal
@@ -445,7 +451,7 @@ namespace eae
 
     void Robot::Dock(ds_t ds, double bid)
     {
-        if(DEBUG)
+        if(DEBUG && InArray(id, DEBUG_ROBOTS))
             printf("[%s:%d] [robot %d]: docking\n", StripPath(__FILE__), __LINE__, id);
 
         // already charging, no docking required
@@ -465,7 +471,7 @@ namespace eae
 
     void Robot::DockQueue(ds_t ds, double bid)
     {
-        if(DEBUG)
+        if(DEBUG && InArray(id, DEBUG_ROBOTS))
             printf("[%s:%d] [robot %d]: docking queue\n", StripPath(__FILE__), __LINE__, id);
 
         // already charging, no queueing required
@@ -480,7 +486,7 @@ namespace eae
 
     void Robot::UnDock()
     {
-        if(DEBUG)
+        if(DEBUG && InArray(id, DEBUG_ROBOTS))
             printf("[%s:%d] [robot %d]: undock\n", StripPath(__FILE__), __LINE__, id);
 
         // stop moving

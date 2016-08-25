@@ -25,6 +25,13 @@ namespace eae
     const bool DEBUG = false;
 
     /**
+     * Debug the robots listed in this array.
+     * Only debug output of the robots with the given ID's will be output.
+     * Robots can have following ID's: 1, 7, 13, 19, 25, 31, 37, 43, ...
+     */
+    const int DEBUG_ROBOTS[] = {1, 7, 13, 19, 25, 31, 37, 43};
+
+    /**
      * Distance that the robot can be away from goal.
      */
     const double GOAL_TOLERANCE = 1;
@@ -150,6 +157,31 @@ namespace eae
     inline const char* StripPath(string file)
     {
         return file.substr(file.find_last_of("/")+1).c_str();
+    }
+
+    /**
+     * Check if a value exists in an array.
+     * The type of the array values is the template parameter T.
+     *
+     * @param T val: The value to check.
+     * @param T arr[]: The array too look in.
+     *
+     * @return bool: True if the value exists in the array, false otherwise.
+     */
+    template<typename T>
+    inline const bool InArray(T val, const T arr[])
+    {
+        // size of array
+        int n = sizeof(arr)/sizeof(T);
+
+        // loop through array and look vor val
+        for(int i=0; i<n; ++i){
+            if(arr[i] == val)
+                return true;
+        }
+
+        // val not found
+        return false;
     }
 }
 

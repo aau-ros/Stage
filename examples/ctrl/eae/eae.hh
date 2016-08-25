@@ -165,22 +165,21 @@ namespace eae
      *
      * @param T val: The value to check.
      * @param T arr[]: The array too look in.
+     * @param int size: The size of the array (number of elements).
      *
      * @return bool: True if the value exists in the array, false otherwise.
      */
     template<typename T>
-    inline const bool InArray(T val, const T arr[])
+    inline const bool InArray(T val, const T arr[], int size)
     {
-        // size of array
-        int n = sizeof(arr)/sizeof(T);
-
         // loop through array and look vor val
-        for(int i=0; i<n; ++i){
+        for(int i=0; i<size; ++i){
+            // value found, return true
             if(arr[i] == val)
                 return true;
         }
 
-        // val not found
+        // value not found
         return false;
     }
 }

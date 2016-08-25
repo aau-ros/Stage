@@ -79,7 +79,7 @@ namespace eae
         else
             printf("[%s:%d] [robot %d]: invalid coordination strategy: %d\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), strategy);
 
-        if(DEBUG && InArray(this->robot->GetId(), DEBUG_ROBOTS))
+        if(DEBUG && InArray(this->robot->GetId(), DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(this->robot->GetId())))
             printf("[%s:%d] [robot %d]: start docking auction %d, bid %.2f\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), id, bid);
 
         // create and store auction
@@ -146,7 +146,7 @@ namespace eae
             }
         }
 
-        if(DEBUG && InArray(robot->GetId(), DEBUG_ROBOTS))
+        if(DEBUG && InArray(robot->GetId(), DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(robot->GetId())))
             printf("[%s:%d] [robot %d]: add docking station %d (%.0f,%.0f)\n", StripPath(__FILE__), __LINE__, robot->GetId(), id, pose.x, pose.y);
 
         // get model of docking station
@@ -683,7 +683,7 @@ namespace eae
 
         // my bid is higher
         if(my_bid > bid){
-            if(DEBUG && InArray(this->robot->GetId(), DEBUG_ROBOTS))
+            if(DEBUG && InArray(this->robot->GetId(), DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(this->robot->GetId())))
                 printf("[%s:%d] [robot %d]: participate in docking auction %d, bid %.2f\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), id, my_bid);
 
             // notify other robots
@@ -743,7 +743,7 @@ namespace eae
 
         // continue exploration
         if(lost){
-            if(DEBUG && InArray(robot->GetId(), DEBUG_ROBOTS))
+            if(DEBUG && InArray(robot->GetId(), DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(robot->GetId())))
                 printf("[%s:%d] [robot %d]: lost auction\n", StripPath(__FILE__), __LINE__, robot->GetId());
             robot->Explore();
             return; // only dock if i didn't start any frontier auction

@@ -851,7 +851,7 @@ namespace eae
         }
 
         // stop moving
-        else{
+        else if(robot->turning <= 0){
             robot->pos->Stop();
         }
 

@@ -7,14 +7,11 @@ include "pioneer.inc"
 include "sick.inc"
 include "map.inc"
 
-# speed of simulation relative to real time
-speedup 1
-
 # start simulation in paused mode (gui only)
 paused 1
 
-# force simulation to quit after quit_time seconds
-quit_time 18000
+# force simulation to quit after quit_time simulated seconds
+quit_time 7200
 
 # resolution of map in meters / cell
 resolution 1

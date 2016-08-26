@@ -12,40 +12,47 @@ namespace eae
         struct tm* timeinfo;
         timeinfo = localtime(&now);
 
-        // path to log file
+        // path to day directory
         char dir[11];
         strftime(dir, 11, "%y-%m-%d/", timeinfo);
         string path = string(getenv("HOME")) + "/" + LOG_PATH + string(dir);
 
         // create directory if it doesn't exist
-        struct stat sb;
-        if(stat(path.c_str(), &sb) != 0 || S_ISDIR(sb.st_mode) == false){
-            if(mkdir(path.c_str(), 0755) < 0){
-                string base_path = string(getenv("HOME")) + "/" + LOG_PATH;
-                printf("Could not create log folder %s, please create it manually!\n", base_path.c_str());
-                return;
-            }
-        }
+        if(MkDir(path) == false)
+            return;
 
-        // file name from time
-        char timestring[7];
-        strftime(timestring, 7, "%H-%M", timeinfo);
-
-        // add coordination strategy index to file name
+        // coordination strategy index for directory name
         ostringstream ss_cord;
         ss_cord << i_cord;
 
-        // add policy index to file name
+        // policy index directory name
         ostringstream ss_pol;
         ss_pol << i_pol;
+
+        // number of robots for directory name
+        ostringstream ss_robots;
+        ss_robots << robots;
+
+        // path to specific experiment directory
+        path += ss_cord.str() + "-" + ss_pol.str() + "-" + ss_robots.str() + "/";
+
+        // create directory if it doesn't exist
+        if(MkDir(path) == false)
+            return;
+
+        // add map number to file name
+        string map_no = map.substr(map.rfind("_")+1, map.rfind(".")-map.rfind("_")-1);
 
         // add robot id to file name
         ostringstream ss_robot;
         ss_robot << robot;
 
         // complete path of file
-        string filepath = path + string(timestring) + "-" + ss_cord.str() + "-" + ss_pol.str() + "-" + ss_robot.str() + ".log";
-        printf("log file: %s\n", filepath.c_str());
+        string filepath = path + map_no + "-" + ss_robot.str() + ".log";
+        printf("[Log file \"%s\"]\n", filepath.c_str());
+
+        // backup old log file if exists
+        Backup(filepath);
 
         // open log file
         file.open(filepath.c_str());
@@ -72,5 +79,42 @@ namespace eae
     void LogOutput::Write(string text)
     {
         file << text << endl;
+    }
+
+    bool LogOutput::MkDir(string path)
+    {
+        struct stat sb;
+        if(stat(path.c_str(), &sb) != 0 || S_ISDIR(sb.st_mode) == false){
+            if(mkdir(path.c_str(), 0755) < 0){
+                string base_path = string(getenv("HOME")) + "/" + LOG_PATH;
+                printf("Could not create log folder %s, please create it manually!\n", base_path.c_str());
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void LogOutput::Backup(string path)
+    {
+        // get current time
+        std::time_t now = time(NULL);
+        struct tm* timeinfo;
+        timeinfo = localtime(&now);
+
+        // file info
+        struct stat sb;
+
+        // file exists
+        if(stat(path.c_str(), &sb) == 0){
+            // create new file name with time
+            char timestring[7];
+            strftime(timestring, 7, "%H-%M", timeinfo);
+            string backup = path + "." + string(timestring);
+
+            printf("[Backup previous log file to \"%s\"]\n", backup.c_str());
+
+            // rename file
+            rename(path.c_str(), backup.c_str());
+        }
     }
 }

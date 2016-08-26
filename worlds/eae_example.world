@@ -51,5 +51,6 @@ floorplan
     size [250 50 1]
 
     # path to the underlying bitmap
+    # the map name should always end with _#.ext
     bitmap "bitmaps/lines_1.png"
 )

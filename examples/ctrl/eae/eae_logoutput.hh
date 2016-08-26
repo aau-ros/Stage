@@ -70,6 +70,22 @@ namespace eae
 
     private:
         /**
+         * Create a directory.
+         *
+         * @param string path: The path of the directory to create.
+         *
+         * @return bool: False if the directory could not be created, true otherwise.
+         */
+        bool MkDir(string path);
+
+        /**
+         * Backup a file by renaming it. The hour and minute are added to the end.
+         *
+         * @param string path: Path to the file.
+         */
+        void Backup(string path);
+
+        /**
          * The file stream for the log file.
          */
         ofstream file;

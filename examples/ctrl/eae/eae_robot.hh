@@ -166,6 +166,13 @@ namespace eae
         Pose GetPose();
 
         /**
+         * Get the DS which was last selected by the robot.
+         *
+         * @return ds_t: The selected DS.
+         */
+        ds_t GetDs();
+
+        /**
          * Check whether there is still a goal in the queue.
          *
          * @return bool: True if there is still a valid goal in the queue, false otherwise.

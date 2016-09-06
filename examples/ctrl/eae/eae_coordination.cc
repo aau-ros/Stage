@@ -188,7 +188,7 @@ namespace eae
         }
     }
 
-    ds_t Coordination::SelectDs(double range, pol_t policy)
+    ds_t Coordination::SelectDs(double range, pol_t policy, int exclude)
     {
         // select global policy
         if(policy == POL_UNDEFINED)
@@ -202,7 +202,10 @@ namespace eae
                 return VacantDs(range);
                 break;
             case POL_OPPORTUNISTIC:
-                return OpportunisticDs(range);
+                return OpportunisticDs(range, exclude);
+                break;
+            case POL_CURRENT:
+                return CurrentDs(range);
                 break;
             default:
                 printf("[%s:%d] [robot %d]: combined policy not yet implemented\n", StripPath(__FILE__), __LINE__, robot->GetId());
@@ -374,7 +377,7 @@ namespace eae
         return ds_occ;
     }
 
-    ds_t Coordination::OpportunisticDs(double range)
+    ds_t Coordination::OpportunisticDs(double range, int exclude)
     {
         bool frontiers; // true if there are frontiers in range of the docking station
         bool reachable; // true if one docking station is reachable by another
@@ -389,6 +392,10 @@ namespace eae
 
         // iterate over all docking stations and sort into different vectors
         for(it=dss.begin(); it<dss.end(); ++it){
+            // exclude docking station
+            if(it->id == exclude)
+                continue;
+
             // compute path distance
             dist_temp = robot->Distance(it->pose.x, it->pose.y);
 
@@ -419,6 +426,9 @@ namespace eae
                 dss_else.push_back(*it);
             }
         }
+
+        if(DEBUG && InArray(this->robot->GetId(), DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(this->robot->GetId())))
+            printf("[%s:%d] [robot %d]: dss_reach_front: %lu, dss_reachable: %lu, dss_frontiers: %lu, dss_else: %lu\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), dss_reach_front.size(), dss_reachable.size(), dss_frontiers.size(), dss_else.size());
 
         // return closest docking station in range of robot with frontiers in range
         for(it=dss_reach_front.begin(); it<dss_reach_front.end(); ++it){
@@ -529,6 +539,19 @@ namespace eae
             }
         }
         return ds;
+    }
+
+    ds_t Coordination::CurrentDs(double range)
+    {
+        // get the current ds of the robot
+        ds_t ds_cur = robot->GetDs();
+
+        // return current ds if it still has opportunities
+        if(ds_cur.id > 0 && robot->FrontiersReachable(ds_cur.pose, robot->MaxDist(), true).empty() == false)
+            return ds_cur;
+
+        // return other ds that still has opportunities
+        return OpportunisticDs(range, ds_cur.id);
     }
 
     void Coordination::UpdateRobots(int id, robot_state_t state, Pose pose)
@@ -995,7 +1018,7 @@ namespace eae
         // number of not occupied docking stations
         int num_dss = 0;
         for(itd=dss.begin(); itd<dss.end(); ++itd)
-            if(itd->state !=  STATE_OCCUPIED)
+            if(itd->state != STATE_OCCUPIED)
                 ++num_dss;
 
         // number of active robots, i.e. robots that are willing to charge

@@ -18,7 +18,8 @@ strategy 1
 # 1: always select closest docking station
 # 2: prefer vacant docking stations
 # 3: prefer docking stations where there are still frontiers in reach
-# 4: a combination of the above
+# 4: prefer current docking station
+# 5: a combination of the above
 policy 1
 
 # a robot

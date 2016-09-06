@@ -21,6 +21,7 @@ namespace eae
         POL_CLOSEST,
         POL_VACANT,
         POL_OPPORTUNISTIC,
+        POL_CURRENT,
         POL_COMBINED
     } pol_t;
 
@@ -28,7 +29,7 @@ namespace eae
      * Strings describing the policy.
      * Make sure they match the pol_t enum!
      */
-    const string POL_STRING[] = {"undefined", "closest", "vacant", "opportunistic", "combined"};
+    const string POL_STRING[] = {"undefined", "closest", "vacant", "opportunistic", "current", "combined"};
 
     /**
      * Possible coordination strategies for recharging at docking stations.
@@ -181,8 +182,9 @@ namespace eae
          *
          * @param double range: The range of the robot, not required for all policies.
          * @param pol_t policy: Override the global policy for selecting a docking station.
+         * @param int exclude: Exclude this docking station, default none.
          */
-        ds_t SelectDs(double range=0, pol_t policy=POL_UNDEFINED);
+        ds_t SelectDs(double range=0, pol_t policy=POL_UNDEFINED, int exclude=0);
 
         /**
          * Set a docking station to the state vacant.
@@ -288,10 +290,20 @@ namespace eae
          * Get the docking station closest to the robots current location where there are frontiers nearby that the robot can reach after recharging. If this is not possible get the closest docking station where another docking station with frontiers nearby can be reached in the next step.
          *
          * @param double range: The range of the robot.
+         * @param int exclude: Exclude this docking station.
          *
          * @return ds_t: The docking station.
          */
-        ds_t OpportunisticDs(double range);
+        ds_t OpportunisticDs(double range, int exclude);
+
+        /**
+         * Get the docking station that the robot preveously selected if there are still frontiers/opportunities in range. Otherwise use opportunistic policy to select another one.
+         *
+         * @param double range: The range of the robot.
+         *
+         * @return ds_t: The docking station.
+         */
+        ds_t CurrentDs(double range);
 
         /**
          * Update the vector of robots.

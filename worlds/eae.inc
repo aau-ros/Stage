@@ -35,7 +35,7 @@ window
     show_data 1
 
     # show grid in the background
-    show_grid 1
+    show_grid 0
 )
 
 # definition of the charging connector of a robot

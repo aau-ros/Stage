@@ -68,6 +68,9 @@ namespace eae
         // robot did not try turning to fix computing path
         turning = 0;
         turned = 0;
+
+        // no ds selected yet
+        ds.id = 0;
     }
 
     void Robot::Init()
@@ -105,7 +108,7 @@ namespace eae
         ds = cord->SelectDs(RemainingDist());
 
         // visualize map progress
-//         map->VisualizeGui(pos->GetPose());
+        //map->VisualizeGui(pos->GetPose());
 
 
         /******************
@@ -161,7 +164,10 @@ namespace eae
             // no reachable goal with full battery
             if(FullyCharged()){
                 // try finding another docking station from where it is still possible to explore
-                ds_t ds_op = cord->SelectDs(RemainingDist(), POL_OPPORTUNISTIC);
+                ds_t ds_op = cord->SelectDs(RemainingDist(), POL_OPPORTUNISTIC, ds.id);
+
+                if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+                    printf("[%s:%d] [robot %d]: try ds %d\n", StripPath(__FILE__), __LINE__, id, ds_op.id);
 
                 // start docking station auction
                 if(ds_op.id > 0 && SamePoint(ds.pose, ds_op.pose) == false){
@@ -441,6 +447,11 @@ namespace eae
     Pose Robot::GetPose()
     {
         return pos->GetPose();
+    }
+
+    ds_t Robot::GetDs()
+    {
+        return ds;
     }
 
     bool Robot::GoalQueue()

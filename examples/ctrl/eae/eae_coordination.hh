@@ -183,8 +183,9 @@ namespace eae
          * @param double range: The range of the robot, not required for all policies.
          * @param pol_t policy: Override the global policy for selecting a docking station.
          * @param int exclude: Exclude this docking station, default none.
+         * @param bool end: Selection that takes place at end of exploration, only docking stations with frontiers in reach are of interest, default false.
          */
-        ds_t SelectDs(double range=0, pol_t policy=POL_UNDEFINED, int exclude=0);
+        ds_t SelectDs(double range=0, pol_t policy=POL_UNDEFINED, int exclude=0, bool end=false);
 
         /**
          * Set a docking station to the state vacant.
@@ -291,10 +292,11 @@ namespace eae
          *
          * @param double range: The range of the robot.
          * @param int exclude: Exclude this docking station.
+         * @param bool end: Selection that takes place at end of exploration, only docking stations with frontiers in reach are of interest, default false.
          *
          * @return ds_t: The docking station.
          */
-        ds_t OpportunisticDs(double range, int exclude);
+        ds_t OpportunisticDs(double range, int exclude, bool end=false);
 
         /**
          * Get the docking station that the robot preveously selected if there are still frontiers/opportunities in range. Otherwise use opportunistic policy to select another one.

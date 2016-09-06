@@ -188,7 +188,7 @@ namespace eae
         }
     }
 
-    ds_t Coordination::SelectDs(double range, pol_t policy, int exclude)
+    ds_t Coordination::SelectDs(double range, pol_t policy, int exclude, bool end)
     {
         // select global policy
         if(policy == POL_UNDEFINED)
@@ -202,7 +202,7 @@ namespace eae
                 return VacantDs(range);
                 break;
             case POL_OPPORTUNISTIC:
-                return OpportunisticDs(range, exclude);
+                return OpportunisticDs(range, exclude, end);
                 break;
             case POL_CURRENT:
                 return CurrentDs(range);
@@ -377,7 +377,7 @@ namespace eae
         return ds_occ;
     }
 
-    ds_t Coordination::OpportunisticDs(double range, int exclude)
+    ds_t Coordination::OpportunisticDs(double range, int exclude, bool end)
     {
         bool frontiers; // true if there are frontiers in range of the docking station
         bool reachable; // true if one docking station is reachable by another
@@ -446,6 +446,10 @@ namespace eae
             }
         }
         if(dist > 0)
+            return ds;
+
+        // at end of exploration, ds with frontiers is required
+        if(end && dss_frontiers.empty())
             return ds;
 
         // return closest docking station in range of robot that has another docking station in range with frontiers in range

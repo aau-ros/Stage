@@ -527,11 +527,8 @@ namespace eae
 
     double Robot::RemainingTime()
     {
-        // calculate power consumption (according to stage model: libstage/model_position:496)
-        double power = pos->velocity_bounds->max * WATTS_KGMS * pos->GetTotalMass() + WATTS;
-
         // calculate remaining distance
-        return pos->FindPowerPack()->GetStored() / power;
+        return pos->FindPowerPack()->GetStored() / Power(pos->velocity_bounds->max);
     }
 
     double Robot::RemainingChargeTime()
@@ -684,11 +681,9 @@ namespace eae
 
     double Robot::RemainingDist(joules_t charge)
     {
-        // calculate power consumption (according to stage model: libstage/model_position:496)
-        double power = pos->velocity_bounds->max * WATTS_KGMS * pos->GetTotalMass() + WATTS;
-
+        printf("[%s:%d] [robot %d]: d(%.2f) = %.2f\n", StripPath(__FILE__), __LINE__, id, charge, charge / Power(pos->velocity_bounds->max) * pos->velocity_bounds->max);
         // calculate remaining distance
-        return charge / power * pos->velocity_bounds->max;
+        return charge / Power(pos->velocity_bounds->max) * pos->velocity_bounds->max;
     }
 
     void Robot::Log()
@@ -744,6 +739,12 @@ namespace eae
                 break;
         }
         return name;
+    }
+
+    double Robot::Power(double velocity)
+    {
+        // calculate power consumption (according to stage model: libstage/model_position:496)
+        return WATTS + STG_WIFI_WATTS + RANGER_WATTSPERSENSOR * SENSORS + WATTS_KGMS * velocity * pos->GetTotalMass();
     }
 
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)

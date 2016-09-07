@@ -54,6 +54,24 @@ namespace eae
     static const double WATTS = 9.2;
 
     /**
+     * Power consumption of the WLAN adapter.
+     * See also libstage/mode_wifi.cc line 192.
+     */
+    static const double STG_WIFI_WATTS = 2.5;
+
+    /**
+     * Power consumption of a single sensor.
+     * See also libstage/model_ranger.cc line 72.
+     */
+    static const double RANGER_WATTSPERSENSOR = 0.2;
+
+    /**
+     * Number of sensors:
+     * laser + sonar + fiducial = 1 + 8 + 1
+     */
+    static const int SENSORS = 10;
+
+    /**
      * Distance that the robot has to travel until another map update is performed.
      */
     const double MAP_UPDATE_DIST = 1.41;
@@ -370,6 +388,15 @@ namespace eae
          * @return string: The name of the map.
          */
         string MapName();
+
+        /**
+         * Get the power consumption of the robot at a given velocity.
+         *
+         * @param double velocity: The velocity to compute the power for.
+         *
+         * @return double: The power consumption.
+         */
+        double Power(double velocity);
 
         /**
          * Callback function that is called when the robot changes position.

@@ -681,7 +681,6 @@ namespace eae
 
     double Robot::RemainingDist(joules_t charge)
     {
-        printf("[%s:%d] [robot %d]: d(%.2f) = %.2f\n", StripPath(__FILE__), __LINE__, id, charge, charge / Power(pos->velocity_bounds->max) * pos->velocity_bounds->max);
         // calculate remaining distance
         return charge / Power(pos->velocity_bounds->max) * pos->velocity_bounds->max;
     }

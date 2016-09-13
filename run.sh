@@ -11,11 +11,12 @@ function usage(){
     echo -e "\t-d, --docking-stations\tNumber of docking stations, max 9, mandatory."
     echo -e "\t-s, --strategy\t\tCoordination strategy, mandatory:\n\t\t\t\t0:\tmarked based\n\t\t\t\t1:\tgreedy\n\t\t\t\t2:\toptimal (not yet implemented)"
     echo -e "\t-p, --policy\t\tDocking station selection policy, mandatory:\n\t\t\t\t1:\tclosest\n\t\t\t\t2:\tvacant\n\t\t\t\t3:\topportunistic\n\t\t\t\t4:\tcurrent\n\t\t\t\t5:\tcombined (not yet implemented)"
+    echo -e "\t-m, --map\t\tStart simulation from this map."
     echo
 }
 
 # define command line options
-opts=$(getopt -o hr:d:s:p: --long help,robots:,docking-stations:,strategy:,policy: -n 'run.sh' -- "$@")
+opts=$(getopt -o hr:d:s:p:m: --long help,robots:,docking-stations:,strategy:,policy:,map: -n 'run.sh' -- "$@")
 
 # mandatory command line options
 mandatory=(-r -d -s -p)
@@ -28,6 +29,9 @@ fi
 
 # assign options to positional parameters
 eval set -- "$opts"
+
+# default starting map
+map=1
 
 # loop through all options
 while true ; do
@@ -46,6 +50,8 @@ while true ; do
             strategy=$2 ; shift 2 ;;
         -p|--policy)
             policy=$2 ; shift 2 ;;
+        -m|--map)
+            map=$2 ; shift 2 ;;
         --) shift ; break ;;
         *) usage; exit 1 ;;
     esac
@@ -85,7 +91,7 @@ dss[9]="docking_station( pose [ 200 0 0 0 ] fiducial_return 9 name \"ds9\" )"
 maps=50
 
 # repeat simulation for each map
-for (( i=1; i<=${maps}; i++ ))
+for (( i=${map}; i<=${maps}; i++ ))
 do
     # create content for world file
     world="include \"eae.inc\"\n\n"

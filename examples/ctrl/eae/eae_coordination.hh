@@ -20,7 +20,7 @@ namespace eae
         POL_UNDEFINED = 0,
         POL_CLOSEST,
         POL_VACANT,
-        POL_OPPORTUNISTIC,
+        POL_OPPORTUNE,
         POL_CURRENT,
         POL_CONNECTED,
         POL_COMBINED
@@ -30,7 +30,7 @@ namespace eae
      * Strings describing the policy.
      * Make sure they match the pol_t enum!
      */
-    const string POL_STRING[] = {"undefined", "closest", "vacant", "opportunistic", "current", "connected", "combined"};
+    const string POL_STRING[] = {"undefined", "closest", "vacant", "opportune", "current", "connected", "combined"};
 
     /**
      * Possible coordination strategies for recharging at docking stations.
@@ -298,10 +298,10 @@ namespace eae
          *
          * @return ds_t: The docking station.
          */
-        ds_t OpportunisticDs(double range, int exclude, bool end=false);
+        ds_t OpportuneDs(double range, int exclude, bool end=false);
 
         /**
-         * Get the docking station that the robot preveously selected if there are still frontiers/opportunities in range. Otherwise use opportunistic policy to select another one.
+         * Get the docking station that the robot preveously selected if there are still frontiers/opportunities in range. Otherwise use opportune policy to select another one.
          *
          * @param double range: The range of the robot.
          *

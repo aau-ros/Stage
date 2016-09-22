@@ -170,7 +170,7 @@ namespace eae
             // no reachable goal with full battery
             if(FullyCharged()){
                 // try finding another docking station from where it is still possible to explore
-                ds_t ds_op = cord->SelectDs(RemainingDist(), POL_OPPORTUNISTIC, ds.id, true);
+                ds_t ds_op = cord->SelectDs(RemainingDist(), POL_OPPORTUNE, ds.id, true);
 
                 if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
                     printf("[%s:%d] [robot %d]: try ds %d\n", StripPath(__FILE__), __LINE__, id, ds_op.id);

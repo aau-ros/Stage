@@ -14,13 +14,13 @@ docking_stations 1
 strategy 1
 
 # policy for selecting a docking station
-# 0: undefined
-# 1: always select closest docking station
-# 2: prefer vacant docking stations
-# 3: prefer docking stations where there are still frontiers in reach
-# 4: prefer current docking station
-# 5: select docking station which allows to stay connected to other robots
-# 6: a combination of the above
+# 0 undefined
+# 1 closest:    always select closest docking station
+# 2 vacant:     prefer vacant docking stations
+# 3 opportune:  prefer docking stations where there are still frontiers in reach
+# 4 current:    prefer current docking station
+# 5 connected:  select docking station which allows to stay connected to other robots
+# 6 combined:   a combination of the above
 policy 1
 
 # a robot

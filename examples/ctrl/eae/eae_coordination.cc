@@ -214,8 +214,8 @@ namespace eae
             case POL_VACANT:
                 new_ds = VacantDs(range);
                 break;
-            case POL_OPPORTUNISTIC:
-                new_ds = OpportunisticDs(range, exclude, end);
+            case POL_OPPORTUNE:
+                new_ds = OpportuneDs(range, exclude, end);
                 break;
             case POL_CURRENT:
                 new_ds = CurrentDs(range);
@@ -236,6 +236,7 @@ namespace eae
                         it->robots = 0;
                     break;
                 }
+
                 // increase number at new docking station
                 if(it->id == new_ds.id){
                     ++it->robots;
@@ -432,7 +433,7 @@ namespace eae
         return ds_occ;
     }
 
-    ds_t Coordination::OpportunisticDs(double range, int exclude, bool end)
+    ds_t Coordination::OpportuneDs(double range, int exclude, bool end)
     {
         bool frontiers; // true if there are frontiers in range of the docking station
         bool reachable; // true if one docking station is reachable by another
@@ -610,7 +611,7 @@ namespace eae
             return ds_cur;
 
         // return other ds that still has opportunities
-        return OpportunisticDs(range, ds_cur.id);
+        return OpportuneDs(range, ds_cur.id);
     }
 
     void Coordination::UpdateRobots(int id, robot_state_t state, Pose pose)

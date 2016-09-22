@@ -208,7 +208,7 @@ namespace eae
                 return CurrentDs(range);
                 break;
             default:
-                printf("[%s:%d] [robot %d]: combined policy not yet implemented\n", StripPath(__FILE__), __LINE__, robot->GetId());
+                printf("[%s:%d] [robot %d]: policy not yet implemented\n", StripPath(__FILE__), __LINE__, robot->GetId());
                 return ds_t();
         }
     }

@@ -22,6 +22,7 @@ namespace eae
         POL_VACANT,
         POL_OPPORTUNISTIC,
         POL_CURRENT,
+        POL_CONNECTED,
         POL_COMBINED
     } pol_t;
 
@@ -29,7 +30,7 @@ namespace eae
      * Strings describing the policy.
      * Make sure they match the pol_t enum!
      */
-    const string POL_STRING[] = {"undefined", "closest", "vacant", "opportunistic", "current", "combined"};
+    const string POL_STRING[] = {"undefined", "closest", "vacant", "opportunistic", "current", "connected", "combined"};
 
     /**
      * Possible coordination strategies for recharging at docking stations.

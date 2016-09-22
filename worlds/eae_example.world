@@ -19,7 +19,8 @@ strategy 1
 # 2: prefer vacant docking stations
 # 3: prefer docking stations where there are still frontiers in reach
 # 4: prefer current docking station
-# 5: a combination of the above
+# 5: select docking station which allows to stay connected to other robots
+# 6: a combination of the above
 policy 1
 
 # a robot

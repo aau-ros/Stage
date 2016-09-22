@@ -108,7 +108,7 @@ namespace eae
         ds = cord->SelectDs(RemainingDist());
 
         // visualize map progress
-        //map->VisualizeGui(pos->GetPose());
+        map->VisualizeGui(pos->GetPose());
 
 
         /******************

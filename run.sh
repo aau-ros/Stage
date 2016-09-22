@@ -10,7 +10,7 @@ function usage(){
     echo -e "\t-r, --robots\t\tNumber of robots, max 8, mandatory."
     echo -e "\t-d, --docking-stations\tNumber of docking stations, max 9, mandatory."
     echo -e "\t-s, --strategy\t\tCoordination strategy, mandatory:\n\t\t\t\t0:\tmarked based\n\t\t\t\t1:\tgreedy\n\t\t\t\t2:\toptimal (not yet implemented)"
-    echo -e "\t-p, --policy\t\tDocking station selection policy, mandatory:\n\t\t\t\t1:\tclosest\n\t\t\t\t2:\tvacant\n\t\t\t\t3:\topportunistic\n\t\t\t\t4:\tcurrent\n\t\t\t\t5:\tcombined (not yet implemented)"
+    echo -e "\t-p, --policy\t\tDocking station selection policy, mandatory:\n\t\t\t\t1:\tclosest\n\t\t\t\t2:\tvacant\n\t\t\t\t3:\topportunistic\n\t\t\t\t4:\tcurrent\n\t\t\t\t5:\tconnected (not yet implemented)\n\t\t\t\t6:\tcombined (not yet implemented)"
     echo -e "\t-m, --map\t\tStart simulation from this map."
     echo
 }

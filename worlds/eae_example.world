@@ -16,11 +16,12 @@ strategy 1
 # policy for selecting a docking station
 # 0 undefined
 # 1 closest:    always select closest docking station
-# 2 vacant:     prefer vacant docking stations
+# 2 vacant:     prefer vacant docking stations (currently no one charging)
 # 3 opportune:  prefer docking stations where there are still frontiers in reach
 # 4 current:    prefer current docking station
-# 5 connected:  select docking station which allows to stay connected to other robots
-# 6 combined:   a combination of the above
+# 5 lonely:     prefer docking stations with fewest robots
+# 6 connected:  select docking station which allows to stay connected to other robots
+# 7 combined:   a combination of the above
 policy 1
 
 # a robot

@@ -220,6 +220,8 @@ namespace eae
             case POL_CURRENT:
                 new_ds = CurrentDs(range);
                 break;
+            case POL_LONELY:
+                new_ds = LonelyDs(range);
             default:
                 printf("[%s:%d] [robot %d]: policy not yet implemented\n", StripPath(__FILE__), __LINE__, robot->GetId());
         }
@@ -426,7 +428,7 @@ namespace eae
         }
 
         // return vacant docking station
-        if(dist_free > 0)
+        if(0 < dist_free && dist_free < range)
             return ds_free;
 
         // return occupied docking station (or invalid one)
@@ -612,6 +614,41 @@ namespace eae
 
         // return other ds that still has opportunities
         return OpportuneDs(range, ds_cur.id);
+    }
+
+    ds_t Coordination::LonelyDs(double range)
+    {
+        ds_t ds = ds_t();
+        int robots = -1;
+        double dist = 0;
+        double dist_temp;
+        vector<ds_t>::iterator it;
+
+        // iterate over all docking stations to find least crowded onw
+        for(it=dss.begin(); it<dss.end(); ++it){
+            // compute path distance
+            dist_temp = robot->Distance(it->pose.x, it->pose.y);
+
+            // could not compute distance, take euclidean distance
+            if(dist_temp < 0)
+                dist_temp = it->pose.Distance(robot->GetPose());
+
+            // cannot reach docking station
+            if(dist_temp > range)
+                continue;
+
+            // found docking station with same number of robots that is closer by
+            // or found docking station with fewer robots
+            // or it's the first docking station in range
+            if((it->robots == robots && dist_temp < dist) || it->robots < robots || robots < 0){
+                ds = *it;
+                robots = it->robots;
+                dist = dist_temp;
+            }
+        }
+
+        // return docking station
+        return ds;
     }
 
     void Coordination::UpdateRobots(int id, robot_state_t state, Pose pose)

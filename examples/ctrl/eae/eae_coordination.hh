@@ -22,6 +22,7 @@ namespace eae
         POL_VACANT,
         POL_OPPORTUNE,
         POL_CURRENT,
+        POL_LONELY,
         POL_CONNECTED,
         POL_COMBINED
     } pol_t;
@@ -30,7 +31,7 @@ namespace eae
      * Strings describing the policy.
      * Make sure they match the pol_t enum!
      */
-    const string POL_STRING[] = {"undefined", "closest", "vacant", "opportune", "current", "connected", "combined"};
+    const string POL_STRING[] = {"undefined", "closest", "vacant", "opportune", "current", "lonely", "connected", "combined"};
 
     /**
      * Possible coordination strategies for recharging at docking stations.
@@ -308,6 +309,15 @@ namespace eae
          * @return ds_t: The docking station.
          */
         ds_t CurrentDs(double range);
+
+        /**
+         * Get the docking station which the fewest robots are currently associated with.
+         *
+         * @param double range: The range of the robot.
+         *
+         * @return ds_t: The docking station.
+         */
+        ds_t LonelyDs(double range);
 
         /**
          * Update the vector of robots.

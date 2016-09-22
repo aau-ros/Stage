@@ -175,8 +175,9 @@ namespace eae
          * @param int id: The ID of the docking station (as returned by the fiducial).
          * @param Pose pose: The position of the docking station.
          * @param ds_state_t state: The state of the docking station, default is undefined.
+         * @param int change: The number of new or removed robots (the ones that selected this docking station), default 0.
          */
-        void UpdateDs(int id, Pose pose, ds_state_t state=STATE_UNDEFINED_DS);
+        void UpdateDs(int id, Pose pose, ds_state_t state=STATE_UNDEFINED_DS, int change=0);
 
         /**
          * Select a docking station for recharging.

@@ -117,6 +117,7 @@ namespace eae
         ds_state_t state;
         Pose pose;
         Model* model;
+        int robots;
     } ds_t;
 
     /**

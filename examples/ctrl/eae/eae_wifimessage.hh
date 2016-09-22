@@ -35,8 +35,9 @@ namespace eae
          * @param ds_state_t state_ds: State of the docking station.
          * @param double bid: Bid for the auction.
          * @param Pose pos: Position of robot, docking station, or frontier.
+         * @param int change: Change in number of robots.
          */
-        WifiMessage(msg_type_t type, int id_auction, int id_robot, robot_state_t state_robot, int id_ds, ds_state_t state_ds, double bid, Pose pos);
+        WifiMessage(msg_type_t type, int id_auction, int id_robot, robot_state_t state_robot, int id_ds, ds_state_t state_ds, double bid, Pose pos, int change);
 
         /**
          * Constructor for map messages.
@@ -122,6 +123,11 @@ namespace eae
          * Map.
          */
         GridMap* map;
+
+        /**
+         * Change in number of robots that selected a docking station.
+         */
+        int change;
     };
 
     /**
@@ -152,8 +158,9 @@ namespace eae
          * @param int id_ds: ID of the docking station.
          * @param ds_state_t state_ds: State of the docking station.
          * @param Pose pose: Position of docking station.
+         * @param int change: Change in number of robots, default 0.
          */
-        WifiMessageDs(int id_ds, ds_state_t state_ds, Pose pose);
+        WifiMessageDs(int id_ds, ds_state_t state_ds, Pose pose, int change=0);
     };
 
     /**
@@ -184,13 +191,10 @@ namespace eae
          *
          * @param int id_auction: ID of the auction.
          * @param int id_robot: ID of the robot that initiates the auction.
-         * @param robot_state_t state_robot: State of the robot.
          * @param int id_ds: ID of the docking station.
-         * @param ds_state_t state_ds: State of the docking station.
          * @param double bid: Bid for the auction.
-         * @param Pose pose: Position of docking station.
          */
-        WifiMessageDsAuction(int id_auction, int id_robot, robot_state_t state_robot, int id_ds, ds_state_t state_ds, double bid, Pose pose);
+        WifiMessageDsAuction(int id_auction, int id_robot, int id_ds, double bid);
     };
 
     /**

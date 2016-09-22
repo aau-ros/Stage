@@ -324,6 +324,13 @@ namespace eae
         void Continue();
 
         /**
+         * Get the number of robots in the simulation.
+         *
+         * @return int: Number of robots.
+         */
+        int NumRobots();
+
+        /**
          * Update the local grid map with a given map.
          * Only non existent or unknown cells in the local map will be written.
          *
@@ -569,6 +576,11 @@ namespace eae
          * It is reset to 0 if it was successfull.
          */
         double turned;
+
+        /**
+         * Number of robots in the simulation.
+         */
+        int num_robots;
     };
 }
 

@@ -136,7 +136,7 @@ namespace eae
         return dist;
     }
 
-    void Coordination::UpdateDs(int id, Pose pose, ds_state_t state)
+    void Coordination::UpdateDs(int id, Pose pose, ds_state_t state, int change)
     {
         // check if docking station is already in vector
         vector<ds_t>::iterator it;
@@ -145,6 +145,13 @@ namespace eae
             if(it->id == id){
                 // update state
                 it->state = state;
+
+                // update number of robots
+                it->robots += change;
+                if(it->robots > robot->NumRobots())
+                    it->robots = robot->NumRobots();
+                if(it->robots < 0)
+                    it->robots = 0;
 
                 // start new auction if currently queueing at that docking station
                 ds_t ds;
@@ -171,6 +178,7 @@ namespace eae
         ds.state = state;
         ds.pose = pose;
         ds.model = ds_model;
+        ds.robots = change;
         dss.push_back(ds);
 
         // broadcast docking station information
@@ -180,7 +188,7 @@ namespace eae
 
         // statistics
         ++msgs_sent;
-        bytes_sent += sizeof(id) + sizeof(state) + sizeof(pose);
+        bytes_sent += sizeof(id) + sizeof(state) + sizeof(pose) + sizeof(int);
 
         // try to continue exploration
         if(robot->GetState() == STATE_FINISHED){
@@ -194,23 +202,70 @@ namespace eae
         if(policy == POL_UNDEFINED)
             policy = this->policy;
 
+        // selected docking station
+        ds_t old_ds = robot->GetDs();
+        ds_t new_ds;
+        new_ds.id = -1;
+
         switch(policy){
             case POL_CLOSEST:
-                return ClosestDs();
+                new_ds = ClosestDs();
                 break;
             case POL_VACANT:
-                return VacantDs(range);
+                new_ds = VacantDs(range);
                 break;
             case POL_OPPORTUNISTIC:
-                return OpportunisticDs(range, exclude, end);
+                new_ds = OpportunisticDs(range, exclude, end);
                 break;
             case POL_CURRENT:
-                return CurrentDs(range);
+                new_ds = CurrentDs(range);
                 break;
             default:
                 printf("[%s:%d] [robot %d]: policy not yet implemented\n", StripPath(__FILE__), __LINE__, robot->GetId());
-                return ds_t();
         }
+
+        // changed docking station
+        if(old_ds.id != new_ds.id){
+            // update robot numbers
+            vector<ds_t>::iterator it;
+            for(it=dss.begin(); it<dss.end(); ++it){
+                // decrease number at old docking station
+                if(it->id == old_ds.id){
+                    --it->robots;
+                    if(it->robots < 0)
+                        it->robots = 0;
+                    break;
+                }
+                // increase number at new docking station
+                if(it->id == new_ds.id){
+                    ++it->robots;
+                    if(it->robots > robot->NumRobots())
+                        it->robots = robot->NumRobots();
+                    break;
+                }
+            }
+
+            // inform other robots about old docking station
+            WifiMessageDs* msg = new WifiMessageDs(old_ds.id, old_ds.state, DsPose(old_ds.id), -1);
+            WifiMessageBase* base_ptr = msg;
+            wifi->comm.SendBroadcastMessage(base_ptr);
+            delete msg;
+
+            // statistics
+            ++msgs_sent;
+            bytes_sent += sizeof(int) + sizeof(ds_state_t) + sizeof(Pose) + sizeof(int);
+
+            // inform other robots about new docking station
+            msg = new WifiMessageDs(new_ds.id, new_ds.state, DsPose(new_ds.id), 1);
+            base_ptr = msg;
+            wifi->comm.SendBroadcastMessage(base_ptr);
+
+            // statistics
+            ++msgs_sent;
+            bytes_sent += sizeof(int) + sizeof(ds_state_t) + sizeof(Pose) + sizeof(int);
+        }
+
+        return new_ds;
     }
 
     void Coordination::DsVacant(int id)
@@ -228,7 +283,7 @@ namespace eae
 
                 // statistics
                 ++msgs_sent;
-                bytes_sent += sizeof(id) + sizeof(STATE_VACANT) + sizeof(Pose);
+                bytes_sent += sizeof(id) + sizeof(STATE_VACANT) + sizeof(Pose) + sizeof(int);
 
                 break;
             }
@@ -931,13 +986,13 @@ namespace eae
         for(it=ds_auctions.begin(); it<ds_auctions.end(); ++it){
             if(it->id == id){
                 // create and send message
-                WifiMessageDsAuction* msg = new WifiMessageDsAuction(id, robot->GetId(), robot->GetState(), it->ds_id, DsState(it->ds_id), it->highest_bid, DsPose(it->ds_id));
+                WifiMessageDsAuction* msg = new WifiMessageDsAuction(id, robot->GetId(), it->ds_id, it->highest_bid);
                 WifiMessageBase* base_ptr = msg;
                 wifi->comm.SendBroadcastMessage(base_ptr);
 
                 // statistics
                 ++msgs_sent;
-                bytes_sent += sizeof(id) + sizeof(int) + sizeof(robot_state_t) + sizeof(it->ds_id) + sizeof(ds_state_t) + sizeof(it->highest_bid) + sizeof(Pose);
+                bytes_sent += sizeof(id) + sizeof(int) + sizeof(it->ds_id) + sizeof(it->highest_bid);
 
                 break;
             }
@@ -1170,8 +1225,8 @@ namespace eae
 
             case MSG_DS:
                 // add/update docking station in the private vector of docking stations
-                cord->UpdateDs(msg->id_ds, msg->pose, msg->state_ds);
-                cord->bytes_received += sizeof(msg->id_ds) + sizeof(msg->pose) + sizeof(msg->state_ds);
+                cord->UpdateDs(msg->id_ds, msg->pose, msg->state_ds, msg->change);
+                cord->bytes_received += sizeof(msg->id_ds) + sizeof(msg->pose) + sizeof(msg->state_ds) + sizeof(msg->change);
                 break;
 
             case MSG_FRONTIER_AUCTION:

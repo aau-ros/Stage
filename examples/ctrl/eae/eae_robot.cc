@@ -10,6 +10,9 @@ namespace eae
         // robot id
         id = pos->GetId();
 
+        // number of robots
+        num_robots = robots;
+
         // instantiate objects
         this->pos = pos;
         fid = (ModelFiducial*)pos->GetUnusedModelOfType("fiducial");
@@ -640,6 +643,11 @@ namespace eae
 
         // continue exploration
         Explore();
+    }
+
+    int Robot::NumRobots()
+    {
+        return num_robots;
     }
 
     void Robot::UpdateMap(GridMap* map)

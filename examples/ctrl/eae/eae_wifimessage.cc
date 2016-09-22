@@ -16,9 +16,10 @@ namespace eae
         bid = BID_INV;
         pose = Pose();
         map = NULL;
+        change = 0;
     }
 
-    WifiMessage::WifiMessage(msg_type_t type, int id_auction, int id_robot, robot_state_t state_robot, int id_ds, ds_state_t state_ds, double bid, Pose pose)
+    WifiMessage::WifiMessage(msg_type_t type, int id_auction, int id_robot, robot_state_t state_robot, int id_ds, ds_state_t state_ds, double bid, Pose pose, int change)
     {
         this->type = type;
         this->id_auction = id_auction;
@@ -29,6 +30,7 @@ namespace eae
         this->bid = bid;
         this->pose = pose;
         this->map = NULL;
+        this->change = change;
     }
 
     WifiMessage::WifiMessage(GridMap* map)
@@ -42,6 +44,7 @@ namespace eae
         this->bid = BID_INV;
         this->pose = Pose();
         this->map = map;
+        this->change = 0;
     }
 
     WifiMessage::~WifiMessage()
@@ -59,6 +62,7 @@ namespace eae
         bid = toCopy.bid;
         pose = toCopy.pose;
         map = toCopy.map;
+        change = toCopy.change;
     };
 
     WifiMessage& WifiMessage::operator=(const WifiMessage& toCopy)
@@ -74,6 +78,7 @@ namespace eae
         bid = toCopy.bid;
         pose = toCopy.pose;
         map = toCopy.map;
+        change = toCopy.change;
 
         return *this;
     };
@@ -86,23 +91,23 @@ namespace eae
     string WifiMessage::ToString()
     {
         char output[500];
-        sprintf(output, "---------------------------------\n msg type:    %d\n robot state: %d\n ds state:    %d\n auction:     %d\n robot:       %d\n ds:          %d\n bid:         %.2f\n position:    (%.2f, %.2f, %.2f)\n---------------------------------\n", type, state_robot, state_ds, id_auction, id_robot, id_ds, bid, pose.x, pose.y, pose.a);
+        sprintf(output, "---------------------------------\n msg type:    %d\n robot state: %d\n ds state:    %d\n auction:     %d\n robot:       %d\n ds:          %d\n bid:         %.2f\n position:    (%.2f, %.2f, %.2f)\n change:      %d\n---------------------------------\n", type, state_robot, state_ds, id_auction, id_robot, id_ds, bid, pose.x, pose.y, pose.a, change);
         return string(output);
     }
 
-    WifiMessageRobot::WifiMessageRobot(int id_robot, robot_state_t state_robot, Pose pose) : WifiMessage(MSG_ROBOT, -1, id_robot, state_robot, -1, STATE_UNDEFINED_DS, BID_INV, pose)
+    WifiMessageRobot::WifiMessageRobot(int id_robot, robot_state_t state_robot, Pose pose) : WifiMessage(MSG_ROBOT, -1, id_robot, state_robot, -1, STATE_UNDEFINED_DS, BID_INV, pose, 0)
     {
     }
 
-    WifiMessageDs::WifiMessageDs(int id_ds, ds_state_t state_ds, Pose pose) : WifiMessage(MSG_DS, -1, -1, STATE_UNDEFINED_ROBOT, id_ds, state_ds, BID_INV, pose)
+    WifiMessageDs::WifiMessageDs(int id_ds, ds_state_t state_ds, Pose pose, int change) : WifiMessage(MSG_DS, -1, -1, STATE_UNDEFINED_ROBOT, id_ds, state_ds, BID_INV, pose, change)
     {
     }
 
-    WifiMessageFrontierAuction::WifiMessageFrontierAuction(int id_auction, int id_robot, double bid, Pose pose) : WifiMessage(MSG_FRONTIER_AUCTION, id_auction, id_robot, STATE_UNDEFINED_ROBOT, -1, STATE_UNDEFINED_DS, bid, pose)
+    WifiMessageFrontierAuction::WifiMessageFrontierAuction(int id_auction, int id_robot, double bid, Pose pose) : WifiMessage(MSG_FRONTIER_AUCTION, id_auction, id_robot, STATE_UNDEFINED_ROBOT, -1, STATE_UNDEFINED_DS, bid, pose, 0)
     {
     }
 
-    WifiMessageDsAuction::WifiMessageDsAuction(int id_auction, int id_robot, robot_state_t state_robot, int id_ds, ds_state_t state_ds, double bid, Pose pose) : WifiMessage(MSG_DS_AUCTION, id_auction, id_robot, state_robot, id_ds, state_ds, bid, pose)
+    WifiMessageDsAuction::WifiMessageDsAuction(int id_auction, int id_robot, int id_ds, double bid) : WifiMessage(MSG_DS_AUCTION, id_auction, id_robot, STATE_UNDEFINED_ROBOT, id_ds, STATE_UNDEFINED_DS, bid, Pose(), 0)
     {
     }
 

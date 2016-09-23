@@ -2,6 +2,7 @@
 #define EAE_COORDINATION_H
 
 #include "eae.hh"
+#include "eae_ds.hh"
 #include "eae_robot.hh"
 #include "eae_wifimessage.hh"
 
@@ -187,8 +188,10 @@ namespace eae
          * @param pol_t policy: Override the global policy for selecting a docking station.
          * @param int exclude: Exclude this docking station, default none.
          * @param bool end: Selection that takes place at end of exploration, only docking stations with frontiers in reach are of interest, default false.
+         *
+         * @return Ds*: Pointer to the selected docking station.
          */
-        ds_t SelectDs(double range=0, pol_t policy=POL_UNDEFINED, int exclude=0, bool end=false);
+        Ds* SelectDs(double range=0, pol_t policy=POL_UNDEFINED, int exclude=0, bool end=false);
 
         /**
          * Set a docking station to the state vacant.
@@ -277,18 +280,18 @@ namespace eae
         /**
          * Get the docking station closest to the robot's current position.
          *
-         * @return ds_t: The closest docking station.
+         * @return Ds*: Pointer to the closest docking station.
          */
-        ds_t ClosestDs();
+        Ds* ClosestDs();
 
         /**
          * Get the docking station closest to the robot's current position that is vacant and in range of the robot.
          *
          * @param double range: The range of the robot.
          *
-         * @return ds_t: The closest free docking station.
+         * @return Ds*: Pointer to the closest free docking station.
          */
-        ds_t VacantDs(double range);
+        Ds* VacantDs(double range);
 
         /**
          * Get the docking station closest to the robots current location where there are frontiers nearby that the robot can reach after recharging. If this is not possible get the closest docking station where another docking station with frontiers nearby can be reached in the next step.
@@ -297,27 +300,27 @@ namespace eae
          * @param int exclude: Exclude this docking station.
          * @param bool end: Selection that takes place at end of exploration, only docking stations with frontiers in reach are of interest, default false.
          *
-         * @return ds_t: The docking station.
+         * @return Ds*: Pointer to the docking station.
          */
-        ds_t OpportuneDs(double range, int exclude, bool end=false);
+        Ds* OpportuneDs(double range, int exclude, bool end=false);
 
         /**
          * Get the docking station that the robot preveously selected if there are still frontiers/opportunities in range. Otherwise use opportune policy to select another one.
          *
          * @param double range: The range of the robot.
          *
-         * @return ds_t: The docking station.
+         * @return Ds*: Pointer to the docking station.
          */
-        ds_t CurrentDs(double range);
+        Ds* CurrentDs(double range);
 
         /**
          * Get the docking station which the fewest robots are currently associated with.
          *
          * @param double range: The range of the robot.
          *
-         * @return ds_t: The docking station.
+         * @return Ds*: Pointer to the docking station.
          */
-        ds_t LonelyDs(double range);
+        Ds* LonelyDs(double range);
 
         /**
          * Update the vector of robots.
@@ -410,8 +413,10 @@ namespace eae
          * Get the docking station object from the private vector.
          *
          * @param int id: The ID of the docking station
+         *
+         * @return Ds*: Pointer to the docking station in the vector.
          */
-        ds_t GetDs(int id);
+        Ds* GetDs(int id);
 
         /**
          * Get the state of a docking station.
@@ -497,7 +502,7 @@ namespace eae
         /**
          * Vector containing all docking stations.
          */
-        vector<ds_t> dss;
+        vector<Ds*> dss;
 
         /**
          * Vector containing all frontier auctions this robot participated in.

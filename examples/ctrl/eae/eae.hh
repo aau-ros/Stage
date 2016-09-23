@@ -101,26 +101,6 @@ namespace eae
     const string STATE_STRING[] = {"undefined", "init", "idle", "explore", "charge queue", "precharge", "going charging", "charge", "dead", "finished"};
 
     /**
-     * The current state of a docking station.
-     */
-    typedef enum{
-        STATE_UNDEFINED_DS = 0,
-        STATE_VACANT,
-        STATE_OCCUPIED
-    } ds_state_t;
-
-    /**
-     * Docking station type.
-     */
-    typedef struct{
-        int id;
-        ds_state_t state;
-        Pose pose;
-        Model* model;
-        int robots;
-    } ds_t;
-
-    /**
      * Wifi message types.
      */
     typedef enum{
@@ -136,6 +116,7 @@ namespace eae
      * Forward class declarations.
      */
     class Coordination;
+    class Ds;
     class Edge;
     class Graph;
     class GraphVis;

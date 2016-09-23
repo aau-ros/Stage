@@ -2,6 +2,7 @@
 #define EAE_WIFIMESSAGE_H
 
 #include "eae.hh"
+#include "eae_ds.hh"
 #include "eae_gridmap.hh"
 
 using namespace Stg;

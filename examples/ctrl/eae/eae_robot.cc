@@ -73,7 +73,7 @@ namespace eae
         turned = 0;
 
         // no ds selected yet
-        ds.id = 0;
+        ds = new Ds();
     }
 
     void Robot::Init()
@@ -111,7 +111,7 @@ namespace eae
         ds = cord->SelectDs(RemainingDist());
 
         // visualize map progress
-        map->VisualizeGui(pos->GetPose());
+//         map->VisualizeGui(pos->GetPose());
 
 
         /******************
@@ -170,20 +170,20 @@ namespace eae
             // no reachable goal with full battery
             if(FullyCharged()){
                 // try finding another docking station from where it is still possible to explore
-                ds_t ds_op = cord->SelectDs(RemainingDist(), POL_OPPORTUNE, ds.id, true);
+                Ds* ds_op = cord->SelectDs(RemainingDist(), POL_OPPORTUNE, ds->id, true);
 
                 if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
-                    printf("[%s:%d] [robot %d]: try ds %d\n", StripPath(__FILE__), __LINE__, id, ds_op.id);
+                    printf("[%s:%d] [robot %d]: try ds %d\n", StripPath(__FILE__), __LINE__, id, ds_op->id);
 
                 // start docking station auction
-                if(ds_op.id > 0 && SamePoint(ds.pose, ds_op.pose) == false){
+                if(ds_op->id > 0 && SamePoint(ds->pose, ds_op->pose) == false){
                     ds = ds_op;
 
                     state = STATE_PRECHARGE;
 
                     // start docking station auction
                     // and queue if unsuccessful
-                    if(cord->DockingAuction(pos->GetPose(), ds.id) == false)
+                    if(cord->DockingAuction(pos->GetPose(), ds->id) == false)
                         DockQueue(ds, BID_INV);
                 }
 
@@ -202,8 +202,8 @@ namespace eae
 
                 // start docking station auction
                 // and queue if unsuccessful
-                if(ds.id > 0){
-                    if(cord->DockingAuction(pos->GetPose(), ds.id) == false)
+                if(ds->id > 0){
+                    if(cord->DockingAuction(pos->GetPose(), ds->id) == false)
                         DockQueue(ds, BID_INV);
                 }
 
@@ -375,7 +375,7 @@ namespace eae
         int dg = Distance(frontier.x, frontier.y);
         if(dg < 0)
             return BID_INV;
-        int dgb = map->Distance(frontier.x, frontier.y, ds.pose.x, ds.pose.y);
+        int dgb = map->Distance(frontier.x, frontier.y, ds->pose.x, ds->pose.y);
         if(dgb < 0)
             return BID_INV;
 
@@ -455,7 +455,7 @@ namespace eae
         return pos->GetPose();
     }
 
-    ds_t Robot::GetDs()
+    Ds* Robot::GetDs()
     {
         return ds;
     }
@@ -465,13 +465,13 @@ namespace eae
         return goal_next_bid != BID_INV;
     }
 
-    void Robot::Dock(ds_t ds, double bid)
+    void Robot::Dock(Ds* ds, double bid)
     {
         if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
             printf("[%s:%d] [robot %d]: docking\n", StripPath(__FILE__), __LINE__, id);
 
         // already charging, no docking required
-        if(this->ds.id == ds.id && state == STATE_CHARGE)
+        if(this->ds->id == ds->id && state == STATE_CHARGE)
             return;
 
         // measure waiting time
@@ -482,21 +482,21 @@ namespace eae
 
         this->ds = ds;
         state = STATE_GOING_CHARGING;
-        SetGoal(ds.pose, bid);
+        SetGoal(ds->pose, bid);
     }
 
-    void Robot::DockQueue(ds_t ds, double bid)
+    void Robot::DockQueue(Ds* ds, double bid)
     {
         if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
             printf("[%s:%d] [robot %d]: docking queue\n", StripPath(__FILE__), __LINE__, id);
 
         // already charging, no queueing required
-        if(this->ds.id == ds.id && state == STATE_CHARGE)
+        if(this->ds->id == ds->id && state == STATE_CHARGE)
             return;
 
         this->ds = ds;
         state = STATE_CHARGE_QUEUE;
-        SetGoal(ds.pose, bid);
+        SetGoal(ds->pose, bid);
         waiting_start = pos->GetWorld()->SimTimeNow() / 1000000;
     }
 
@@ -518,7 +518,7 @@ namespace eae
         Log();
 
         // docking station is free now
-        cord->DsVacant(ds.id);
+        cord->DsVacant(ds->id);
 
         // invalidate any previous goals
         goal_next_bid = BID_INV;
@@ -549,7 +549,7 @@ namespace eae
         return pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL;
     }
 
-    bool Robot::Charging(ds_t& at)
+    bool Robot::Charging(Ds* at)
     {
         if(state == STATE_CHARGE){
             at = ds;
@@ -559,7 +559,7 @@ namespace eae
         return false;
     }
 
-    bool Robot::Docking(ds_t& at)
+    bool Robot::Docking(Ds* at)
     {
         if(state == STATE_GOING_CHARGING || state == STATE_CHARGE){
             at = ds;
@@ -569,7 +569,7 @@ namespace eae
         return false;
     }
 
-    bool Robot::Queueing(ds_t& at)
+    bool Robot::Queueing(Ds* at)
     {
         if(state == STATE_CHARGE_QUEUE){
             at = ds;
@@ -609,7 +609,7 @@ namespace eae
             if(ds)
                 dist2 = dist1;
             else
-                dist2 = map->Distance(it->at(0), it->at(1), this->ds.pose.x, this->ds.pose.y);
+                dist2 = map->Distance(it->at(0), it->at(1), this->ds->pose.x, this->ds->pose.y);
 
             // remove frontier if it is not reachable
             if(range <= dist1 + dist2){
@@ -695,7 +695,7 @@ namespace eae
 
     void Robot::Log()
     {
-        log->Log(pos->GetWorld()->SimTimeNow(), dist_travel, map->Explored(), goal.x, goal.y, STATE_STRING[state], waiting_time, ds.id, cord->msgs_sent, cord->msgs_received, cord->bytes_sent, cord->bytes_received);
+        log->Log(pos->GetWorld()->SimTimeNow(), dist_travel, map->Explored(), goal.x, goal.y, STATE_STRING[state], waiting_time, ds->id, cord->msgs_sent, cord->msgs_received, cord->bytes_sent, cord->bytes_received);
     }
 
     void Robot::Finalize()
@@ -821,7 +821,7 @@ namespace eae
             // robot needs recharging
             if(robot->state == STATE_GOING_CHARGING){
                 // already at docking station
-                if(robot->SamePoint(robot->goal, robot->ds.pose)){
+                if(robot->SamePoint(robot->goal, robot->ds->pose)){
                     // stop moving
                     pos->Stop();
 
@@ -829,12 +829,12 @@ namespace eae
                     robot->state = STATE_CHARGE;
 
                     // subscribe to docking station
-                    robot->ds.model->AddCallback(Model::CB_UPDATE, (model_callback_t)ChargingUpdate, robot);
-                    robot->ds.model->Subscribe();
+                    robot->ds->model->AddCallback(Model::CB_UPDATE, (model_callback_t)ChargingUpdate, robot);
+                    robot->ds->model->Subscribe();
                 }
 
                 // next goal is docking station
-                else if(robot->GoalQueue() && robot->SamePoint(robot->goal_next, robot->ds.pose)){
+                else if(robot->GoalQueue() && robot->SamePoint(robot->goal_next, robot->ds->pose)){
                     robot->SetGoalNext();
                 }
             }
@@ -842,16 +842,16 @@ namespace eae
             // robot waits for recharging at docking station
             else if(robot->state == STATE_CHARGE_QUEUE){
                 // already at docking station
-                if(robot->SamePoint(robot->goal, robot->ds.pose)){
+                if(robot->SamePoint(robot->goal, robot->ds->pose)){
                     // stop moving
                     pos->Stop();
 
                     // start docking station auction
-                    robot->cord->DockingAuction(pos->GetPose(), robot->ds.id);
+                    robot->cord->DockingAuction(pos->GetPose(), robot->ds->id);
                 }
 
                 // next goal is docking station
-                else if(robot->GoalQueue() && robot->SamePoint(robot->goal_next, robot->ds.pose)){
+                else if(robot->GoalQueue() && robot->SamePoint(robot->goal_next, robot->ds->pose)){
                     robot->SetGoalNext();
                 }
             }

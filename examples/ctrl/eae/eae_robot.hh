@@ -3,6 +3,7 @@
 
 #include "eae.hh"
 #include "eae_coordination.hh"
+#include "eae_ds.hh"
 #include "eae_graph.hh"
 #include "eae_gridmap.hh"
 #include "eae_logoutput.hh"
@@ -186,9 +187,9 @@ namespace eae
         /**
          * Get the DS which was last selected by the robot.
          *
-         * @return ds_t: The selected DS.
+         * @return Ds*: Pointer to the selected DS.
          */
-        ds_t GetDs();
+        Ds* GetDs();
 
         /**
          * Check whether there is still a goal in the queue.
@@ -200,18 +201,18 @@ namespace eae
         /**
          * Start a docking procedure.
          *
-         * @param ds_t ds: The docking station to dock at.
+         * @param Ds* ds: Pointer to the docking station to dock at.
          * @param double bid: The bid that was made for that docking station.
          */
-        void Dock(ds_t ds, double bid);
+        void Dock(Ds* ds, double bid);
 
         /**
          * Enqueue at a docking station.
          *
-         * @param ds_t ds: The docking station to queue at.
+         * @param Ds* ds: Pointer to the docking station to queue at.
          * @param double bid: The bid that was made for that docking station.
          */
-        void DockQueue(ds_t ds, double bid);
+        void DockQueue(Ds* ds, double bid);
 
         /**
          * Stop recharging and continue exploration.
@@ -249,29 +250,29 @@ namespace eae
         /**
          * Check whether the robot is currently charging.
          *
-         * @param ds_t& at: The docking station where the robot is charging at. It is set only if the robot is currently charging.
+         * @param Ds* at: Pointer to the docking station where the robot is charging at. It is set only if the robot is currently charging.
          *
          * @return bool: True if the robot is charging, false otherwise.
          */
-        bool Charging(ds_t& at);
+        bool Charging(Ds* at);
 
         /**
          * Check whether the robot is currently on its way for recharging.
          *
-         * @param ds_t& at: The docking station where the robot is docking at. It is set only if the robot is currently on its way for recharging.
+         * @param Ds* at: Pointer to the docking station where the robot is docking at. It is set only if the robot is currently on its way for recharging.
          *
          * @return bool: True if the robot is on its way for recharging, false otherwise.
          */
-        bool Docking(ds_t& at);
+        bool Docking(Ds* at);
 
         /**
          * Check whether the robot is currently waiting for recharging.
          *
-         * @param ds_t& at: The docking station the robot is waiting for. It is set only if the robot is currently waiting.
+         * @param Ds* at: Pointer to the docking station the robot is waiting for. It is set only if the robot is currently waiting.
          *
          * @return bool: True if the robot is waiting, false otherwise.
          */
-        bool Queueing(ds_t& at);
+        bool Queueing(Ds* at);
 
         /**
          * Get the grid map.
@@ -511,7 +512,7 @@ namespace eae
         /**
          * The docking station that the robot selected for recharging.
          */
-        ds_t ds;
+        Ds* ds;
 
         /**
          * The color for visualizing the waypoints.

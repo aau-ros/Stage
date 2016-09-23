@@ -138,75 +138,85 @@ namespace eae
 
     void Coordination::UpdateDs(int id, Pose pose, ds_state_t state, int change)
     {
-        // check if docking station is already in vector
-        vector<ds_t>::iterator it;
-        for(it=dss.begin(); it<dss.end(); ++it){
-            // docking station already in vector
-            if(it->id == id){
-                // update state
-                it->state = state;
+        // invalid docking station
+        if(id <= 0)
+            return;
 
-                // update number of robots
-                it->robots += change;
-                if(it->robots > robot->NumRobots())
-                    it->robots = robot->NumRobots();
-                if(it->robots < 0)
-                    it->robots = 0;
+        // get docking station object from vector
+        Ds* ds = GetDs(id);
 
-                // start new auction if currently queueing at that docking station
-                ds_t ds;
-                if(robot->Queueing(ds)){
-                    if(ds.id == id && state == STATE_VACANT){
-                        DockingAuction(robot->GetPose(), id);
-                    }
+        // docking station already in vector
+        if(ds->id > 0){
+            // update state
+            if(state != STATE_UNDEFINED_DS)
+                ds->state = state;
+
+            // update number of robots
+            if(change != 0){
+                if(robot->GetId() == 19)
+                    printf("[%s:%d] [robot %d]: ds %d: %d -> %d robots\n", StripPath(__FILE__), __LINE__, robot->GetId(), id, ds->robots, ds->robots + change);
+
+                ds->robots += change;
+                if(ds->robots > robot->NumRobots()) // just in case
+                    ds->robots = robot->NumRobots();
+                if(ds->robots < 0) // just in case
+                    ds->robots = 0;
+            }
+
+            // start new auction if currently queueing at that docking station
+            if(state == STATE_VACANT){
+                Ds* dsq = NULL;
+                if(robot->Queueing(dsq) && dsq->id == id){
+                    DockingAuction(robot->GetPose(), id);
                 }
-                return;
             }
         }
 
-        if(DEBUG && InArray(robot->GetId(), DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(robot->GetId())))
-            printf("[%s:%d] [robot %d]: add docking station %d (%.0f,%.0f)\n", StripPath(__FILE__), __LINE__, robot->GetId(), id, pose.x, pose.y);
+        // new docking station
+        else{
+            if(DEBUG && InArray(robot->GetId(), DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(robot->GetId())))
+                printf("[%s:%d] [robot %d]: add docking station %d (%.0f,%.0f)\n", StripPath(__FILE__), __LINE__, robot->GetId(), id, pose.x, pose.y);
 
-        // get model of docking station
-        stringstream ds_name;
-        ds_name << "ds" << id;
-        Model* ds_model = pos->GetWorld()->GetModel(ds_name.str());
+            // get model of docking station
+            stringstream ds_name;
+            ds_name << "ds" << id;
+            Model* ds_model = pos->GetWorld()->GetModel(ds_name.str());
 
-        // add new docking station
-        ds_t ds;
-        ds.id = id;
-        ds.state = state;
-        ds.pose = pose;
-        ds.model = ds_model;
-        ds.robots = change;
-        dss.push_back(ds);
+            // add new docking station
+            ds->id = id;
+            ds->state = state;
+            ds->pose = pose;
+            ds->model = ds_model;
+            ds->robots = max(0, change);
+            dss.push_back(ds);
 
-        // broadcast docking station information
-        WifiMessageDs* msg = new WifiMessageDs(id, state, pose);
-        WifiMessageBase* base_ptr = msg;
-        wifi->comm.SendBroadcastMessage(base_ptr);
+            // broadcast docking station information (don't retransmit change)
+            WifiMessageDs* msg = new WifiMessageDs(id, state, pose);
+            WifiMessageBase* base_ptr = msg;
+            wifi->comm.SendBroadcastMessage(base_ptr);
 
-        // statistics
-        ++msgs_sent;
-        bytes_sent += sizeof(id) + sizeof(state) + sizeof(pose) + sizeof(int);
+            // statistics
+            ++msgs_sent;
+            bytes_sent += sizeof(id) + sizeof(state) + sizeof(pose) + sizeof(int);
 
-        // try to continue exploration
-        if(robot->GetState() == STATE_FINISHED){
-            robot->Continue();
+            // try to continue exploration
+            if(robot->GetState() == STATE_FINISHED){
+                robot->Continue();
+            }
         }
     }
 
-    ds_t Coordination::SelectDs(double range, pol_t policy, int exclude, bool end)
+    Ds* Coordination::SelectDs(double range, pol_t policy, int exclude, bool end)
     {
         // select global policy
         if(policy == POL_UNDEFINED)
             policy = this->policy;
 
-        // selected docking station
-        ds_t old_ds = robot->GetDs();
-        ds_t new_ds;
-        new_ds.id = -1;
+        // docking station objects
+        Ds* old_ds = robot->GetDs();
+        Ds* new_ds;
 
+        // select docking station based on policy
         switch(policy){
             case POL_CLOSEST:
                 new_ds = ClosestDs();
@@ -222,44 +232,61 @@ namespace eae
                 break;
             case POL_LONELY:
                 new_ds = LonelyDs(range);
+                break;
             default:
+                new_ds = new Ds();
                 printf("[%s:%d] [robot %d]: policy not yet implemented\n", StripPath(__FILE__), __LINE__, robot->GetId());
         }
 
-        // changed docking station
-        if(old_ds.id != new_ds.id){
-            // update robot numbers
-            vector<ds_t>::iterator it;
-            for(it=dss.begin(); it<dss.end(); ++it){
-                // decrease number at old docking station
-                if(it->id == old_ds.id){
-                    --it->robots;
-                    if(it->robots < 0)
-                        it->robots = 0;
-                    break;
-                }
+        if(robot->GetId() == 19){
+            printf(" ds  robots\n-----------\n");
+            vector<Ds*>::iterator iter;
+            for(iter=dss.begin(); iter<dss.end(); ++iter){
+                printf(" %d   %d\n", (*iter)->id, (*iter)->robots);
+            }
+            printf("-----------\n");
+        }
 
-                // increase number at new docking station
-                if(it->id == new_ds.id){
-                    ++it->robots;
-                    if(it->robots > robot->NumRobots())
-                        it->robots = robot->NumRobots();
-                    break;
-                }
+        // selected invalid docking station
+        if(new_ds->id <= 0){
+            delete new_ds;
+            return old_ds;
+        }
+
+        // changed docking station
+        if(old_ds->id != new_ds->id){
+            //if(DEBUG && InArray(this->robot->GetId(), DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(this->robot->GetId())))
+                printf("[%s:%d] [robot %d]: switched ds: %d (%d robots) -> %d (%d robots)\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), old_ds->id, old_ds->robots, new_ds->id, new_ds->robots);
+
+            // messages to inform other robots
+            WifiMessageDs* msg;
+            WifiMessageBase* base_ptr;
+
+            // update old docking station
+            if(old_ds->id > 0){
+                // decrease number at old docking station
+                --old_ds->robots;
+                if(old_ds->robots < 0) // just in case
+                    old_ds->robots = 0;
+
+                // inform other robots about old docking station
+                msg = new WifiMessageDs(old_ds->id, old_ds->state, old_ds->pose, -1);
+                base_ptr = msg;
+                wifi->comm.SendBroadcastMessage(base_ptr);
+                delete msg;
+
+                // statistics
+                ++msgs_sent;
+                bytes_sent += sizeof(int) + sizeof(ds_state_t) + sizeof(Pose) + sizeof(int);
             }
 
-            // inform other robots about old docking station
-            WifiMessageDs* msg = new WifiMessageDs(old_ds.id, old_ds.state, DsPose(old_ds.id), -1);
-            WifiMessageBase* base_ptr = msg;
-            wifi->comm.SendBroadcastMessage(base_ptr);
-            delete msg;
-
-            // statistics
-            ++msgs_sent;
-            bytes_sent += sizeof(int) + sizeof(ds_state_t) + sizeof(Pose) + sizeof(int);
+            // increase number at new docking station
+            ++new_ds->robots;
+            if(new_ds->robots > robot->NumRobots()) // just in case
+                new_ds->robots = robot->NumRobots();
 
             // inform other robots about new docking station
-            msg = new WifiMessageDs(new_ds.id, new_ds.state, DsPose(new_ds.id), 1);
+            msg = new WifiMessageDs(new_ds->id, new_ds->state, new_ds->pose, 1);
             base_ptr = msg;
             wifi->comm.SendBroadcastMessage(base_ptr);
 
@@ -273,23 +300,19 @@ namespace eae
 
     void Coordination::DsVacant(int id)
     {
-        vector<ds_t>::iterator it;
-        for(it=dss.begin(); it<dss.end(); ++it){
-            if(it->id == id){
-                // set local state
-                it->state = STATE_VACANT;
+        Ds* ds = GetDs(id);
+        if(ds->id > 0){
+            // set local state
+            ds->state = STATE_VACANT;
 
-                // inform other robots
-                WifiMessageDs* msg = new WifiMessageDs(id, STATE_VACANT, DsPose(id));
-                WifiMessageBase* base_ptr = msg;
-                wifi->comm.SendBroadcastMessage(base_ptr);
+            // inform other robots
+            WifiMessageDs* msg = new WifiMessageDs(id, STATE_VACANT, ds->pose);
+            WifiMessageBase* base_ptr = msg;
+            wifi->comm.SendBroadcastMessage(base_ptr);
 
-                // statistics
-                ++msgs_sent;
-                bytes_sent += sizeof(id) + sizeof(STATE_VACANT) + sizeof(Pose) + sizeof(int);
-
-                break;
-            }
+            // statistics
+            ++msgs_sent;
+            bytes_sent += sizeof(id) + sizeof(STATE_VACANT) + sizeof(Pose) + sizeof(int);
         }
     }
 
@@ -350,32 +373,32 @@ namespace eae
         return POL_STRING[policy];
     }
 
-    ds_t Coordination::ClosestDs()
+    Ds* Coordination::ClosestDs()
     {
-        ds_t ds_free = ds_t();
-        ds_t ds_occ = ds_t();
+        Ds* ds_free = NULL;
+        Ds* ds_occ = NULL;
         double dist_free = 0;
         double dist_occ = 0;
         double dist_temp;
-        vector<ds_t>::iterator it;
+        vector<Ds*>::iterator it;
 
         // iterate over all docking stations to find closest vacant / occupied
         for(it=dss.begin(); it<dss.end(); ++it){
             // compute path distance
-            dist_temp = robot->Distance(it->pose.x, it->pose.y);
+            dist_temp = robot->Distance((*it)->pose.x, (*it)->pose.y);
 
             // could not compute distance, take euclidean distance
             if(dist_temp < 0)
-                dist_temp = it->pose.Distance(robot->GetPose());
+                dist_temp = (*it)->pose.Distance(robot->GetPose());
 
             // found vacant docking station
-            if(it->state != STATE_OCCUPIED && (dist_temp < dist_free || dist_free == 0)){
+            if((*it)->state != STATE_OCCUPIED && (dist_temp < dist_free || dist_free == 0)){
                 ds_free = *it;
                 dist_free = dist_temp;
             }
 
             // found occupied docking station
-            else if(it->state == STATE_OCCUPIED && (dist_temp < dist_occ || dist_occ == 0)){
+            else if((*it)->state == STATE_OCCUPIED && (dist_temp < dist_occ || dist_occ == 0)){
                 ds_occ = *it;
                 dist_occ = dist_temp;
             }
@@ -383,7 +406,7 @@ namespace eae
 
         // return vacant if it is closer than occupied or maximum DS_TOLERANCE further away
         if(dist_free > 0 && dist_occ > 0){
-            if(dist_free < dist_occ + DS_TOLERANCE )
+            if(dist_free < dist_occ + DS_TOLERANCE)
                 return ds_free;
             return ds_occ;
         }
@@ -392,36 +415,40 @@ namespace eae
         if(dist_free > 0)
             return ds_free;
 
-        // return occupied docking station (or invalid one)
-        return ds_occ;
+        // return occupied docking station
+        if(dist_occ > 0)
+            return ds_occ;
+
+        // return invalid docking station
+        return new Ds();
     }
 
-    ds_t Coordination::VacantDs(double range)
+    Ds* Coordination::VacantDs(double range)
     {
-        ds_t ds_free = ds_t();
-        ds_t ds_occ = ds_t();
+        Ds* ds_free = NULL;
+        Ds* ds_occ = NULL;
         double dist_free = 0;
         double dist_occ = 0;
         double dist_temp;
-        vector<ds_t>::iterator it;
+        vector<Ds*>::iterator it;
 
         // iterate over all docking stations to find closest vacant / occupied
         for(it=dss.begin(); it<dss.end(); ++it){
             // compute path distance
-            dist_temp = robot->Distance(it->pose.x, it->pose.y);
+            dist_temp = robot->Distance((*it)->pose.x, (*it)->pose.y);
 
             // could not compute distance, take euclidean distance
             if(dist_temp < 0)
-                dist_temp = it->pose.Distance(robot->GetPose());
+                dist_temp = (*it)->pose.Distance(robot->GetPose());
 
             // found vacant docking station
-            if(it->state != STATE_OCCUPIED && (dist_temp < dist_free || dist_free == 0)){
+            if((*it)->state != STATE_OCCUPIED && (dist_temp < dist_free || dist_free == 0)){
                 ds_free = *it;
                 dist_free = dist_temp;
             }
 
             // found occupied docking station
-            if(it->state == STATE_OCCUPIED && (dist_temp < dist_occ || dist_occ == 0)){
+            if((*it)->state == STATE_OCCUPIED && (dist_temp < dist_occ || dist_occ == 0)){
                 ds_occ = *it;
                 dist_occ = dist_temp;
             }
@@ -431,38 +458,42 @@ namespace eae
         if(0 < dist_free && dist_free < range)
             return ds_free;
 
-        // return occupied docking station (or invalid one)
-        return ds_occ;
+        // return occupied docking station
+        if(dist_occ > 0)
+            return ds_occ;
+
+        // return invalid docking station
+        return new Ds();
     }
 
-    ds_t Coordination::OpportuneDs(double range, int exclude, bool end)
+    Ds* Coordination::OpportuneDs(double range, int exclude, bool end)
     {
         bool frontiers; // true if there are frontiers in range of the docking station
         bool reachable; // true if one docking station is reachable by another
-        ds_t ds = ds_t();
+        Ds* ds = NULL;
         double dist = 0;
         double dist_temp;
-        vector<ds_t> dss_reachable; // docking stations in range of robot
-        vector<ds_t> dss_frontiers; // docking stations that have frontiers in range
-        vector<ds_t> dss_reach_front; // docking stations in range of robot with frontiers in range
-        vector<ds_t> dss_else; // docking stations not in any of the above vectors
-        vector<ds_t>::iterator it, jt;
+        vector<Ds*> dss_reachable; // docking stations in range of robot
+        vector<Ds*> dss_frontiers; // docking stations that have frontiers in range
+        vector<Ds*> dss_reach_front; // docking stations in range of robot with frontiers in range
+        vector<Ds*> dss_else; // docking stations not in any of the above vectors
+        vector<Ds*>::iterator it, jt;
 
         // iterate over all docking stations and sort into different vectors
         for(it=dss.begin(); it<dss.end(); ++it){
             // exclude docking station
-            if(it->id == exclude)
+            if((*it)->id == exclude)
                 continue;
 
             // compute path distance
-            dist_temp = robot->Distance(it->pose.x, it->pose.y);
+            dist_temp = robot->Distance((*it)->pose.x, (*it)->pose.y);
 
             // check for reachable frontiers
-            frontiers = (robot->FrontiersReachable(it->pose, robot->MaxDist(), true).empty() == false);
+            frontiers = (robot->FrontiersReachable((*it)->pose, robot->MaxDist(), true).empty() == false);
 
             // could not compute distance, take euclidean distance
             if(dist_temp < 0)
-                dist_temp = it->pose.Distance(robot->GetPose());
+                dist_temp = (*it)->pose.Distance(robot->GetPose());
 
             // docking station is reachable and has frontiers in range
             if(dist_temp <= range && frontiers){
@@ -491,11 +522,11 @@ namespace eae
         // return closest docking station in range of robot with frontiers in range
         for(it=dss_reach_front.begin(); it<dss_reach_front.end(); ++it){
             // compute path distance
-            dist_temp = robot->Distance(it->pose.x, it->pose.y);
+            dist_temp = robot->Distance((*it)->pose.x, (*it)->pose.y);
 
             // could not compute distance, take euclidean distance
             if(dist_temp < 0)
-                dist_temp = it->pose.Distance(robot->GetPose());
+                dist_temp = (*it)->pose.Distance(robot->GetPose());
 
             // found docking station
             if(dist_temp < dist || dist == 0){
@@ -517,11 +548,11 @@ namespace eae
             reachable = false;
             for(jt=dss_frontiers.begin(); jt<dss_frontiers.end(); ++jt){
                 // comput path distance to other docking station
-                dist_temp = robot->GetMap()->Distance(jt->pose.x, jt->pose.y, it->pose.x, it->pose.y);
+                dist_temp = robot->GetMap()->Distance((*jt)->pose.x, (*jt)->pose.y, (*it)->pose.x, (*it)->pose.y);
 
                 // could not compute distance, take euclidean distance
                 if(dist_temp < 0)
-                    dist_temp = jt->pose.Distance(it->pose);
+                    dist_temp = (*jt)->pose.Distance((*it)->pose);
 
                 // check if this docking station is reachable from the current one
                 if(dist_temp <= range){
@@ -533,11 +564,11 @@ namespace eae
             // minimize distance
             if(reachable){
                 // compute path distance
-                dist_temp = robot->Distance(it->pose.x, it->pose.y);
+                dist_temp = robot->Distance((*it)->pose.x, (*it)->pose.y);
 
                 // could not compute distance, take euclidean distance
                 if(dist_temp < 0)
-                    dist_temp = it->pose.Distance(robot->GetPose());
+                    dist_temp = (*it)->pose.Distance(robot->GetPose());
 
                 // found docking station
                 if(dist_temp < dist || dist == 0){
@@ -552,11 +583,11 @@ namespace eae
         // return closest docking station in range of robot
         for(it=dss_reachable.begin(); it<dss_reachable.end(); ++it){
             // compute path distance
-            dist_temp = robot->Distance(it->pose.x, it->pose.y);
+            dist_temp = robot->Distance((*it)->pose.x, (*it)->pose.y);
 
             // could not compute distance, take euclidean distance
             if(dist_temp < 0)
-                dist_temp = it->pose.Distance(robot->GetPose());
+                dist_temp = (*it)->pose.Distance(robot->GetPose());
 
             // found docking station
             if(dist_temp < dist || dist == 0){
@@ -570,11 +601,11 @@ namespace eae
         // return closest docking station with frontiers in range
         for(it=dss_frontiers.begin(); it<dss_frontiers.end(); ++it){
             // compute path distance
-            dist_temp = robot->Distance(it->pose.x, it->pose.y);
+            dist_temp = robot->Distance((*it)->pose.x, (*it)->pose.y);
 
             // could not compute distance, take euclidean distance
             if(dist_temp < 0)
-                dist_temp = it->pose.Distance(robot->GetPose());
+                dist_temp = (*it)->pose.Distance(robot->GetPose());
 
             // found docking station
             if(dist_temp < dist || dist == 0){
@@ -588,11 +619,11 @@ namespace eae
         // return closest docking station
         for(it=dss_else.begin(); it<dss_else.end(); ++it){
             // compute path distance
-            dist_temp = robot->Distance(it->pose.x, it->pose.y);
+            dist_temp = robot->Distance((*it)->pose.x, (*it)->pose.y);
 
             // could not compute distance, take euclidean distance
             if(dist_temp < 0)
-                dist_temp = it->pose.Distance(robot->GetPose());
+                dist_temp = (*it)->pose.Distance(robot->GetPose());
 
             // found docking station
             if(dist_temp < dist || dist == 0){
@@ -600,38 +631,42 @@ namespace eae
                 dist = dist_temp;
             }
         }
-        return ds;
+        if(dist > 0)
+            return ds;
+
+        // return invalid docking station
+        return new Ds();
     }
 
-    ds_t Coordination::CurrentDs(double range)
+    Ds* Coordination::CurrentDs(double range)
     {
         // get the current ds of the robot
-        ds_t ds_cur = robot->GetDs();
+        Ds* ds_cur = robot->GetDs();
 
         // return current ds if it still has opportunities
-        if(ds_cur.id > 0 && robot->FrontiersReachable(ds_cur.pose, robot->MaxDist(), true).empty() == false)
+        if(ds_cur->id > 0 && robot->FrontiersReachable(ds_cur->pose, robot->MaxDist(), true).empty() == false)
             return ds_cur;
 
         // return other ds that still has opportunities
-        return OpportuneDs(range, ds_cur.id);
+        return OpportuneDs(range, ds_cur->id);
     }
 
-    ds_t Coordination::LonelyDs(double range)
+    Ds* Coordination::LonelyDs(double range)
     {
-        ds_t ds = ds_t();
+        Ds* ds = NULL;
         int robots = -1;
         double dist = 0;
         double dist_temp;
-        vector<ds_t>::iterator it;
+        vector<Ds*>::iterator it;
 
         // iterate over all docking stations to find least crowded onw
         for(it=dss.begin(); it<dss.end(); ++it){
             // compute path distance
-            dist_temp = robot->Distance(it->pose.x, it->pose.y);
+            dist_temp = robot->Distance((*it)->pose.x, (*it)->pose.y);
 
             // could not compute distance, take euclidean distance
             if(dist_temp < 0)
-                dist_temp = it->pose.Distance(robot->GetPose());
+                dist_temp = (*it)->pose.Distance(robot->GetPose());
 
             // cannot reach docking station
             if(dist_temp > range)
@@ -640,15 +675,19 @@ namespace eae
             // found docking station with same number of robots that is closer by
             // or found docking station with fewer robots
             // or it's the first docking station in range
-            if((it->robots == robots && dist_temp < dist) || it->robots < robots || robots < 0){
+            if(((*it)->robots == robots && dist_temp < dist) || (*it)->robots < robots || robots < 0){
                 ds = *it;
-                robots = it->robots;
+                robots = (*it)->robots;
                 dist = dist_temp;
             }
         }
 
         // return docking station
-        return ds;
+        if(dist > 0)
+            return ds;
+
+        // return invalid docking station
+        return new Ds();
     }
 
     void Coordination::UpdateRobots(int id, robot_state_t state, Pose pose)
@@ -716,7 +755,7 @@ namespace eae
         }
 
         // don't respond to frontier auctions if robot is charging or on the way
-        ds_t ds_dock;
+        Ds* ds_dock = NULL;
         if(this->robot->Docking(ds_dock)){
             StoreNewFrAuction(id, bid, -1, robot, pos->GetWorld()->SimTimeNow(), false, frontier);
             return;
@@ -785,9 +824,9 @@ namespace eae
             return;
 
         // don't respond to auctions for other docking stations if robot is charging or on the way
-        ds_t ds_dock;
+        Ds* ds_dock = NULL;
         if(this->robot->Docking(ds_dock)){
-            if(ds_dock.id != ds)
+            if(ds_dock->id != ds)
                 return;
         }
 
@@ -797,7 +836,7 @@ namespace eae
 
         // for closest policy, only respond to auctions for closest docking station
         if(policy == POL_CLOSEST){
-            if(ds != ClosestDs().id)
+            if(ds != ClosestDs()->id)
                 return;
         }
 
@@ -921,9 +960,9 @@ namespace eae
 
                 // i lost and am currently charging at that docking station
                 // now i have to move away
-                ds_t ds;
+                Ds* ds = NULL;
                 if(robot->Docking(ds)){
-                    if(ds.id == jt->ds_id){
+                    if(ds->id == jt->ds_id){
                         ds_undock = *jt;
                         continue;
                     }
@@ -1057,51 +1096,39 @@ namespace eae
         }
     }
 
-    ds_t Coordination::GetDs(int id)
+    Ds* Coordination::GetDs(int id)
     {
-        vector<ds_t>::iterator it;
+        vector<Ds*>::iterator it;
         for(it=dss.begin(); it<dss.end(); ++it){
-            if(it->id == id)
+            if((*it)->id == id)
                 return *it;
         }
-        return ds_t();
+        return new Ds();
     }
 
     ds_state_t Coordination::DsState(int id)
     {
-        vector<ds_t>::iterator it;
-        for(it=dss.begin(); it<dss.end(); ++it){
-            if(it->id == id)
-                return it->state;
-        }
-        return STATE_UNDEFINED_DS;
+        return GetDs(id)->state;
     }
 
     Pose Coordination::DsPose(int id)
     {
-        vector<ds_t>::iterator it;
-        for(it=dss.begin(); it<dss.end(); ++it){
-            if(it->id == id)
-                return it->pose;
-        }
-        return Pose();
+        return GetDs(id)->pose;
     }
 
     void Coordination::DsOccupied(int id)
     {
-        vector<ds_t>::iterator it;
-        for(it=dss.begin(); it<dss.end(); ++it){
-            if(it->id == id){
-                it->state = STATE_OCCUPIED;
-                break;
-            }
-        }
+        Ds* ds = GetDs(id);
+        if(ds->id > 0)
+            ds->state = STATE_OCCUPIED;
+        else
+            delete ds;
     }
 
     double Coordination::DockingBid(int id)
     {
         double l1, l2, l3, l4;
-        vector<ds_t>::iterator itd;
+        vector<Ds*>::iterator itd;
         vector<robot_t>::iterator itr;
         vector< vector <int> >::iterator itf;
         vector< vector <int> > frontiers = robot->GetMap()->Frontiers();
@@ -1115,7 +1142,7 @@ namespace eae
         // number of not occupied docking stations
         int num_dss = 0;
         for(itd=dss.begin(); itd<dss.end(); ++itd)
-            if(itd->state != STATE_OCCUPIED)
+            if((*itd)->state != STATE_OCCUPIED)
                 ++num_dss;
 
         // number of active robots, i.e. robots that are willing to charge
@@ -1172,10 +1199,10 @@ namespace eae
          ********************/
 
         // get docking station from id
-        ds_t ds = GetDs(id);
+        Ds* ds = GetDs(id);
 
         // docking station not found
-        if(ds.id <= 0){
+        if(ds->id <= 0){
             printf("[%s:%d] [robot %d]: invalid docking station id: %d\n", StripPath(__FILE__), __LINE__, robot->GetId(), id);
             l4 = 0.5;
         }
@@ -1184,11 +1211,11 @@ namespace eae
         else{
             // distance to docking station
             // compute path distance
-            double dist_ds = robot->Distance(ds.pose.x, ds.pose.y);
+            double dist_ds = robot->Distance(ds->pose.x, ds->pose.y);
 
             // could not compute distance, take euclidean distance
             if(dist_ds < 0)
-                dist_ds = robot->GetPose().Distance(ds.pose);
+                dist_ds = robot->GetPose().Distance(ds->pose);
 
             // get frontiers, try smaller vector first
             vector< vector <int> > frontiers_temp;

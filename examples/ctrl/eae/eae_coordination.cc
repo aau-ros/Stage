@@ -109,6 +109,7 @@ namespace eae
         WifiMessageMap* msg = new WifiMessageMap(local);
         WifiMessageBase* base_ptr = msg;
         wifi->comm.SendBroadcastMessage(base_ptr);
+        delete msg;
 
         // statistics
         ++msgs_sent;
@@ -146,16 +147,13 @@ namespace eae
         Ds* ds = GetDs(id);
 
         // docking station already in vector
-        if(ds->id > 0){
+        if(ds){
             // update state
             if(state != STATE_UNDEFINED_DS)
                 ds->state = state;
 
             // update number of robots
             if(change != 0){
-                if(robot->GetId() == 19)
-                    printf("[%s:%d] [robot %d]: ds %d: %d -> %d robots\n", StripPath(__FILE__), __LINE__, robot->GetId(), id, ds->robots, ds->robots + change);
-
                 ds->robots += change;
                 if(ds->robots > robot->NumRobots()) // just in case
                     ds->robots = robot->NumRobots();
@@ -165,8 +163,8 @@ namespace eae
 
             // start new auction if currently queueing at that docking station
             if(state == STATE_VACANT){
-                Ds* dsq = NULL;
-                if(robot->Queueing(dsq) && dsq->id == id){
+                Ds* dsq = robot->Queueing();
+                if(dsq && dsq->id == id){
                     DockingAuction(robot->GetPose(), id);
                 }
             }
@@ -176,6 +174,9 @@ namespace eae
         else{
             if(DEBUG && InArray(robot->GetId(), DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(robot->GetId())))
                 printf("[%s:%d] [robot %d]: add docking station %d (%.0f,%.0f)\n", StripPath(__FILE__), __LINE__, robot->GetId(), id, pose.x, pose.y);
+
+            // create new docking station object
+            ds = new Ds();
 
             // get model of docking station
             stringstream ds_name;
@@ -202,6 +203,11 @@ namespace eae
             // try to continue exploration
             if(robot->GetState() == STATE_FINISHED){
                 robot->Continue();
+            }
+
+            // start exploration
+            else if(robot->GetState() == STATE_IDLE){
+                robot->Explore();
             }
         }
     }
@@ -234,36 +240,27 @@ namespace eae
                 new_ds = LonelyDs(range);
                 break;
             default:
-                new_ds = new Ds();
+                new_ds = NULL;
                 printf("[%s:%d] [robot %d]: policy not yet implemented\n", StripPath(__FILE__), __LINE__, robot->GetId());
         }
 
-        if(robot->GetId() == 19){
-            printf(" ds  robots\n-----------\n");
-            vector<Ds*>::iterator iter;
-            for(iter=dss.begin(); iter<dss.end(); ++iter){
-                printf(" %d   %d\n", (*iter)->id, (*iter)->robots);
-            }
-            printf("-----------\n");
-        }
-
         // selected invalid docking station
-        if(new_ds->id <= 0){
-            delete new_ds;
+        if(!new_ds){
             return old_ds;
         }
 
         // changed docking station
-        if(old_ds->id != new_ds->id){
-            //if(DEBUG && InArray(this->robot->GetId(), DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(this->robot->GetId())))
-                printf("[%s:%d] [robot %d]: switched ds: %d (%d robots) -> %d (%d robots)\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), old_ds->id, old_ds->robots, new_ds->id, new_ds->robots);
+        if(old_ds != new_ds){
 
             // messages to inform other robots
             WifiMessageDs* msg;
             WifiMessageBase* base_ptr;
 
             // update old docking station
-            if(old_ds->id > 0){
+            if(old_ds){
+                if(DEBUG && InArray(this->robot->GetId(), DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(this->robot->GetId())))
+                    printf("[%s:%d] [robot %d]: switched ds: %d (%d robots) -> %d (%d robots)\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), old_ds->id, old_ds->robots, new_ds->id, new_ds->robots);
+
                 // decrease number at old docking station
                 --old_ds->robots;
                 if(old_ds->robots < 0) // just in case
@@ -279,6 +276,8 @@ namespace eae
                 ++msgs_sent;
                 bytes_sent += sizeof(int) + sizeof(ds_state_t) + sizeof(Pose) + sizeof(int);
             }
+            else if(DEBUG && InArray(this->robot->GetId(), DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(this->robot->GetId())))
+                    printf("[%s:%d] [robot %d]: switched ds: %d (%d robots) -> %d (%d robots)\n", StripPath(__FILE__), __LINE__, this->robot->GetId(), 0, 0, new_ds->id, new_ds->robots);
 
             // increase number at new docking station
             ++new_ds->robots;
@@ -289,6 +288,7 @@ namespace eae
             msg = new WifiMessageDs(new_ds->id, new_ds->state, new_ds->pose, 1);
             base_ptr = msg;
             wifi->comm.SendBroadcastMessage(base_ptr);
+            delete msg;
 
             // statistics
             ++msgs_sent;
@@ -301,7 +301,7 @@ namespace eae
     void Coordination::DsVacant(int id)
     {
         Ds* ds = GetDs(id);
-        if(ds->id > 0){
+        if(ds){
             // set local state
             ds->state = STATE_VACANT;
 
@@ -309,6 +309,7 @@ namespace eae
             WifiMessageDs* msg = new WifiMessageDs(id, STATE_VACANT, ds->pose);
             WifiMessageBase* base_ptr = msg;
             wifi->comm.SendBroadcastMessage(base_ptr);
+            delete msg;
 
             // statistics
             ++msgs_sent;
@@ -415,12 +416,8 @@ namespace eae
         if(dist_free > 0)
             return ds_free;
 
-        // return occupied docking station
-        if(dist_occ > 0)
-            return ds_occ;
-
-        // return invalid docking station
-        return new Ds();
+        // return occupied docking station or NULL
+        return ds_occ;
     }
 
     Ds* Coordination::VacantDs(double range)
@@ -458,12 +455,8 @@ namespace eae
         if(0 < dist_free && dist_free < range)
             return ds_free;
 
-        // return occupied docking station
-        if(dist_occ > 0)
-            return ds_occ;
-
-        // return invalid docking station
-        return new Ds();
+        // return occupied docking station or NULL
+        return ds_occ;
     }
 
     Ds* Coordination::OpportuneDs(double range, int exclude, bool end)
@@ -631,11 +624,7 @@ namespace eae
                 dist = dist_temp;
             }
         }
-        if(dist > 0)
-            return ds;
-
-        // return invalid docking station
-        return new Ds();
+        return ds; // can return NULL
     }
 
     Ds* Coordination::CurrentDs(double range)
@@ -644,7 +633,7 @@ namespace eae
         Ds* ds_cur = robot->GetDs();
 
         // return current ds if it still has opportunities
-        if(ds_cur->id > 0 && robot->FrontiersReachable(ds_cur->pose, robot->MaxDist(), true).empty() == false)
+        if(ds_cur && robot->FrontiersReachable(ds_cur->pose, robot->MaxDist(), true).empty() == false)
             return ds_cur;
 
         // return other ds that still has opportunities
@@ -682,12 +671,8 @@ namespace eae
             }
         }
 
-        // return docking station
-        if(dist > 0)
-            return ds;
-
-        // return invalid docking station
-        return new Ds();
+        // return docking station or NULL
+        return ds;
     }
 
     void Coordination::UpdateRobots(int id, robot_state_t state, Pose pose)
@@ -755,8 +740,8 @@ namespace eae
         }
 
         // don't respond to frontier auctions if robot is charging or on the way
-        Ds* ds_dock = NULL;
-        if(this->robot->Docking(ds_dock)){
+        Ds* ds_dock = this->robot->Docking();
+        if(ds_dock){
             StoreNewFrAuction(id, bid, -1, robot, pos->GetWorld()->SimTimeNow(), false, frontier);
             return;
         }
@@ -824,11 +809,9 @@ namespace eae
             return;
 
         // don't respond to auctions for other docking stations if robot is charging or on the way
-        Ds* ds_dock = NULL;
-        if(this->robot->Docking(ds_dock)){
-            if(ds_dock->id != ds)
-                return;
-        }
+        Ds* ds_dock = this->robot->Docking();
+        if(ds_dock && ds_dock->id != ds)
+            return;
 
         // don't respond to auctions with greedy strategy
         else if(bid == BID_MAX)
@@ -960,12 +943,10 @@ namespace eae
 
                 // i lost and am currently charging at that docking station
                 // now i have to move away
-                Ds* ds = NULL;
-                if(robot->Docking(ds)){
-                    if(ds->id == jt->ds_id){
-                        ds_undock = *jt;
-                        continue;
-                    }
+                Ds* ds = robot->Docking();
+                if(ds && ds->id == jt->ds_id){
+                    ds_undock = *jt;
+                    continue;
                 }
 
                 // i lost my own auction, queue at the docking station
@@ -1039,6 +1020,7 @@ namespace eae
                 WifiMessageFrontierAuction* msg = new WifiMessageFrontierAuction(id, robot->GetId(), it->highest_bid, it->pose);
                 WifiMessageBase* base_ptr = msg;
                 wifi->comm.SendBroadcastMessage(base_ptr);
+                delete msg;
 
                 // statistics
                 ++msgs_sent;
@@ -1066,6 +1048,7 @@ namespace eae
                 WifiMessageDsAuction* msg = new WifiMessageDsAuction(id, robot->GetId(), it->ds_id, it->highest_bid);
                 WifiMessageBase* base_ptr = msg;
                 wifi->comm.SendBroadcastMessage(base_ptr);
+                delete msg;
 
                 // statistics
                 ++msgs_sent;
@@ -1088,6 +1071,7 @@ namespace eae
             WifiMessageRobot* msg = new WifiMessageRobot(robot->GetId(), robot->GetState(), pos->GetPose());
             WifiMessageBase* base_ptr = msg;
             wifi->comm.SendBroadcastMessage(base_ptr);
+            delete msg;
             to_beacon = pos->GetWorld()->SimTimeNow() + TO_BEACON;
 
             // statistics
@@ -1103,26 +1087,32 @@ namespace eae
             if((*it)->id == id)
                 return *it;
         }
-        return new Ds();
+        return NULL;
     }
 
     ds_state_t Coordination::DsState(int id)
     {
-        return GetDs(id)->state;
+        Ds* ds = GetDs(id);
+        if(ds)
+            return GetDs(id)->state;
+        else
+            return STATE_UNDEFINED_DS;
     }
 
     Pose Coordination::DsPose(int id)
     {
-        return GetDs(id)->pose;
+        Ds* ds = GetDs(id);
+        if(ds)
+            return GetDs(id)->pose;
+        else
+            return Pose();
     }
 
     void Coordination::DsOccupied(int id)
     {
         Ds* ds = GetDs(id);
-        if(ds->id > 0)
+        if(ds)
             ds->state = STATE_OCCUPIED;
-        else
-            delete ds;
     }
 
     double Coordination::DockingBid(int id)
@@ -1202,7 +1192,7 @@ namespace eae
         Ds* ds = GetDs(id);
 
         // docking station not found
-        if(ds->id <= 0){
+        if(!ds){
             printf("[%s:%d] [robot %d]: invalid docking station id: %d\n", StripPath(__FILE__), __LINE__, robot->GetId(), id);
             l4 = 0.5;
         }

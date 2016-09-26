@@ -108,6 +108,11 @@ namespace eae
         Robot(ModelPosition* pos, int robots, int dss);
 
         /**
+         * Destructor.
+         */
+        ~Robot();
+
+        /**
          * Initialize the robot.
          */
         void Init();
@@ -250,29 +255,23 @@ namespace eae
         /**
          * Check whether the robot is currently charging.
          *
-         * @param Ds* at: Pointer to the docking station where the robot is charging at. It is set only if the robot is currently charging.
-         *
-         * @return bool: True if the robot is charging, false otherwise.
+         * @return Ds*: The docking station where the robots is currently charging. NULL if it is not charging.
          */
-        bool Charging(Ds* at);
+        Ds* Charging();
 
         /**
          * Check whether the robot is currently on its way for recharging.
          *
-         * @param Ds* at: Pointer to the docking station where the robot is docking at. It is set only if the robot is currently on its way for recharging.
-         *
-         * @return bool: True if the robot is on its way for recharging, false otherwise.
+         * @return Ds*: The docking station where the robots is currently docking. NULL if it is not docking.
          */
-        bool Docking(Ds* at);
+        Ds* Docking();
 
         /**
          * Check whether the robot is currently waiting for recharging.
          *
-         * @param Ds* at: Pointer to the docking station the robot is waiting for. It is set only if the robot is currently waiting.
-         *
-         * @return bool: True if the robot is waiting, false otherwise.
+         * @return Ds*: The docking station where the robots is currently waiting. NULL if it is not waiting.
          */
-        bool Queueing(Ds* at);
+        Ds* Queueing();
 
         /**
          * Get the grid map.

@@ -73,7 +73,15 @@ namespace eae
         turned = 0;
 
         // no ds selected yet
-        ds = new Ds();
+        ds = NULL;
+    }
+
+    Robot::~Robot()
+    {
+        delete map;
+        delete cord;
+        delete log;
+        delete cam;
     }
 
     void Robot::Init()
@@ -101,14 +109,22 @@ namespace eae
         if(valid_path)
             return;
 
-        if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
-            printf("[%s:%d] [robot %d]: exploring\n", StripPath(__FILE__), __LINE__, id);
-
         // get current position
         Pose pose = pos->GetPose();
 
         // find docking station and store in private variable
         ds = cord->SelectDs(RemainingDist());
+
+        // only explore if robot found a docking station
+        if(!ds){
+            // turn to find docking station around
+            pos->SetTurnSpeed(pos->velocity_bounds[3].max);
+            state = STATE_IDLE;
+            return;
+        }
+
+        if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+            printf("[%s:%d] [robot %d]: exploring\n", StripPath(__FILE__), __LINE__, id);
 
         // visualize map progress
 //         map->VisualizeGui(pos->GetPose());
@@ -176,7 +192,7 @@ namespace eae
                     printf("[%s:%d] [robot %d]: try ds %d\n", StripPath(__FILE__), __LINE__, id, ds_op->id);
 
                 // start docking station auction
-                if(ds_op->id > 0 && SamePoint(ds->pose, ds_op->pose) == false){
+                if(ds_op && SamePoint(ds->pose, ds_op->pose) == false){
                     ds = ds_op;
 
                     state = STATE_PRECHARGE;
@@ -202,7 +218,7 @@ namespace eae
 
                 // start docking station auction
                 // and queue if unsuccessful
-                if(ds->id > 0){
+                if(ds > 0){
                     if(cord->DockingAuction(pos->GetPose(), ds->id) == false)
                         DockQueue(ds, BID_INV);
                 }
@@ -369,6 +385,9 @@ namespace eae
 
     double Robot::CalcBid(Pose frontier)
     {
+        if(!ds)
+            return BID_INV;
+
         Pose pose = pos->GetPose();
 
         // calculate distances
@@ -467,6 +486,10 @@ namespace eae
 
     void Robot::Dock(Ds* ds, double bid)
     {
+        // invalid docking station
+        if(!ds)
+            return;
+
         if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
             printf("[%s:%d] [robot %d]: docking\n", StripPath(__FILE__), __LINE__, id);
 
@@ -487,6 +510,10 @@ namespace eae
 
     void Robot::DockQueue(Ds* ds, double bid)
     {
+        // invalid docking station
+        if(!ds)
+            return;
+
         if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
             printf("[%s:%d] [robot %d]: docking queue\n", StripPath(__FILE__), __LINE__, id);
 
@@ -549,34 +576,31 @@ namespace eae
         return pos->FindPowerPack()->ProportionRemaining() >= CHARGE_FULL;
     }
 
-    bool Robot::Charging(Ds* at)
+    Ds* Robot::Charging()
     {
         if(state == STATE_CHARGE){
-            at = ds;
-            return true;
+            return ds;
         }
 
-        return false;
+        return NULL;
     }
 
-    bool Robot::Docking(Ds* at)
+    Ds* Robot::Docking()
     {
         if(state == STATE_GOING_CHARGING || state == STATE_CHARGE){
-            at = ds;
-            return true;
+            return ds;
         }
 
-        return false;
+        return NULL;
     }
 
-    bool Robot::Queueing(Ds* at)
+    Ds* Robot::Queueing()
     {
         if(state == STATE_CHARGE_QUEUE){
-            at = ds;
-            return true;
+            return ds;
         }
 
-        return false;
+        return NULL;
     }
 
     GridMap* Robot::GetMap()

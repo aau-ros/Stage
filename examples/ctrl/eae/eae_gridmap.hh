@@ -31,6 +31,11 @@ namespace eae
         GridMap(ModelPosition* pos, int robot);
 
         /**
+         * Destructor.
+         */
+        ~GridMap();
+
+        /**
          * Visualize the map in the command line.
          *
          * @param Pose pose: The current position of the robot.
@@ -91,15 +96,6 @@ namespace eae
          * @return double: The explored area in square meters.
          */
         double Explored();
-
-        /**
-         * Assignment operator.
-         *
-         * @param GridMap& toCopy: The object that should be copied.
-         *
-         * @return GridMap&: A pointer to this object.
-         */
-        GridMap& operator=(const GridMap& toCopy);
 
         /**
          * Compute distance between two points.

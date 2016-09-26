@@ -69,6 +69,14 @@ namespace eae
         raster_valid = false;
     }
 
+    GridMap::~GridMap()
+    {
+        delete vis_frontier;
+        delete vis_free;
+        delete vis_unknown;
+        delete vis_occupied;
+    }
+
     void GridMap::Visualize(Pose pose)
     {
         int y = y_max;
@@ -283,6 +291,8 @@ namespace eae
             }
         }
 
+        delete data;
+
         return local;
     }
 
@@ -356,27 +366,6 @@ namespace eae
     {
         // multiply twice with resolution because we have a two-dimensional area
         return ExploredCells() * resolution * resolution;
-    }
-
-    GridMap& GridMap::operator=(const GridMap& toCopy)
-    {
-        grid = toCopy.grid;
-
-        x_dim = toCopy.x_dim;
-        y_dim = toCopy.y_dim;
-        x_offset = toCopy.x_offset;
-        y_offset = toCopy.y_offset;
-        x_min = toCopy.x_min;
-        x_max = toCopy.x_max;
-        y_min = toCopy.y_min;
-        y_max = toCopy.y_max;
-
-        vis_frontier = toCopy.vis_frontier;
-        vis_free = toCopy.vis_free;
-        vis_unknown = toCopy.vis_unknown;
-        vis_occupied = toCopy.vis_occupied;
-
-        return *this;
     }
 
     int GridMap::Distance(double from_x, double from_y, double to_x, double to_y)

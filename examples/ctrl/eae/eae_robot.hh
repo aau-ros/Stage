@@ -514,6 +514,11 @@ namespace eae
         Ds* ds;
 
         /**
+         * The previous docking station selected by the robot.
+         */
+        Ds* ds_prev;
+
+        /**
          * The color for visualizing the waypoints.
          */
         Color wpcolor;

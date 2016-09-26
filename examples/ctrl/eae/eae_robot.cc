@@ -74,6 +74,7 @@ namespace eae
 
         // no ds selected yet
         ds = NULL;
+        ds_prev = NULL;
     }
 
     Robot::~Robot()
@@ -113,7 +114,13 @@ namespace eae
         Pose pose = pos->GetPose();
 
         // find docking station and store in private variable
-        ds = cord->SelectDs(RemainingDist());
+        Ds* ds_new = cord->SelectDs(RemainingDist());
+
+        // avoid alternating between two docking stations
+        if(ds_new != ds_prev){
+            ds_prev = ds;
+            ds = ds_new;
+        }
 
         // only explore if robot found a docking station
         if(!ds){
@@ -185,6 +192,9 @@ namespace eae
 
             // no reachable goal with full battery
             if(FullyCharged()){
+                if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+                    printf("[%s:%d] [robot %d]: look for another ds\n", StripPath(__FILE__), __LINE__, id);
+
                 // try finding another docking station from where it is still possible to explore
                 Ds* ds_op = cord->SelectDs(RemainingDist(), POL_OPPORTUNE, ds->id, true);
 

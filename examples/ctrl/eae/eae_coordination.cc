@@ -637,7 +637,10 @@ namespace eae
             return ds_cur;
 
         // return other ds that still has opportunities
-        return OpportuneDs(range, ds_cur->id);
+        if(ds_cur)
+            return OpportuneDs(range, ds_cur->id);
+        else
+            return OpportuneDs(range, 0);
     }
 
     Ds* Coordination::LonelyDs(double range)

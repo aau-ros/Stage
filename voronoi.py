@@ -8,6 +8,9 @@ from scipy.spatial import Voronoi
 '''
 settings
 '''
+# minimum distance in pixels between center docking station and next closest one
+min_dist = 10
+
 # for debugging
 debug = False
 
@@ -34,15 +37,43 @@ size = int(sys.argv[2])
 '''
 place docking stations
 '''
-# generate distribution
+# distance between center docking station and next closest one
+dist = 0
+
+# seed for docking station distribution
 rd.seed(sys.argv[1])
-points = np.array([random_n(0,size,2) for _ in xrange(int(sys.argv[3]))])
+
+# find distribution where center docking station has enough room
+while(dist < min_dist):
+    # generate distribution
+    points = np.array([random_n(0,size,2) for _ in xrange(int(sys.argv[3]))])
+
+    # find center most docking station
+    d = size
+    center = (size/2,size/2)
+    for (x,y) in points:
+        if(math.hypot(x-float(size)/2, y-float(size)/2) < d):
+            d = math.hypot(x-float(size)/2, y-float(size)/2)
+            center = (x,y)
+
+    # find docking station closest to center docking station
+    d = size
+    closest = (0,0)
+    for (x,y) in points:
+        if (x,y) == center:
+            continue
+        if(math.hypot(x-center[0], y-center[1]) < d):
+            d = math.hypot(x-center[0], y-center[1])
+            closest = (x,y)
+
+    # check distance of center docking station to next closest one
+    dist = math.hypot(center[0]-closest[0], center[1]-closest[1])
 
 # store coordinates in stage world file
 if not debug:
     f = open("worlds/eae_dss.inc", "w")
     for i,(x,y) in enumerate(points):
-        f.write("docking_station( pose [ " + str(x) + " " + str(y) + " 0 0 ] fiducial_return " + str(i+1) + " name \"ds" + str(i+1) + "\" )\n")
+        f.write("docking_station( pose [ " + str(x-float(size)/2) + " " + str(y-float(size)/2) + " 0 0 ] fiducial_return " + str(i+1) + " name \"ds" + str(i+1) + "\" )\n")
     f.close()
 
 '''
@@ -53,14 +84,6 @@ if not debug:
     # read number of robots from command line parameter
     nr = int(sys.argv[4])
 
-    # find center most docking station
-    d = size
-    center = (size/2,size/2)
-    for (x,y) in points:
-        if(math.hypot(x-float(size)/2, y-float(size)/2) < d):
-            d = math.hypot(x-float(size)/2, y-float(size)/2)
-            center = (x,y)
-
     # angle between robots
     angle = 2*math.pi / nr
 
@@ -69,8 +92,8 @@ if not debug:
     for r in xrange(nr):
         # define position
         a = r * angle
-        x = center[0] + math.cos(a)
-        y = center[1] + math.sin(a)
+        x = center[0] + math.cos(a) - float(size)/2
+        y = center[1] + math.sin(a) - float(size)/2
 
         # store coordinates in stage world file
         f.write("robot( pose [ " + str(x) + " " + str(y) + " 0 " + str(a*180.0/math.pi) + " ] )\n")
@@ -85,7 +108,7 @@ vor = Voronoi(points)
 output map
 '''
 # read connectivity from command line parameter
-con = sys.argv[5]
+con = float(sys.argv[5])
 
 # output docking stations
 if debug:

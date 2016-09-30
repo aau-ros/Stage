@@ -54,7 +54,7 @@ namespace eae
         /**
          * Number of robots currently associated with the docking station.
          */
-        int robots;
+        unsigned int robots;
     };
 }
 

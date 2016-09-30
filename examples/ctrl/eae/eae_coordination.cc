@@ -155,8 +155,8 @@ namespace eae
             // update number of robots
             if(change != 0){
                 ds->robots += change;
-                if(ds->robots > robot->NumRobots()) // just in case
-                    ds->robots = robot->NumRobots();
+                if(ds->robots > robots.size()) // just in case
+                    ds->robots = robots.size();
                 if(ds->robots < 0) // just in case
                     ds->robots = 0;
             }
@@ -281,8 +281,8 @@ namespace eae
 
             // increase number at new docking station
             ++new_ds->robots;
-            if(new_ds->robots > robot->NumRobots()) // just in case
-                new_ds->robots = robot->NumRobots();
+            if(new_ds->robots > robots.size()) // just in case
+                new_ds->robots = robots.size();
 
             // inform other robots about new docking station
             msg = new WifiMessageDs(new_ds->id, new_ds->state, new_ds->pose, 1);
@@ -646,7 +646,7 @@ namespace eae
     Ds* Coordination::LonelyDs(double range)
     {
         Ds* ds = NULL;
-        int robots = -1;
+        unsigned int robots = 0;
         double dist = 0;
         double dist_temp;
         vector<Ds*>::iterator it;
@@ -667,7 +667,7 @@ namespace eae
             // found docking station with same number of robots that is closer by
             // or found docking station with fewer robots
             // or it's the first docking station in range
-            if(((*it)->robots == robots && dist_temp < dist) || (*it)->robots < robots || robots < 0){
+            if(((*it)->robots == robots && dist_temp < dist) || (*it)->robots < robots || !ds){
                 ds = *it;
                 robots = (*it)->robots;
                 dist = dist_temp;

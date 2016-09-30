@@ -102,10 +102,8 @@ namespace eae
          * Constructor.
          *
          * @param ModelPosition* pos: The instantiated position model of the robot.
-         * @param int robots: The number of robots in this simulation.
-         * @param int dss: The number of docking stations in this simulation.
          */
-        Robot(ModelPosition* pos, int robots, int dss);
+        Robot(ModelPosition* pos);
 
         /**
          * Destructor.
@@ -322,13 +320,6 @@ namespace eae
          * Continue exploration after finalizing too early.
          */
         void Continue();
-
-        /**
-         * Get the number of robots in the simulation.
-         *
-         * @return int: Number of robots.
-         */
-        int NumRobots();
 
         /**
          * Update the local grid map with a given map.

@@ -5,13 +5,10 @@ using namespace std;
 
 namespace eae
 {
-    Robot::Robot(ModelPosition* pos, int robots, int dss)
+    Robot::Robot(ModelPosition* pos)
     {
         // robot id
         id = pos->GetId();
-
-        // number of robots
-        num_robots = robots;
 
         // instantiate objects
         this->pos = pos;
@@ -20,7 +17,7 @@ namespace eae
         sonar = (ModelRanger*)pos->GetChild("ranger:0");
         map = new GridMap(pos, id);
         cord = new Coordination(pos, this);
-        log = new LogOutput(id, robots, dss, cord->GetWifiModel(), cord->GetStrategy(), cord->GetStrategyString(), cord->GetPolicy(), cord->GetPolicyString(), pos->FindPowerPack()->GetCapacity(), MapName());
+        log = new LogOutput(pos, id, cord->GetWifiModel(), cord->GetStrategy(), cord->GetStrategyString(), cord->GetPolicy(), cord->GetPolicyString(), pos->FindPowerPack()->GetCapacity(), MapName());
         cam = new OrthoCamera();
         wpcolor = Color(0,1,0); // waypoint color is green
 
@@ -677,11 +674,6 @@ namespace eae
 
         // continue exploration
         Explore();
-    }
-
-    int Robot::NumRobots()
-    {
-        return num_robots;
     }
 
     void Robot::UpdateMap(GridMap* map)

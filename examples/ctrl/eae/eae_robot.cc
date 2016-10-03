@@ -13,8 +13,7 @@ namespace eae
         // instantiate objects
         this->pos = pos;
         fid = (ModelFiducial*)pos->GetUnusedModelOfType("fiducial");
-        laser = (ModelRanger*)pos->GetChild("ranger:1");
-        sonar = (ModelRanger*)pos->GetChild("ranger:0");
+        laser = (ModelRanger*)pos->GetChild("ranger:0");
         map = new GridMap(pos, id);
         cord = new Coordination(pos, this);
         log = new LogOutput(pos, id, cord->GetWifiModel(), cord->GetStrategy(), cord->GetStrategyString(), cord->GetPolicy(), cord->GetPolicyString(), pos->FindPowerPack()->GetCapacity(), MapName());
@@ -34,9 +33,6 @@ namespace eae
 
         // subscribe to laser ranger to receive data
         laser->Subscribe();
-
-        // subscribe to sonar ranger to receive data
-        sonar->Subscribe();
 
         // store starting point for visualization
         pos->waypoints.push_back(ModelPosition::Waypoint(pos->GetPose(), wpcolor));
@@ -565,7 +561,7 @@ namespace eae
     double Robot::RemainingTime()
     {
         // calculate remaining distance
-        return pos->FindPowerPack()->GetStored() / Power(pos->velocity_bounds->max);
+        return pos->FindPowerPack()->GetStored() / POWER_M;
     }
 
     double Robot::RemainingChargeTime()
@@ -716,7 +712,7 @@ namespace eae
     double Robot::RemainingDist(joules_t charge)
     {
         // calculate remaining distance
-        return charge / Power(pos->velocity_bounds->max) * pos->velocity_bounds->max;
+        return charge / POWER_M * pos->velocity_bounds->max;
     }
 
     void Robot::Log()
@@ -772,12 +768,6 @@ namespace eae
                 break;
         }
         return name;
-    }
-
-    double Robot::Power(double velocity)
-    {
-        // calculate power consumption (according to stage model: libstage/model_position:496)
-        return WATTS + STG_WIFI_WATTS + RANGER_WATTSPERSENSOR * SENSORS + WATTS_KGMS * velocity * pos->GetTotalMass();
     }
 
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)

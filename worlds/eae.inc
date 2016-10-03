@@ -68,7 +68,7 @@ define charging_bump model
 )
 
 # definition of a robot
-define robot pioneer2dx_front_sonar
+define robot pioneer3dx_no_sonar
 (
     # the controller to use (see ../examples/ctrl)
     ctrl "eae"
@@ -77,10 +77,10 @@ define robot pioneer2dx_front_sonar
     mass 9.0
 
     # initial battery charge in kJ
-    kjoules 3.5
+    kjoules 6
 
     # capacity of battery in kJ
-    kjoules_capacity 3.5
+    kjoules_capacity 6
 
     # localization method (can be gps or odom)
     localization "gps"
@@ -100,9 +100,8 @@ define robot pioneer2dx_front_sonar
     # wifi interface (see ../libstage/model_wifi.cc)
     wifi(
         essid "robotnet"
-        model "friis"
-        power 30
-        sensitivity -80
+        model "simple"
+        range 67.5 # set to half of robot range
     )
 
     # lidar

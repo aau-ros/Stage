@@ -43,34 +43,14 @@ namespace eae
     const double CHARGE_TURN = 0.5;
 
     /**
-     * Power consumption in watts per (meter per second) per kg.
-     * See also libstage/model_position.cc line 88.
+     * Power consumption of the robot when it is stationary.
      */
-    static const double WATTS_KGMS = 2.0;
+    static const double POWER_S = 11.9;
 
     /**
-     * Power consumption in watts when robot is stationary.
-     * See also libstage/model_position.cc line 89.
+     * Power consumption of the robot when it is moving.
      */
-    static const double WATTS = 9.2;
-
-    /**
-     * Power consumption of the WLAN adapter.
-     * See also libstage/mode_wifi.cc line 192.
-     */
-    static const double STG_WIFI_WATTS = 2.5;
-
-    /**
-     * Power consumption of a single sensor.
-     * See also libstage/model_ranger.cc line 72.
-     */
-    static const double RANGER_WATTSPERSENSOR = 0.2;
-
-    /**
-     * Number of sensors:
-     * laser + sonar + fiducial = 1 + 8 + 1
-     */
-    static const int SENSORS = 10;
+    static const double POWER_M = 22.15;
 
     /**
      * Distance that the robot has to travel until another map update is performed.
@@ -386,15 +366,6 @@ namespace eae
          * @return string: The name of the map.
          */
         string MapName();
-
-        /**
-         * Get the power consumption of the robot at a given velocity.
-         *
-         * @param double velocity: The velocity to compute the power for.
-         *
-         * @return double: The power consumption.
-         */
-        double Power(double velocity);
 
         /**
          * Callback function that is called when the robot changes position.

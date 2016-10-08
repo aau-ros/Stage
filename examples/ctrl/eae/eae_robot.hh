@@ -252,7 +252,9 @@ namespace eae
         Ds* Queueing();
 
         /**
-         * TODO
+         * Check wheter the robot is currently waiting for recharging at a docking station.
+         * 
+         * @return Ds*: The docking station where the robots is currently waiting. NULL if it is not waiting.
          */
         Ds* QueueingAtDs();
 

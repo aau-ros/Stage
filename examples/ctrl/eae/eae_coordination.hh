@@ -410,9 +410,10 @@ namespace eae
         void CheckDsAuctions();
 
         /**
-         * TODO
+         * Check whether this robot is queueing for recharging
+         * and is located at the docking station.
          *
-         * @param bool:
+         * @return bool: True if the robot is queueing at a docking station, false otherwise.
          */
         bool Queueing();
 
@@ -466,7 +467,9 @@ namespace eae
         void BroadcastDsAuction(int id);
 
         /**
-         * TODO
+         * Send a broadcast message about queueing status for greedy coordination.
+         *
+         * @param int to: ID of robot which this is a response to.
          */
         void BroadcastDsQueue(int to=-1);
 

@@ -21,11 +21,11 @@ namespace eae
      *
      * @todo: Find optimal weight W5.
      */
-    const int W1 = 10;
+    const int W1 = 1;//10;
     const int W2 = 0;
-    const int W3 = 9;
-    const int W4 = 20;
-    const int W5 = 10;
+    const int W3 = 0;//9;
+    const int W4 = 0;//20;
+    const int W5 = 0;//10;
 
     /**
      * SOC at which the battery is considered as full.
@@ -253,7 +253,7 @@ namespace eae
 
         /**
          * Check wheter the robot is currently waiting for recharging at a docking station.
-         * 
+         *
          * @return Ds*: The docking station where the robots is currently waiting. NULL if it is not waiting.
          */
         Ds* QueueingAtDs();

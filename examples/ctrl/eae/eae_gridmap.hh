@@ -70,9 +70,19 @@ namespace eae
         GridMap* Clear(Pose pos, vector<meters_t> scan);
 
         /**
+         * Get the closest frontier in range of robot.
+         *
+         * @param int range: The range that the robot can travel.
+         * @param int max_frontiers: Number of frontiers to look for, default -1 for unlimited.
+         *
+         * @return vector< vector <int> >: A vector containing one element. It is a vector with the two coordinates of that frontier.
+         */
+        vector< vector <int> > ReachableFrontiers(int range, int max_frontiers=-1)
+
+        /**
          * Get a list of all frontiers.
          *
-         * @return vector< vector <int> >: A vector containing an element for every frontier. Each element ist a vector with the two coordinates of that frontier.
+         * @return vector< vector <int> >: A vector containing an element for every frontier. Each element is a vector with the two coordinates of that frontier.
          */
         vector< vector <int> > Frontiers();
 
@@ -87,6 +97,8 @@ namespace eae
          * Get the amount of explored area combined from all robots.
          *
          * @return int: The number of explored grid cells.
+         *
+         * @todo: store already known area and iterate only over newly explored area
          */
         int ExploredCells();
 

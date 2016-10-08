@@ -403,17 +403,23 @@ namespace eae
             return BID_INV;
 
         // calculate energy aware parameter
-        double dgbe;
-        if(pos->FindPowerPack()->ProportionRemaining() > CHARGE_TURN)
-            dgbe = -dgb;
-        else
-            dgbe = dgb;
+        double dgbe = 0;
+        if(W3 != 0){
+            if(pos->FindPowerPack()->ProportionRemaining() > CHARGE_TURN)
+                dgbe = -dgb;
+            else
+                dgbe = dgb;
+        }
 
         // calculate angular parameter
-        double theta = 1/PI * (PI - abs(abs(pose.a - Angle(pose.x, pose.y, frontier.x, frontier.y)) - PI));
+        double theta = 0;
+        if(W4 != 0)
+            theta = 1/PI * (PI - abs(abs(pose.a - Angle(pose.x, pose.y, frontier.x, frontier.y)) - PI));
 
         // calculate distance to other robot's goals
-        double dr = -cord->DistRobot(frontier);
+        double dr = 0;
+        if(W5 != 0)
+            dr = -cord->DistRobot(frontier);
 
         // calculate bid
         return -(W1*dg + W2*dgb + W3*dgbe + W4*theta + W5*dr);

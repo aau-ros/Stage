@@ -296,6 +296,55 @@ namespace eae
         return local;
     }
 
+    vector< vector <int> > GridMap::ReachableFrontiers(int range, int max_frontiers)
+    {
+        vector< vector <int> > frontiers;
+
+        // number of frontiers
+        num_frontiers = 0;
+
+        // number of angles to search
+        double angles = 4;
+
+        // search with increasing radius
+        for(int r=1; r<range; ++r){
+            // set number of angles per quater circle
+            angles = r*2; // approximation
+
+            // search all angles
+            for(double a=0; a<2*PI; a+=PI/2.0/angles){
+                // calculate cartesian coordinates
+                double xd = double(r)*cos(a);
+                double yd = double(r)*sin(a);
+                int x;
+                int y;
+                if(xd > 0)
+                    x = floor(xd);
+                else
+                    x = ceil(xd);
+                if(yd > 0)
+                    y = floor(yd);
+                else
+                    y = ceil(yd);
+
+                // check if frontier is there
+                if(Frontier(x,y)){
+                    vector<int> frontier;
+                    frontier.push_back(x);
+                    frontier.push_back(y);
+                    frontiers.push_back(frontier);
+                    ++num_frontiers;
+
+                    // only find max_frontiers frontiers
+                    if(max_frontiers > 0 && num_frontiers >= max_frontiers)
+                        return frontiers;
+                }
+            }
+        }
+
+        return frontiers;
+    }
+
     vector< vector <int> > GridMap::Frontiers()
     {
         vector< vector <int> > frontiers;

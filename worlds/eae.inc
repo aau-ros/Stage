@@ -101,7 +101,7 @@ define robot pioneer3dx_no_sonar
     wifi(
         essid "robotnet"
         model "simple"
-        range 67.5 # set to half of robot range
+        range 200 # set to ~half of robot range
     )
 
     # lidar

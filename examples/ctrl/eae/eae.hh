@@ -20,16 +20,12 @@ using namespace std;
 namespace eae
 {
     /**
-     * Display additional output for debugging.
-     */
-    const bool DEBUG = false;
-
-    /**
-     * Debug the robots listed in this array.
+     * Display additional debugging output for the robots listed in this array.
      * Only debug output of the robots with the given ID's will be output.
-     * Robots can have following ID's: 1, 7, 13, 19, 25, 31, 37, 43, ...
+     * Robots can have following ID's: 1, 6, 11, 16, 21, 26, 31, 36, ...
      */
-    const int DEBUG_ROBOTS[] = {1, 7, 13, 19, 25, 31, 37, 43};
+    //const int DEBUG_ROBOTS[] = {1, 6, 11, 16, 21, 26, 31, 36}; // debug all
+    const int DEBUG_ROBOTS[] = {}; // debug none
 
     /**
      * Distance that the robot can be away from goal.
@@ -109,6 +105,7 @@ namespace eae
         MSG_DS,
         MSG_FRONTIER_AUCTION,
         MSG_DS_AUCTION,
+        MSG_DS_QUEUE,
         MSG_MAP
     } msg_type_t;
 
@@ -118,16 +115,19 @@ namespace eae
     class Coordination;
     class Ds;
     class Edge;
+    class Node;
     class Graph;
     class GraphVis;
+    class GridMap;
     class LogOutput;
-    class Node;
     class Robot;
     class WifiMessage;
     class WifiMessageRobot;
     class WifiMessageDs;
     class WifiMessageFrontierAuction;
     class WifiMessageDsAuction;
+    class WifiMessageDsQueue;
+    class WifiMessageMap;
 
     /**
      * Remove the path from a file name.

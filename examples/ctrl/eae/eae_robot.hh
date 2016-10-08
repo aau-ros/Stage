@@ -252,6 +252,11 @@ namespace eae
         Ds* Queueing();
 
         /**
+         * TODO
+         */
+        Ds* QueueingAtDs();
+
+        /**
          * Get the grid map.
          *
          * @return GridMap*: The grid map.

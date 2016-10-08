@@ -199,6 +199,22 @@ namespace eae
     };
 
     /**
+     * A class for wifi messages for keeping the order in docking station queues.
+     */
+    class WifiMessageDsQueue : public WifiMessage
+    {
+    public:
+        /**
+         * Constructor.
+         *
+         * @param int id_to: ID of the robot that this robot is replying to.
+         * @param int id_from: ID of the sending robot.
+         * @param int id_ds: ID of the docking station.
+         */
+        WifiMessageDsQueue(int id_to, int id_from, int id_ds);
+    };
+
+    /**
      * A class for the map update wifi messages.
      */
     class WifiMessageMap : public WifiMessage

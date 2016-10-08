@@ -111,6 +111,10 @@ namespace eae
     {
     }
 
+    WifiMessageDsQueue::WifiMessageDsQueue(int id_to, int id_from, int id_ds) : WifiMessage(MSG_DS_QUEUE, id_to, id_from, STATE_UNDEFINED_ROBOT, id_ds, STATE_UNDEFINED_DS, BID_INV, Pose(), 0)
+    {
+    }
+
     WifiMessageMap::WifiMessageMap(GridMap* map) : WifiMessage(map)
     {
     }

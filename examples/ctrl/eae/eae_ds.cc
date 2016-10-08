@@ -9,7 +9,7 @@ namespace eae
     {
         // initialize member variables
         id = 0;
-        state = STATE_UNDEFINED_DS;
+        state = STATE_VACANT;
         pose = Pose();
         model = NULL;
         robots = 0;

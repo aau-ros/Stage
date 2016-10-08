@@ -84,7 +84,7 @@ namespace eae
     const double DS_TOLERANCE = 2;
 
     /**
-     * Auction type for frontiers.
+     * Auction type for frontiers.robot->GetDs()
      */
     typedef struct{
         int id;
@@ -110,6 +110,16 @@ namespace eae
     } ds_auction_t;
 
     /**
+     * Queueing type for docking stations.
+     */
+    typedef struct{
+        int ds_id;
+        usec_t time;
+        int ahead;
+        bool valid;
+    } ds_queue_t;
+
+    /**
      * Robot type.
      */
     typedef struct{
@@ -132,6 +142,13 @@ namespace eae
         Coordination(ModelPosition* pos, Robot* robot);
 
         /**
+         * Start coordination of recharging at a docking station.
+         * If market based coordination is used, start an auction.
+         * Enqueue at docking station otherwise.
+         */
+        void Recharge();
+
+        /**
          * Initiate an auction for distributing frontiers amongst robots.
          *
          * @param Pose frontier: The position of the frontier.
@@ -141,14 +158,16 @@ namespace eae
 
         /**
          * Initiate an auction for assigning robots to docking stations.
-         *
-         * @param Pose pose: The position of the robot.
-         * @param int ds: ID of the docking station to start the auction for.
-         *
+
          * @return: Success of auction generation. True if new auction was started,
          * false if there was not enough time since last auction for the same docking station.
          */
-        bool DockingAuction(Pose pose, int ds);
+        bool DockingAuction();
+
+        /**
+         * Start docking station queue. It is used for greedy coordination.
+         */
+        void DockingQueue();
 
         /**
          * Send a map update to the other robots containing the complete map.
@@ -323,6 +342,24 @@ namespace eae
         Ds* LonelyDs(double range);
 
         /**
+         * Get closest docking station that allows the robots to stay connected over wifi.
+         *
+         * @param double range: The range of the robot.
+         *
+         * @return Ds*: Pointer to the docking station.
+         */
+        Ds* ConnectedDs(double range);
+
+        /**
+         * Get docking station that results from a combination of the other policies.
+         *
+         * @param double range: The range of the robot.
+         *
+         * @return Ds*: Pointer to the docking station.
+         */
+        Ds* CombinedDs(double range);
+
+        /**
          * Update the vector of robots.
          *
          * @param int id: The ID of the robot to update.
@@ -359,10 +396,34 @@ namespace eae
         void UpdateDsAuction(int id, int robot, int ds, double bid);
 
         /**
-         * Check all auctions.
+         * Check frontier auctions.
+         * If this robot is winner of an auction that timed out, take action.
+         *
+         * @return bool: True if this robot is idle after checking the auctions.
+         */
+        bool CheckFrontierAuctions();
+
+        /**
+         * Check docking station auctions.
          * If this robot is winner of an auction that timed out, take action.
          */
-        void CheckAuctions();
+        void CheckDsAuctions();
+
+        /**
+         * TODO
+         *
+         * @param bool:
+         */
+        bool Queueing();
+
+        /**
+         * Update number of robots in queue (for greedy coordination).
+         *
+         * @param int to: The robot addressed by this queue message.
+         * @param int from: The robot that sent this queue message.
+         * @param int ds_id: The docking station in question.
+         */
+        void UpdateQueue(int to, int from, int ds_id);
 
         /**
          * Store a new frontier auction in the private vector.
@@ -403,6 +464,11 @@ namespace eae
          * @param int id: ID of the auction.
          */
         void BroadcastDsAuction(int id);
+
+        /**
+         * TODO
+         */
+        void BroadcastDsQueue(int to=-1);
 
         /**
          * Send a beacon message about the robot.
@@ -513,6 +579,11 @@ namespace eae
          * Vector containing all docking station auctions this robot participated in.
          */
         vector<ds_auction_t> ds_auctions;
+
+        /**
+         * Description of docking station queue.
+         */
+        ds_queue_t ds_queue;
 
         /**
          * Timeout for sending beacons. A beacon will only be send, after this timeout expired.

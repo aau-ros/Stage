@@ -80,11 +80,28 @@ namespace eae
 
     void Robot::Init()
     {
+        if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+            printf("[%s:%d] [robot %d]: init\n", StripPath(__FILE__), __LINE__, id);
+
         // do an initial map update
         UpdateMap();
 
         // pose at last map update
         last_pose = pos->GetPose();
+
+        // try to select docking station
+        ds = cord->SelectDs(RemainingDist());
+
+        // turn to find docking station around
+        if(!ds){
+            pos->SetTurnSpeed(pos->velocity_bounds[3].max);
+
+            // return, init will be called again
+            return;
+        }
+
+        // stop turning
+        pos->SetTurnSpeed(0);
 
         // init done
         state = STATE_IDLE;
@@ -106,24 +123,7 @@ namespace eae
         // get current position
         Pose pose = pos->GetPose();
 
-        // find docking station and store in private variable
-        Ds* ds_new = cord->SelectDs(RemainingDist());
-
-        // avoid alternating between two docking stations
-        if(ds_new != ds_prev){
-            ds_prev = ds;
-            ds = ds_new;
-        }
-
-        // only explore if robot found a docking station
-        if(!ds){
-            // turn to find docking station around
-            pos->SetTurnSpeed(pos->velocity_bounds[3].max);
-            state = STATE_IDLE;
-            return;
-        }
-
-        if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+        if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
             printf("[%s:%d] [robot %d]: exploring\n", StripPath(__FILE__), __LINE__, id);
 
         // visualize map progress
@@ -144,7 +144,7 @@ namespace eae
         // get list of frontiers
         vector< vector <int> > frontiers = FrontiersReachable();
 
-        if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+        if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
             printf("[%s:%d] [robot %d]: frontiers reachable %lu\n", StripPath(__FILE__), __LINE__, id, frontiers.size());
 
         // iterate through all frontiers
@@ -180,18 +180,18 @@ namespace eae
 
         // no new goal was found, coordinate docking with other robots
         if(SamePoint(goal, pose) || SamePoint(goal, goal_prev)){
-            if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+            if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
                 printf("[%s:%d] [robot %d]: no reachable frontiers\n", StripPath(__FILE__), __LINE__, id);
 
             // no reachable goal with full battery
             if(FullyCharged()){
-                if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+                if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
                     printf("[%s:%d] [robot %d]: look for another ds\n", StripPath(__FILE__), __LINE__, id);
 
                 // try finding another docking station from where it is still possible to explore
                 Ds* ds_op = cord->SelectDs(RemainingDist(), POL_OPPORTUNE, ds->id, true);
 
-                if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+                if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
                     printf("[%s:%d] [robot %d]: try ds %d\n", StripPath(__FILE__), __LINE__, id, ds_op->id);
 
                 // start docking station auction
@@ -200,10 +200,8 @@ namespace eae
 
                     state = STATE_PRECHARGE;
 
-                    // start docking station auction
-                    // and queue if unsuccessful
-                    if(cord->DockingAuction(pos->GetPose(), ds->id) == false)
-                        DockQueue(ds, BID_INV);
+                    // start recharging procedure
+                    cord->Recharge();
                 }
 
                 // end of exploration
@@ -214,16 +212,15 @@ namespace eae
 
             // needs recharging, coordinate with other robots
             else{
-                if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+                if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
                     printf("[%s:%d] [robot %d]: needs recharging\n", StripPath(__FILE__), __LINE__, id);
 
                 state = STATE_PRECHARGE;
 
-                // start docking station auction
-                // and queue if unsuccessful
+                // have valid docking station
                 if(ds > 0){
-                    if(cord->DockingAuction(pos->GetPose(), ds->id) == false)
-                        DockQueue(ds, BID_INV);
+                    // start recharging procedure
+                    cord->Recharge();
                 }
 
                 // no docking station found
@@ -253,7 +250,7 @@ namespace eae
 
             // make a new plan
             if(clear){
-                if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+                if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
                     printf("[%s:%d] [robot %d]: moving on new path to (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, goal.x, goal.y);
 
                 // plan path to goal
@@ -327,7 +324,7 @@ namespace eae
         // or does not have a goal
         // use euclidean distance
         if(pos->GetPose().Distance(goal) < GOAL_TOLERANCE || ((state == STATE_EXPLORE || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE) && valid_path == false)){
-            if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+            if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
                 printf("[%s:%d] [robot %d]: set goal (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, to.x, to.y);
 
             // store previous goal
@@ -357,20 +354,20 @@ namespace eae
         // - if my bid is higher than for the other goal already stored
         // - if robot needs recharging (goal should be a docking station)
         else if(GoalQueue() == false || goal_next_bid < bid || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE){
-            if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+            if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
                 printf("[%s:%d] [robot %d]: enqueue goal (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, to.x, to.y);
             goal_next = to;
             goal_next_bid = bid;
         }
         else{
-            if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+            if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
                 printf("[%s:%d] [robot %d]: discard goal (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, to.x, to.y);
         }
     }
 
     void Robot::SetGoalNext()
     {
-        if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+        if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
             printf("[%s:%d] [robot %d]: set goal next (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, goal_next.x, goal_next.y);
 
         // store previous goal
@@ -493,7 +490,7 @@ namespace eae
         if(!ds)
             return;
 
-        if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+        if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
             printf("[%s:%d] [robot %d]: docking\n", StripPath(__FILE__), __LINE__, id);
 
         // already charging, no docking required
@@ -517,7 +514,7 @@ namespace eae
         if(!ds)
             return;
 
-        if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+        if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
             printf("[%s:%d] [robot %d]: docking queue\n", StripPath(__FILE__), __LINE__, id);
 
         // already charging, no queueing required
@@ -532,7 +529,7 @@ namespace eae
 
     void Robot::UnDock()
     {
-        if(DEBUG && InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
+        if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
             printf("[%s:%d] [robot %d]: undock\n", StripPath(__FILE__), __LINE__, id);
 
         // stop moving
@@ -600,6 +597,15 @@ namespace eae
     Ds* Robot::Queueing()
     {
         if(state == STATE_CHARGE_QUEUE){
+            return ds;
+        }
+
+        return NULL;
+    }
+
+    Ds* Robot::QueueingAtDs()
+    {
+        if(state == STATE_CHARGE_QUEUE && ds && pos->GetPose().Distance(ds->pose) < GOAL_TOLERANCE){
             return ds;
         }
 
@@ -862,8 +868,8 @@ namespace eae
                     // stop moving
                     pos->Stop();
 
-                    // start docking station auction
-                    robot->cord->DockingAuction(pos->GetPose(), robot->ds->id);
+                    // coordinate docking station access
+                    robot->cord->Recharge();
                 }
 
                 // next goal is docking station
@@ -899,7 +905,7 @@ namespace eae
             return 0;
         }
 
-        // stop moving
+        // stop moving if not currently turning to aid path planning
         else if(robot->turning <= 0){
             robot->pos->Stop();
         }

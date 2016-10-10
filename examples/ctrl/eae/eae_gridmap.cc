@@ -298,10 +298,15 @@ namespace eae
 
     vector< vector <int> > GridMap::ReachableFrontiers(int range, int max_frontiers)
     {
-        vector< vector <int> > frontiers;
+        // found frontiers
+        vector< vector<int> > frontiers;
+
+        // unique coordinates in range
+        set< vector<int> > coords;
+        pair< set< vector<int> >::iterator,bool> ret;
 
         // number of frontiers
-        num_frontiers = 0;
+        int num_frontiers = 0;
 
         // number of angles to search
         double angles = 4;
@@ -316,22 +321,25 @@ namespace eae
                 // calculate cartesian coordinates
                 double xd = double(r)*cos(a);
                 double yd = double(r)*sin(a);
-                int x;
-                int y;
+                vector<int> coord;
                 if(xd > 0)
-                    x = floor(xd);
+                    coord.push_back(floor(xd));
                 else
-                    x = ceil(xd);
+                    coord.push_back(ceil(xd));
                 if(yd > 0)
-                    y = floor(yd);
+                    coord.push_back(floor(yd));
                 else
-                    y = ceil(yd);
+                    coord.push_back(ceil(yd));
 
+                // store unique coordinates
+                ret = coords.insert(coord);
+
+                // got new unique coordinates
                 // check if frontier is there
-                if(Frontier(x,y)){
+                if(ret.second == true && Frontier(coord[0],coord[1])){
                     vector<int> frontier;
-                    frontier.push_back(x);
-                    frontier.push_back(y);
+                    frontier.push_back(coord[0]);
+                    frontier.push_back(coord[1]);
                     frontiers.push_back(frontier);
                     ++num_frontiers;
 

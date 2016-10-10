@@ -25,7 +25,7 @@ namespace eae
     const int W2 = 0;
     const int W3 = 0;//9;
     const int W4 = 0;//20;
-    const int W5 = 0;//10;
+    const int W5 = 1;//10;
 
     /**
      * SOC at which the battery is considered as full.

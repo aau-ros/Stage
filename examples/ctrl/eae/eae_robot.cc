@@ -630,8 +630,12 @@ namespace eae
 
     vector< vector <int> > Robot::FrontiersReachable(Pose pos, double range, bool ds)
     {
+        // closest frontier approach TODO
+        //if(W1 == 1 && W2 == 0 && W3 == 0 && W4 == 0 && W5 == 0)
+        //    return map->ReachableFrontiers(range, 1);
+
         // get all frontiers
-        vector< vector <int> > frontiers = map->Frontiers();
+        vector< vector <int> > frontiers = map->ReachableFrontiers(range);
 
         // iterate through all frontiers
         vector< vector<int> >::iterator it;

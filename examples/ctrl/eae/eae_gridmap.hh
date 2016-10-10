@@ -70,14 +70,16 @@ namespace eae
         GridMap* Clear(Pose pos, vector<meters_t> scan);
 
         /**
-         * Get the closest frontier in range of robot.
+         * Get a list of frontiers in range of the robot.
+         * Not all frontiers might actually be reachable since
+         * the robot also needs to return to the docking station.
          *
          * @param int range: The range that the robot can travel.
          * @param int max_frontiers: Number of frontiers to look for, default -1 for unlimited.
          *
          * @return vector< vector <int> >: A vector containing one element. It is a vector with the two coordinates of that frontier.
          */
-        vector< vector <int> > ReachableFrontiers(int range, int max_frontiers=-1)
+        vector< vector <int> > ReachableFrontiers(int range, int max_frontiers=-1);
 
         /**
          * Get a list of all frontiers.

@@ -127,7 +127,8 @@ namespace eae
             printf("[%s:%d] [robot %d]: exploring\n", StripPath(__FILE__), __LINE__, id);
 
         // visualize map progress
-//         map->VisualizeGui(pos->GetPose());
+        map->ReachableFrontierClusters(RemainingDist());
+        map->VisualizeGui(pos->GetPose());
 
 
         /******************
@@ -634,8 +635,8 @@ namespace eae
         //if(W1 == 1 && W2 == 0 && W3 == 0 && W4 == 0 && W5 == 0)
         //    return map->ReachableFrontiers(range, 1);
 
-        // get all frontiers
-        vector< vector <int> > frontiers = map->ReachableFrontiers(range);
+        // get all frontier clusters
+        vector< vector <int> > frontiers = map->ReachableFrontierClusters(range);
 
         // iterate through all frontiers
         vector< vector<int> >::iterator it;

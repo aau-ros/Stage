@@ -30,33 +30,37 @@ namespace eae
             grid.push_back(col);
         }
 
-        // initialize visualization model for frontiers
-        vis_frontier = new Model(world, NULL, "model", "frontier");
-        vis_frontier->SetObstacleReturn(0);
-        vis_frontier->SetColor(Color(0, 1, 0, 0.5));
-        vis_frontier->ClearBlocks();
-        vis_frontier->SetGuiMove(0);
+        // initialize visualization models for frontier clusters
+        int clusters = sizeof(CC)/sizeof(Color);
+        for(int i=0; i<clusters; ++i){
+            Model* vis_cluster = new Model(world, NULL, "model", "cluster");
+            vis_cluster->SetColor(CC[i]);
+            vis_cluster->SetObstacleReturn(0);
+            vis_cluster->SetGuiMove(0);
+            vis_cluster->ClearBlocks();
+            vis_clusters.push_back(vis_cluster);
+        }
 
         // initialize visualization model for free space
         vis_free = new Model(world, NULL, "model", "free");
-        vis_free->SetObstacleReturn(0);
         vis_free->SetColor(Color(1, 1, 1, 1));
-        vis_free->ClearBlocks();
+        vis_free->SetObstacleReturn(0);
         vis_free->SetGuiMove(0);
+        vis_free->ClearBlocks();
 
         // initialize visualization model for unknown space
         vis_unknown = new Model(world, NULL, "model", "unknown");
-        vis_unknown->SetObstacleReturn(0);
         vis_unknown->SetColor(Color(0, 0, 0, 0.5));
-        vis_unknown->ClearBlocks();
+        vis_unknown->SetObstacleReturn(0);
         vis_unknown->SetGuiMove(0);
+        vis_unknown->ClearBlocks();
 
         // initialize visualization model for occupied space
         vis_occupied = new Model(world, NULL, "model", "occupied");
-        vis_occupied->SetObstacleReturn(0);
         vis_occupied->SetColor(Color(0, 0, 0, 1));
-        vis_occupied->ClearBlocks();
+        vis_occupied->SetObstacleReturn(0);
         vis_occupied->SetGuiMove(0);
+        vis_occupied->ClearBlocks();
 
         // robot id
         this->robot = robot;
@@ -71,10 +75,13 @@ namespace eae
 
     GridMap::~GridMap()
     {
-        delete vis_frontier;
         delete vis_free;
         delete vis_unknown;
         delete vis_occupied;
+        vector<Model*>::iterator it;
+        for(it=vis_clusters.begin(); it<vis_clusters.end(); ++it)
+            delete *it;
+        vis_clusters.clear();
     }
 
     void GridMap::Visualize(Pose pose)
@@ -115,7 +122,6 @@ namespace eae
 
     void GridMap::VisualizeGui(Pose pose)
     {
-        vis_frontier->ClearBlocks();
         vis_free->ClearBlocks();
         vis_unknown->ClearBlocks();
         vis_occupied->ClearBlocks();
@@ -127,13 +133,10 @@ namespace eae
             vector< vector<grid_cell_v> >::iterator it;
 
             for(it = grid.begin(); it<grid.end(); ++it){
-                // frontier
-                if(Frontier(x,y))
-                    vis_frontier->AddBlockRect(x, y, 1, 1, 0);
-
                 // free
-                else if(it->at(i) == CELL_FREE)
+                if(it->at(i) == CELL_FREE){
                     vis_free->AddBlockRect(x, y, 1, 1, 0);
+                }
 
                 // unknown
                 else if(it->at(i) == CELL_UNKNOWN)
@@ -149,6 +152,33 @@ namespace eae
                 ++x;
             }
             --y;
+        }
+
+        // visualize frontier clusters
+        // clear blocks from previous round
+        vector<Model*>::iterator m;
+        for(m=vis_clusters.begin(); m<vis_clusters.end(); ++m)
+            (*m)->ClearBlocks();
+
+        // current cluster
+        Model* vis_cluster;
+        unsigned int c = 0;
+
+        // iterate over all clusters
+        vector< vector< vector<int> > >::iterator it;
+        vector< vector<int> >::iterator jt;
+        for(it=cluster_frontiers.begin(); it<cluster_frontiers.end(); ++it){
+            // select cluster visualizer
+            vis_cluster = vis_clusters.at(c);
+
+            // iterate over cluster visualizers
+            ++c;
+            if(c >= vis_clusters.size())
+                c = 0;
+
+            // add block for every frontier in current cluster
+            for(jt=it->begin(); jt<it->end(); ++jt)
+                vis_cluster->AddBlockRect(jt->at(0), jt->at(1), 1, 1, 0);
         }
     }
 
@@ -296,9 +326,219 @@ namespace eae
         return local;
     }
 
+    vector< vector <int> > GridMap::ReachableFrontierClusters(int range)
+    {
+        vector< vector<int> >::iterator it, jt, kt;
+        vector< vector< vector<int> > >::iterator cit, cjt;
+
+        // get all reachable frontiers
+        vector< vector<int> > frontiers = ReachableFrontiers(range);
+
+        // reset clusters
+        cluster_frontiers.clear();
+        cluster_frontiers.reserve(int(ceil(double(frontiers.size())/2.0/LASER_RANGE)));
+
+        // temporary vector
+        vector< vector<int> > todo;
+
+
+        /*********************
+         * cluster frontiers *
+         *********************/
+
+        // do as long as there are unclustered frontiers
+        while(frontiers.size() > 0){
+            // pick one frontier
+            it = frontiers.begin();
+
+            // create cluster from that frontier
+            vector< vector<int> > cluster;
+            cluster.push_back(*it);
+
+            // frontiers in new cluster need to be checked with all remaining frontiers
+            todo.push_back(*it);
+
+            // remove frontier from vector of frontiers
+            frontiers.erase(it);
+
+            // iterate newly added frontiers and check their neighbors
+            while(todo.size() > 0){
+                // pick one frontier
+                vector<int> frontier = todo.front();
+
+                // remove this frontier from todo vector
+                todo.erase(todo.begin());
+
+                // iterate all unclustered frontiers
+                for(it=frontiers.end()-1; it>=frontiers.begin(); --it){
+                    // connecting vector between frontiers
+                    vector <int> dir;
+                    dir.push_back(frontier[0]-it->at(0));
+                    dir.push_back(frontier[1]-it->at(1));
+
+                    // frontiers within clustering distance
+                    double dist = hypot(dir.at(0), dir.at(1));
+
+                    if(dist <= FRONTIER_CLUSTER_DIST){
+                        // check if no wall is in between
+                        bool clear = true;
+                        for(int i=1; i<floor(dist); ++i){
+                            // calculate coordinates of intermediate cells
+                            int x = frontier[0] + floor(double(dir.at(0)) / dist * i);
+                            int y = frontier[1] + floor(double(dir.at(1)) / dist * i);
+
+                            // only free cells allowed
+                            if(Read(x,y) != CELL_FREE){
+                                clear = false;
+                                break;
+                            }
+                        }
+
+                        // frontiers are connected
+                        if(clear){
+                            // store frontier in cluster
+                            cluster.push_back(*it);
+                            todo.push_back(*it);
+
+                            // delete from frontiers
+                            frontiers.erase(it);
+                        }
+                    }
+                }
+            }
+
+            // store cluster in global vector
+            cluster_frontiers.push_back(cluster);
+        }
+
+
+        /************************
+         * split large clusters *
+         ************************/
+
+        // temporary cluster of sorted frontiers
+        vector< vector<int> > cluster;
+        cluster.reserve(2*LASER_RANGE);
+
+        // vector of temporary clusters
+        vector< vector< vector<int> > > cluster_frontiers_temp;
+
+        // iterate over clusters
+        for(cit=cluster_frontiers.begin(); cit<cluster_frontiers.end(); ++cit){
+            // cluster is too large
+            if(cit->size() > 2*LASER_RANGE){
+                while(cit->size() > 0){
+                    // pick one frontier
+                    it = cit->begin();
+
+                    // remove any frontiers from temp cluster
+                    cluster.clear();
+
+                    // go along chain of connected frontiers into one direction
+                    int d = 1;
+                    while(d > 0){
+                        // add current frontier to temp cluster
+                        cluster.push_back(*it);
+                        // and remove it from original cluster
+                        cit->erase(it);
+
+                        // temp cluster reached its maximum size
+                        if(cluster.size() >= 2*LASER_RANGE){
+                            break;
+                        }
+
+                        // find closest neighbor
+                        d = -1;
+                        for(jt=cit->begin(); jt<cit->end(); ++jt){
+                            int d_temp = hypot(jt->at(0)-cluster.back().at(0), jt->at(1)-cluster.back().at(1));
+                            if(d_temp <= FRONTIER_CLUSTER_DIST && (d_temp < d || d < 0)){
+                                d = d_temp;
+                                it = jt;
+                            }
+                        }
+                    }
+
+                    // temp cluster has still room
+                    if(cluster.size() < 2*LASER_RANGE){
+                        // go along chain of connected frontiers into OTHER direction
+                        while(true){
+                            // find closest neighbor
+                            d = -1;
+                            for(jt=cit->begin(); jt<cit->end(); ++jt){
+                                int d_temp = hypot(jt->at(0)-cluster.front().at(0), jt->at(1)-cluster.front().at(1));
+                                if(d_temp <= FRONTIER_CLUSTER_DIST && (d_temp < d || d < 0)){
+                                    d = d_temp;
+                                    it = jt;
+                                }
+                            }
+
+                            // no neighbor found, cluster finished
+                            if(d <= 0){
+                                break;
+                            }
+
+                            // add current frontier to temp cluster
+                            cluster.insert(cluster.begin(), *it);
+                            //cluster.push_back(*it);
+                            // and remove it from original cluster
+                            cit->erase(it);
+
+                            // temp cluster reached its maximum size
+                            if(cluster.size() >= 2*LASER_RANGE){
+                                break;
+                            }
+                        }
+                    }
+
+                    // add temp cluster to clusters
+                    cluster_frontiers_temp.push_back(cluster);
+                }
+            }
+        }
+
+        // remove empty clusters
+        for(cit=cluster_frontiers.end()-1; cit>=cluster_frontiers.begin(); --cit){
+            if(cit->size() <= 0)
+                cluster_frontiers.erase(cit);
+        }
+
+        // add temporary clusters to global vector
+        for(cit=cluster_frontiers_temp.begin(); cit<cluster_frontiers_temp.end(); ++cit){
+            cluster_frontiers.push_back(*cit);
+        }
+
+
+        /**************************
+         * calculate spatial mean *
+         **************************/
+
+        // reset clusters
+        clusters.clear();
+
+        // iterate over all clusters to calculate spatial mean
+        for(cit=cluster_frontiers.begin(); cit<cluster_frontiers.end(); ++cit){
+            // summed coordinates of frontiers in cluster
+            int x = 0;
+            int y = 0;
+
+            // sum all coordinates of frontiers in cluster
+            for(it=cit->begin(); it<cit->end(); ++it){
+                x += it->at(0);
+                y += it->at(1);
+            }
+
+            // calculate spatial mean
+            vector<int> cluster;
+            cluster.push_back(round(double(x)/cit->size()));
+            cluster.push_back(round(double(y)/cit->size()));
+            clusters.push_back(cluster);
+        }
+
+        return clusters;
+    }
+
     vector< vector <int> > GridMap::ReachableFrontiers(int range, int max_frontiers)
     {
-        // found frontiers
         vector< vector<int> > frontiers;
 
         // unique coordinates in range
@@ -309,12 +549,12 @@ namespace eae
         int num_frontiers = 0;
 
         // number of angles to search
-        double angles = 4;
+        double angles;
 
         // search with increasing radius
         for(int r=1; r<range; ++r){
             // set number of angles per quater circle
-            angles = r*2; // approximation
+            angles = r*3; // approximation
 
             // search all angles
             for(double a=0; a<2*PI; a+=PI/2.0/angles){
@@ -593,11 +833,11 @@ namespace eae
         // check neighboring cells
         try{
             // one neighbors is occupied, robot cannot go so close to walls
-            if(Read(x-1,y-1) == CELL_OCCUPIED || Read(x-1,y) == CELL_OCCUPIED || Read(x-1,y+1) == CELL_OCCUPIED || Read(x,y-1) == CELL_OCCUPIED || Read(x,y+1) == CELL_OCCUPIED || Read(x+1,y-1) == CELL_OCCUPIED || Read(x+1,y) == CELL_OCCUPIED || Read(x+1,y+1) == CELL_OCCUPIED){
+            if(Read(x-1,y) == CELL_OCCUPIED || Read(x,y-1) == CELL_OCCUPIED || Read(x,y+1) == CELL_OCCUPIED || Read(x+1,y) == CELL_OCCUPIED){
                 return false;
             }
             // all neighbors are known, cannot be frontier
-            if(Read(x-1,y-1) != CELL_UNKNOWN && Read(x-1,y) != CELL_UNKNOWN && Read(x-1,y+1) != CELL_UNKNOWN && Read(x,y-1) != CELL_UNKNOWN && Read(x,y+1) != CELL_UNKNOWN && Read(x+1,y-1) != CELL_UNKNOWN && Read(x+1,y) != CELL_UNKNOWN && Read(x+1,y+1) != CELL_UNKNOWN){
+            if(Read(x-1,y) != CELL_UNKNOWN && Read(x,y-1) != CELL_UNKNOWN && Read(x,y+1) != CELL_UNKNOWN && Read(x+1,y) != CELL_UNKNOWN){
                 return false;
             }
             // one of the neighboring cells is unknown, it is a frontier

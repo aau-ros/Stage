@@ -17,6 +17,23 @@ namespace eae
     const bool PLAN_UNKNOWN = false;
 
     /**
+     * Frontiers within this distance are clustered together.
+     */
+    const double FRONTIER_CLUSTER_DIST = 2;
+
+    /**
+     * The colors for the cluster visualization.
+     */
+    const Color CC[] = {
+        Color(1,0,0,0.5),
+        Color(0,1,0,0.5),
+        Color(0,0,1,0.5),
+        Color(0,1,1,0.5),
+        Color(1,0,1,0.5),
+        Color(1,1,0,0.5)
+    };
+
+    /**
      * A class for the internal representation of the map.
      */
     class GridMap
@@ -70,6 +87,16 @@ namespace eae
         GridMap* Clear(Pose pos, vector<meters_t> scan);
 
         /**
+         * Get a list of frontier clusters in range of the robot.
+         * A cluster is a vector with two coordinates where the clustered frontiers spread around.
+         *
+         * @param int range: The range that the robot can travel.
+         *
+         * @return vector< vector <int> >: A vector containing an element for every cluster. Each element is a vector with the two coordinates of the spatial mean of the cluster.
+         */
+        vector< vector <int> > ReachableFrontierClusters(int range);
+
+        /**
          * Get a list of frontiers in range of the robot.
          * Not all frontiers might actually be reachable since
          * the robot also needs to return to the docking station.
@@ -77,7 +104,7 @@ namespace eae
          * @param int range: The range that the robot can travel.
          * @param int max_frontiers: Number of frontiers to look for, default -1 for unlimited.
          *
-         * @return vector< vector <int> >: A vector containing one element. It is a vector with the two coordinates of that frontier.
+         * @return vector< vector <int> >: A vector containing an element for every frontier. Each element is a vector with the two coordinates of that frontier.
          */
         vector< vector <int> > ReachableFrontiers(int range, int max_frontiers=-1);
 
@@ -245,10 +272,10 @@ namespace eae
         /**
          * Visualizer objects.
          */
-        Model* vis_frontier;
         Model* vis_free;
         Model* vis_unknown;
         Model* vis_occupied;
+        vector<Model*> vis_clusters;
 
         /**
          * Robot ID.
@@ -274,6 +301,12 @@ namespace eae
          * Whether the rasterized grid map is still valid.
          */
         bool raster_valid;
+
+        /**
+         * The clusters found during last call of ReachableFrontierClusters().
+         */
+        vector< vector<int> > clusters;
+        vector< vector< vector<int> > > cluster_frontiers;
     };
 }
 

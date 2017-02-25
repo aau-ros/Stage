@@ -884,8 +884,13 @@ namespace eae
             return;
         }
 
+        // try to continue exploration
+        if(this->robot->GetState() == STATE_FINISHED){
+            this->robot->Continue();
+        }
+
         // robot is not active
-        if(this->robot->GetState() == STATE_UNDEFINED_ROBOT || this->robot->GetState() == STATE_INIT || this->robot->GetState() == STATE_DEAD || this->robot->GetState() == STATE_FINISHED)
+        if(this->robot->GetState() == STATE_UNDEFINED_ROBOT || this->robot->GetState() == STATE_INIT || this->robot->GetState() == STATE_DEAD)
             return;
 
         // iterator

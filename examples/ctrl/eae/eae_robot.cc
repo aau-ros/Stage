@@ -149,28 +149,30 @@ namespace eae
             printf("[%s:%d] [robot %d]: frontiers reachable %lu\n", StripPath(__FILE__), __LINE__, id, frontiers.size());
 
         // iterate through all frontiers
-        vector< vector<int> >::iterator it;
-        for(it=frontiers.begin(); it<frontiers.end(); ++it){
-            if(SamePoint(pose, Pose(it->at(0), it->at(1), 0, 0)) || SamePoint(goal_prev, Pose(it->at(0), it->at(1), 0, 0)))
-                continue;
+        if(frontiers.size() > 0){
+            vector< vector<int> >::iterator it;
+            for(it=frontiers.begin(); it<frontiers.end(); ++it){
+                if(SamePoint(pose, Pose(it->at(0), it->at(1), 0, 0)) || SamePoint(goal_prev, Pose(it->at(0), it->at(1), 0, 0)))
+                    continue;
 
-            // make pose of coordinates
-            frontier.x = it->at(0);
-            frontier.y = it->at(1);
-            frontier.a = Angle(pose.x, pose.y, frontier.x, frontier.y);
+                // make pose of coordinates
+                frontier.x = it->at(0);
+                frontier.y = it->at(1);
+                frontier.a = Angle(pose.x, pose.y, frontier.x, frontier.y);
 
-            // calculate bid (negative of cost)
-            bid = CalcBid(frontier);
+                // calculate bid (negative of cost)
+                bid = CalcBid(frontier);
 
-            // invalid bid, not enough energy to reach frontier
-            if(bid == BID_INV){
-                continue;
-            }
+                // invalid bid, not enough energy to reach frontier
+                if(bid == BID_INV){
+                    continue;
+                }
 
-            // maximize bid, minimize cost
-            if(bid > max_bid || max_bid == 0){
-                max_bid = bid;
-                goal = frontier;
+                // maximize bid, minimize cost
+                if(bid > max_bid || max_bid == 0){
+                    max_bid = bid;
+                    goal = frontier;
+                }
             }
         }
 
@@ -180,7 +182,7 @@ namespace eae
          ********************************/
 
         // no new goal was found, coordinate docking with other robots
-        if(SamePoint(goal, pose) || SamePoint(goal, goal_prev)){
+        if(frontiers.size() <= 0 || SamePoint(goal, pose) || SamePoint(goal, goal_prev)){
             if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
                 printf("[%s:%d] [robot %d]: no reachable frontiers\n", StripPath(__FILE__), __LINE__, id);
 
@@ -637,6 +639,10 @@ namespace eae
 
         // get all frontier clusters
         vector< vector <int> > frontiers = map->ReachableFrontierClusters(range);
+
+        if(frontiers.size() <= 0){
+            return frontiers;
+        }
 
         // iterate through all frontiers
         vector< vector<int> >::iterator it;

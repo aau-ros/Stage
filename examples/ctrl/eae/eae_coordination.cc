@@ -1460,17 +1460,19 @@ namespace eae
             // distance to closest frontier (job)
             double dist_job = 0;
             double dist_temp;
-            for(itf=frontiers_temp.begin(); itf<frontiers_temp.end(); ++itf){
-                // compute path distance
-                dist_temp = robot->Distance(itf->at(0), itf->at(1));
+            if(frontiers_temp.size() > 0){
+                for(itf=frontiers_temp.begin(); itf<frontiers_temp.end(); ++itf){
+                    // compute path distance
+                    dist_temp = robot->Distance(itf->at(0), itf->at(1));
 
-                // could not compute distance, take euclidean distance
-                if(dist_temp < 0)
-                    dist_temp = robot->GetPose().Distance(Pose(itf->at(0), itf->at(1), 0, 0));
+                    // could not compute distance, take euclidean distance
+                    if(dist_temp < 0)
+                        dist_temp = robot->GetPose().Distance(Pose(itf->at(0), itf->at(1), 0, 0));
 
-                // found frontier
-                if(dist_temp < dist_job || dist_job == 0){
-                    dist_job = dist_temp;
+                    // found frontier
+                    if(dist_temp < dist_job || dist_job == 0){
+                        dist_job = dist_temp;
+                    }
                 }
             }
 

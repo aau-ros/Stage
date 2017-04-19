@@ -19,3 +19,4 @@ libstage/libstage.so.*
 html
 latex
 docu
+.project

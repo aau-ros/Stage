@@ -1,4 +1,5 @@
 SET( PLUGINS
+  eae_frevo_simple/eae_frevo_simple
   eae/eae
   fasr
   sink
@@ -20,6 +21,8 @@ endforeach( PLUGIN )
 ADD_LIBRARY( fasr2 MODULE fasr2.cc astar/findpath.cpp )
 
 ADD_LIBRARY( eae/eae MODULE eae/eae_coordination.cc eae/eae_ds.cc eae/eae_graph.cc eae/eae_gridmap.cc eae/eae_logoutput.cc eae/eae_robot.cc eae/eae_wifimessage.cc astar/findpath.cpp )
+
+ADD_LIBRARY( eae_frevo_simple/eae_frevo_simple MODULE eae_frevo_simple/eae_frevo_simple_gridmap.cc eae_frevo_simple/eae_frevo_simple_logoutput.cc eae_frevo_simple/eae_frevo_simple_robot.cc )
 
 # add extras to the list of plugins
 SET( PLUGINS ${PLUGINS} fasr2 )

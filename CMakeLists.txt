@@ -115,6 +115,47 @@ SET( INDENT "  * " )
 # MESSAGE( STATUS "    OPENGL_INCLUDE_DIR = ${OPENGL_INCLUDE_DIR}")
 # MESSAGE( STATUS "    OPENGL_glu_LIBRARY = ${OPENGL_glu_LIBRARY}")
 
+# Try to find BOOST
+message( STATUS "Checking for Boost" )
+
+OPTION (Boost_USE_STATIC_LIBS "Use the static versions of the Boost libraries" ON)
+MARK_AS_ADVANCED (Boost_USE_STATIC_LIBS)
+OPTION (USE_BOOST_RANDOM "Use the Boost random number generator library" ON)
+MARK_AS_ADVANCED (USE_BOOST_RANDOM)
+
+#If Boost is to be used, then check fo rit
+IF (USE_BOOST_RANDOM)
+  SET (BOOST_COMPONENTS random)
+  # FIND_PACKAGE (Boost COMPONENTS ${BOOST_COMPONENTS})
+  FIND_PACKAGE (Boost)
+  IF (Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
+    SET (HAVE_BOOST_RANDOM TRUE CACHE INTERNAL "Is the Boost::Random library present")
+
+    #  Note: I'm going to leave the stuff below in; it is used to compile against the boost
+    # libs; it seems just using the includes is fine enough though.
+    #IF (Boost_RANDOM_FOUND)
+    #  SET (HAVE_BOOST_RANDOM TRUE CACHE INTERNAL "Is the Boost::Random library present")
+    #  GET_FILENAME_COMPONENT (boostRandomLib ${Boost_RANDOM_LIBRARY} NAME_WE CACHE INTERNAL)
+    #  # Chop off the lib at the front, too, if present
+    #  STRING (REGEX REPLACE "^lib" "" boostRandomLib ${boostRandomLib})
+
+      MESSAGE( STATUS ${INDENT} "Boost Random found!")
+    #ELSE(Boost_RANDOM_FOUND)
+    #  SET (HAVE_BOOST_RANDOM FALSE)
+    #  MESSAGE( STATUS ${INDENT} "Boost Random NOT found!")
+    #ENDIF(Boost_RANDOM_FOUND)
+  ELSE(Boost_FOUND)
+    MESSAGE( STATUS ${INDENT} "Boost NOT found!")
+    SET (HAVE_BOOST_RANDOM FALSE )
+  ENDIF(Boost_FOUND)
+
+ELSE (USE_BOOST_RANDOM)
+  MESSAGE( STATUS ${INDENT} "Boost diabled" )
+  SET (HAVE_BOOST_RANDOM FALSE)
+  SET (boostRandomLib )
+ENDIF (USE_BOOST_RANDOM)
+
 MESSAGE( STATUS "Checking for optional libraries..." )
 
 # Format the fltk libraries for inclusion in stage.pc

@@ -28,4 +28,5 @@ void Stg::RegisterModels()
   Register("lightindicator", Creator<ModelLightIndicator>);
   Register("position", Creator<ModelPosition>);
   Register("ranger", Creator<ModelRanger>);
+  Register("wifi", Creator<ModelWifi>);
 }

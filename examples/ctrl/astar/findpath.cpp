@@ -125,29 +125,13 @@ bool MapSearchNode::GetSuccessors( AStarSearch<MapSearchNode> *astarsearch,
 
 	// push each possible move except allowing the search to go backwards
 
-    if( (GetMap( ix-1, iy-1 ) < 9u)
-            && !((parent_x == ix-1) && (parent_y == iy-1))
-      )
-    {
-        NewNode = MapSearchNode( ix-1, iy-1 );
-        astarsearch->AddSuccessor( NewNode );
-    }
-
-    if( (GetMap( ix-1, iy ) < 9u)
-            && !((parent_x == ix-1) && (parent_y == iy))
-      )
-    {
-        NewNode = MapSearchNode( ix-1, iy );
-        astarsearch->AddSuccessor( NewNode );
-    }
-
-    if( (GetMap( ix-1, iy+1 ) < 9u)
-            && !((parent_x == ix-1) && (parent_y == iy+1))
-      )
-    {
-        NewNode = MapSearchNode( ix-1, iy+1 );
-        astarsearch->AddSuccessor( NewNode );
-    }
+	if( (GetMap( ix-1, iy ) < 9u)
+			&& !((parent_x == ix-1) && (parent_y == iy))
+	  )
+	{
+		NewNode = MapSearchNode( ix-1, iy );
+		astarsearch->AddSuccessor( NewNode );
+	}
 
 	if( (GetMap( ix, iy-1 ) < 9u)
 		&& !((parent_x == ix) && (parent_y == iy-1))
@@ -157,38 +141,22 @@ bool MapSearchNode::GetSuccessors( AStarSearch<MapSearchNode> *astarsearch,
 		astarsearch->AddSuccessor( NewNode );
 	}
 
+	if( (GetMap( ix+1, iy ) < 9u)
+		&& !((parent_x == ix+1) && (parent_y == iy))
+	  )
+	{
+		NewNode = MapSearchNode( ix+1, iy );
+		astarsearch->AddSuccessor( NewNode );
+	}
 
-    if( (GetMap( ix, iy+1 ) < 9u)
-        && !((parent_x == ix) && (parent_y == iy+1))
-        )
-    {
-        NewNode = MapSearchNode( ix, iy+1 );
-        astarsearch->AddSuccessor( NewNode );
-    }
 
-    if( (GetMap( ix+1, iy-1 ) < 9u)
-        && !((parent_x == ix+1) && (parent_y == iy-1))
-      )
-    {
-        NewNode = MapSearchNode( ix+1, iy-1 );
-        astarsearch->AddSuccessor( NewNode );
-    }
-
-    if( (GetMap( ix+1, iy ) < 9u)
-        && !((parent_x == ix+1) && (parent_y == iy))
-      )
-    {
-        NewNode = MapSearchNode( ix+1, iy );
-        astarsearch->AddSuccessor( NewNode );
-    }
-
-    if( (GetMap( ix+1, iy+1 ) < 9u)
-        && !((parent_x == ix+1) && (parent_y == iy+1))
-      )
-    {
-        NewNode = MapSearchNode( ix+1, iy+1 );
-        astarsearch->AddSuccessor( NewNode );
-    }
+	if( (GetMap( ix, iy+1 ) < 9u)
+		&& !((parent_x == ix) && (parent_y == iy+1))
+		)
+	{
+		NewNode = MapSearchNode( ix, iy+1 );
+		astarsearch->AddSuccessor( NewNode );
+	}
 
 	return true;
 }
@@ -197,7 +165,7 @@ bool MapSearchNode::GetSuccessors( AStarSearch<MapSearchNode> *astarsearch,
 // of our map the answer is the map terrain value at this node since that is
 // conceptually where we're moving
 
-float MapSearchNode::GetCost( MapSearchNode &successor )
+float MapSearchNode::GetCost( MapSearchNode & )
 {
 	return (float) GetMap( x, y );
 
@@ -209,12 +177,12 @@ float MapSearchNode::GetCost( MapSearchNode &successor )
 #include "astar.h"
 using namespace ast;
 
-bool ast::astar( uint8_t* map,
-				uint32_t width,
-				uint32_t height,
-				const point_t start,
-				const point_t goal,
-				std::vector<point_t>& path )
+bool ast::astar(uint8_t* map,
+        uint32_t width,
+        uint32_t height,
+        const point_t &start,
+        const point_t &goal,
+        std::vector<point_t>& path )
 {
   //cout << "STL A* Search implementation\n(C)2001 Justin Heyes-Jones\n";
 
@@ -346,7 +314,7 @@ bool ast::astar( uint8_t* map,
 		}
 		else if( SearchState == AStarSearch<MapSearchNode>::SEARCH_STATE_FAILED )
 		  {
-			 //cout << "Search terminated. Did not find goal state\n";
+			 cout << "Search terminated. Did not find goal state\n";
 
 		  }
 

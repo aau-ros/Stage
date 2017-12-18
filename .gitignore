@@ -5,6 +5,7 @@ config.h
 *#
 .DS_Store
 docsrc/stage
+*.txt.user
 
 CMakeCache.txt
 CMakeFiles

@@ -330,6 +330,9 @@ namespace eae
             case POL_COMBINED:
                 new_ds = CombinedDs(range);
                 break;
+            case POL_EVO:
+                new_ds = EvoDs(range);
+                break;
             default:
                 new_ds = NULL;
                 printf("[%s:%d] [robot %d]: invalid policy\n", StripPath(__FILE__), __LINE__, robot->GetId());
@@ -837,6 +840,12 @@ namespace eae
          *       init: no direction, first robots selects ds and sets direction
          *       else: select ds in mean direction +- x° TODO
          */
+        return new Ds();
+    }
+    
+    Ds* Coordination::EvoDs(double range)
+    {
+        // TODO
         return new Ds();
     }
 

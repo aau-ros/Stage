@@ -22,6 +22,7 @@ strategy 1
 # 5 lonely:     prefer docking stations with fewest robots
 # 6 connected:  select docking station which allows to stay connected to other robots
 # 7 combined:   a combination of the above
+# 8 evo:        use evolved candidate controller
 policy 1
 
 # a robot

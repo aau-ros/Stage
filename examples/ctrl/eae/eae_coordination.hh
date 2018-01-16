@@ -25,14 +25,15 @@ namespace eae
         POL_CURRENT,
         POL_LONELY,
         POL_CONNECTED,
-        POL_COMBINED
+        POL_COMBINED,
+        POL_EVO
     } pol_t;
 
     /**
      * Strings describing the policy.
      * Make sure they match the pol_t enum!
      */
-    const string POL_STRING[] = {"undefined", "closest", "vacant", "opportune", "current", "lonely", "connected", "combined"};
+    const string POL_STRING[] = {"undefined", "closest", "vacant", "opportune", "current", "lonely", "connected", "combined", "evo"};
 
     /**
      * Possible coordination strategies for recharging at docking stations.
@@ -358,6 +359,15 @@ namespace eae
          * @return Ds*: Pointer to the docking station.
          */
         Ds* CombinedDs(double range);
+
+        /**
+         * Get docking station from evolved candidate controller.
+         *
+         * @param double range: The range of the robot.
+         *
+         * @return Ds*: Pointer to the docking station.
+         */
+        Ds* EvoDs(double range);
 
         /**
          * Update the vector of robots.

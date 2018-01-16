@@ -1,5 +1,9 @@
 #include "eae_robot.hh"
 
+extern "C" {
+#include "eae_candidate.c"
+}
+
 using namespace Stg;
 using namespace std;
 
@@ -131,50 +135,35 @@ namespace eae
         map->VisualizeGui(pos->GetPose());
 
 
-        /******************
-         * determine goal *
-         ******************/
+        /************************************
+         * determine goal                   *
+         * use evolved candidate controller *
+         ************************************/
 
         // initialize goal with current position
         goal = pose;
-
-        Pose frontier;
-        double max_bid = 0;
-        double bid;
 
         // get list of frontiers
         vector< vector <int> > frontiers = FrontiersReachable();
 
         if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
             printf("[%s:%d] [robot %d]: frontiers reachable %lu\n", StripPath(__FILE__), __LINE__, id, frontiers.size());
-
-        // iterate through all frontiers
-        if(frontiers.size() > 0){
-            vector< vector<int> >::iterator it;
-            for(it=frontiers.begin(); it<frontiers.end(); ++it){
-                if(SamePoint(pose, Pose(it->at(0), it->at(1), 0, 0)) || SamePoint(goal_prev, Pose(it->at(0), it->at(1), 0, 0)))
-                    continue;
-
-                // make pose of coordinates
-                frontier.x = it->at(0);
-                frontier.y = it->at(1);
-                frontier.a = Angle(pose.x, pose.y, frontier.x, frontier.y);
-
-                // calculate bid (negative of cost)
-                bid = CalcBid(frontier);
-
-                // invalid bid, not enough energy to reach frontier
-                if(bid == BID_INV){
-                    continue;
-                }
-
-                // maximize bid, minimize cost
-                if(bid > max_bid || max_bid == 0){
-                    max_bid = bid;
-                    goal = frontier;
-                }
-            }
-        }
+        
+        // candidate inputs
+        // 1: free
+        // 0: occupied
+        // 0, 1: x/y offset to nearest exit
+        // 2..5: occupancy of neighborhood
+        float in[6];
+        
+        // use candidate to get goal frontier
+        Result out = getOutput(in, 6);
+        // TODO: extract frontier
+        goal = pose;
+        //dx = (int) round(out.output[0] * 2 - 1);
+        
+        // calculate bid (negative of cost)
+        double bid = CalcBid(goal);
 
 
         /********************************
@@ -236,7 +225,7 @@ namespace eae
 
         // goal found, coordinate exploration with other robots
         else{
-            cord->FrontierAuction(goal, max_bid);
+            cord->FrontierAuction(goal, bid);
         }
     }
 

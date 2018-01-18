@@ -112,21 +112,8 @@ namespace eae
          * Set a goal for the robot.
          *
          * @param Pose to: The goal where the robot should move to.
-         * @param double bid: The bid the robot submitted for that goal.
          */
-        void SetGoal(Pose to, double bid);
-
-        /**
-         * Set the current goal for the robot to the next goal.
-         */
-        void SetGoalNext();
-
-        /**
-         * Calculate the bid for a frontier.
-         *
-         * @param Pose frontier: The frontier to calculate the bid for.
-         */
-        double CalcBid(Pose frontier);
+        void SetGoal(Pose to);
 
         /**
          * Compute a path from start to goal using the A* algorithm
@@ -185,17 +172,15 @@ namespace eae
          * Start a docking procedure.
          *
          * @param Ds* ds: Pointer to the docking station to dock at.
-         * @param double bid: The bid that was made for that docking station.
          */
-        void Dock(Ds* ds, double bid);
+        void Dock(Ds* ds);
 
         /**
          * Enqueue at a docking station.
          *
          * @param Ds* ds: Pointer to the docking station to queue at.
-         * @param double bid: The bid that was made for that docking station.
          */
-        void DockQueue(Ds* ds, double bid);
+        void DockQueue(Ds* ds);
 
         /**
          * Stop recharging and continue exploration.
@@ -465,12 +450,6 @@ namespace eae
          * The previous goal that the robot navigated to.
          */
         Pose goal_prev;
-
-        /**
-         * The bid the robot submitted for the next goal.
-         * This makes sure the robot stores the next goal where it submitted its highest bid.
-         */
-        double goal_next_bid;
 
         /**
          * An intermediate goal that is part of the path calculated by the path planner.

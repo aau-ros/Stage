@@ -103,14 +103,6 @@ namespace eae
     {
     }
 
-    WifiMessageFrontierAuction::WifiMessageFrontierAuction(int id_auction, int id_robot, double bid, Pose pose) : WifiMessage(MSG_FRONTIER_AUCTION, id_auction, id_robot, STATE_UNDEFINED_ROBOT, -1, STATE_UNDEFINED_DS, bid, pose, 0)
-    {
-    }
-
-    WifiMessageDsAuction::WifiMessageDsAuction(int id_auction, int id_robot, int id_ds, double bid) : WifiMessage(MSG_DS_AUCTION, id_auction, id_robot, STATE_UNDEFINED_ROBOT, id_ds, STATE_UNDEFINED_DS, bid, Pose(), 0)
-    {
-    }
-
     WifiMessageDsQueue::WifiMessageDsQueue(int id_to, int id_from, int id_ds) : WifiMessage(MSG_DS_QUEUE, id_to, id_from, STATE_UNDEFINED_ROBOT, id_ds, STATE_UNDEFINED_DS, BID_INV, Pose(), 0)
     {
     }

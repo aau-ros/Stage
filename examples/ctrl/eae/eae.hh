@@ -103,8 +103,6 @@ namespace eae
         MSG_UNDEFINED = 0,
         MSG_ROBOT,
         MSG_DS,
-        MSG_FRONTIER_AUCTION,
-        MSG_DS_AUCTION,
         MSG_DS_QUEUE,
         MSG_MAP
     } msg_type_t;
@@ -124,8 +122,6 @@ namespace eae
     class WifiMessage;
     class WifiMessageRobot;
     class WifiMessageDs;
-    class WifiMessageFrontierAuction;
-    class WifiMessageDsAuction;
     class WifiMessageDsQueue;
     class WifiMessageMap;
 

@@ -165,40 +165,6 @@ namespace eae
     };
 
     /**
-     * A class for wifi messages for auctioning of docking stations.
-     */
-    class WifiMessageFrontierAuction : public WifiMessage
-    {
-    public:
-        /**
-         * Constructor.
-         *
-         * @param int id_auction: ID of the auction.
-         * @param int id_robot: ID of the robot that initiates the auction.
-         * @param double bid: Bid for the auction.
-         * @param Pose pose: Position of frontier.
-         */
-        WifiMessageFrontierAuction(int id_auction, int id_robot, double bid, Pose pose);
-    };
-
-    /**
-     * A class for wifi messages for auctioning of docking stations.
-     */
-    class WifiMessageDsAuction : public WifiMessage
-    {
-    public:
-        /**
-         * Constructor.
-         *
-         * @param int id_auction: ID of the auction.
-         * @param int id_robot: ID of the robot that initiates the auction.
-         * @param int id_ds: ID of the docking station.
-         * @param double bid: Bid for the auction.
-         */
-        WifiMessageDsAuction(int id_auction, int id_robot, int id_ds, double bid);
-    };
-
-    /**
      * A class for wifi messages for keeping the order in docking station queues.
      */
     class WifiMessageDsQueue : public WifiMessage

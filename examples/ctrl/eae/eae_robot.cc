@@ -20,7 +20,7 @@ namespace eae
         laser = (ModelRanger*)pos->GetChild("ranger:0");
         map = new GridMap(pos, id);
         cord = new Coordination(pos, this);
-        log = new LogOutput(pos, id, cord->GetWifiModel(), cord->GetStrategy(), cord->GetStrategyString(), cord->GetPolicy(), cord->GetPolicyString(), pos->FindPowerPack()->GetCapacity(), MapName());
+        log = new LogOutput(pos, id, cord->GetWifiModel(), cord->GetPolicy(), cord->GetPolicyString(), pos->FindPowerPack()->GetCapacity(), MapName());
         cam = new OrthoCamera();
         wpcolor = Color(0,1,0); // waypoint color is green
 
@@ -43,9 +43,6 @@ namespace eae
 
         // distance traveled
         dist_travel = 0;
-
-        // goal queue is empty
-        goal_next_bid = BID_INV;
 
         // charging power, look for power output of docking station in world file
         charging_watt = 0;
@@ -149,21 +146,21 @@ namespace eae
         if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
             printf("[%s:%d] [robot %d]: frontiers reachable %lu\n", StripPath(__FILE__), __LINE__, id, frontiers.size());
         
-        // candidate inputs
-        // 1: free
-        // 0: occupied
-        // 0, 1: x/y offset to nearest exit
-        // 2..5: occupancy of neighborhood
-        float in[6];
-        
-        // use candidate to get goal frontier
-        Result out = getOutput(in, 6);
-        // TODO: extract frontier
-        goal = pose;
-        //dx = (int) round(out.output[0] * 2 - 1);
-        
-        // calculate bid (negative of cost)
-        double bid = CalcBid(goal);
+        if(frontiers.size() > 0){
+            // candidate inputs
+            // 1: free
+            // 0: occupied
+            // 0, 1: x/y offset to nearest exit
+            // 2..5: occupancy of neighborhood
+            float in[6];
+            // TODO: assign inputs
+            
+            // use candidate to get goal frontier
+            Result out = getOutput(in, 6);
+            // TODO: extract frontier
+            goal = pose;
+            //dx = (int) round(out.output[0] * 2 - 1);
+        }
 
 
         /********************************
@@ -223,9 +220,9 @@ namespace eae
             }
         }
 
-        // goal found, coordinate exploration with other robots
+        // goal found, move there
         else{
-            cord->FrontierAuction(goal, bid);
+            SetGoal(goal);
         }
     }
 
@@ -265,12 +262,8 @@ namespace eae
                         // stop moving
                         pos->Stop();
 
-                        // go to next goal if there is one
-                        if(GoalQueue())
-                            SetGoalNext();
-
                         // find a new goal if the robot is exploring
-                        else if(state == STATE_EXPLORE)
+                        if(state == STATE_EXPLORE)
                             Explore();
 
                         // it just didn't work, go on a straight line towards goal
@@ -310,7 +303,7 @@ namespace eae
         }
     }
 
-    void Robot::SetGoal(Pose to, double bid)
+    void Robot::SetGoal(Pose to)
     {
         // robot is at current goal
         // or does not have a goal
@@ -322,99 +315,16 @@ namespace eae
             // store previous goal
             goal_prev = goal;
 
-            // goal in queue
-            if(GoalQueue()){
-                // go to goal in queue
-                goal = goal_next;
-                goal_next_bid = BID_INV;
-
-                // enqueue new goal
-                goal_next = to;
-                goal_next_bid = bid;
-            }
-
-            // no goal in queue, go to new goal
-            else{
-                goal = to;
-            }
+            // go to new goal
+            goal = to;
 
             // move towards goal
             Move(true);
-        }
-
-        // store as next goal only
-        // - if my bid is higher than for the other goal already stored
-        // - if robot needs recharging (goal should be a docking station)
-        else if(GoalQueue() == false || goal_next_bid < bid || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE){
-            if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
-                printf("[%s:%d] [robot %d]: enqueue goal (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, to.x, to.y);
-            goal_next = to;
-            goal_next_bid = bid;
         }
         else{
             if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
                 printf("[%s:%d] [robot %d]: discard goal (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, to.x, to.y);
         }
-    }
-
-    void Robot::SetGoalNext()
-    {
-        if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
-            printf("[%s:%d] [robot %d]: set goal next (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, goal_next.x, goal_next.y);
-
-        // store previous goal
-        goal_prev = goal;
-
-        // set new goal
-        goal = goal_next;
-
-        // invalidate next goal
-        goal_next_bid = BID_INV;
-
-        // start moving there
-        Move(true);
-    }
-
-    double Robot::CalcBid(Pose frontier)
-    {
-        if(!ds)
-            return BID_INV;
-
-        Pose pose = pos->GetPose();
-
-        // calculate distances
-        int dg = Distance(frontier.x, frontier.y);
-        if(dg < 0)
-            return BID_INV;
-        int dgb = map->Distance(frontier.x, frontier.y, ds->pose.x, ds->pose.y);
-        if(dgb < 0)
-            return BID_INV;
-
-        // no reachable frontier
-        if(RemainingDist() <= dg + dgb)
-            return BID_INV;
-
-        // calculate energy aware parameter
-        double dgbe = 0;
-        if(W3 != 0){
-            if(pos->FindPowerPack()->ProportionRemaining() > CHARGE_TURN)
-                dgbe = -dgb;
-            else
-                dgbe = dgb;
-        }
-
-        // calculate angular parameter
-        double theta = 0;
-        if(W4 != 0)
-            theta = 1/PI * (PI - abs(abs(pose.a - Angle(pose.x, pose.y, frontier.x, frontier.y)) - PI));
-
-        // calculate distance to other robot's goals
-        double dr = 0;
-        if(W5 != 0)
-            dr = -cord->DistRobot(frontier);
-
-        // calculate bid
-        return -(W1*dg + W2*dgb + W3*dgbe + W4*theta + W5*dr);
     }
 
     bool Robot::Plan(Pose start_pose, Pose goal_pose)
@@ -477,12 +387,7 @@ namespace eae
         return ds;
     }
 
-    bool Robot::GoalQueue()
-    {
-        return goal_next_bid != BID_INV;
-    }
-
-    void Robot::Dock(Ds* ds, double bid)
+    void Robot::Dock(Ds* ds)
     {
         // invalid docking station
         if(!ds)
@@ -503,10 +408,10 @@ namespace eae
 
         this->ds = ds;
         state = STATE_GOING_CHARGING;
-        SetGoal(ds->pose, bid);
+        SetGoal(ds->pose);
     }
 
-    void Robot::DockQueue(Ds* ds, double bid)
+    void Robot::DockQueue(Ds* ds)
     {
         // invalid docking station
         if(!ds)
@@ -521,7 +426,7 @@ namespace eae
 
         this->ds = ds;
         state = STATE_CHARGE_QUEUE;
-        SetGoal(ds->pose, bid);
+        SetGoal(ds->pose);
         waiting_start = pos->GetWorld()->SimTimeNow() / 1000000;
     }
 
@@ -544,9 +449,6 @@ namespace eae
 
         // docking station is free now
         cord->DsVacant(ds->id);
-
-        // invalidate any previous goals
-        goal_next_bid = BID_INV;
 
         // continue exploration
         state = STATE_EXPLORE;
@@ -637,11 +539,8 @@ namespace eae
         vector< vector<int> >::iterator it;
         for(it=frontiers.end()-1; it>=frontiers.begin(); --it){
             // remove frontier if it has been auctioned already
-            if(cord->OldFrontier(Pose(it->at(0), it->at(1), 0, 0))){
-                frontiers.erase(it);
-                continue;
-            }
-
+            // TODO
+            
             // calculate distance
             double dist1 = map->Distance(pos.x, pos.y, it->at(0), it->at(1));
             double dist2;
@@ -860,11 +759,6 @@ namespace eae
                     robot->ds->model->AddCallback(Model::CB_UPDATE, (model_callback_t)ChargingUpdate, robot);
                     robot->ds->model->Subscribe();
                 }
-
-                // next goal is docking station
-                else if(robot->GoalQueue() && robot->SamePoint(robot->goal_next, robot->ds->pose)){
-                    robot->SetGoalNext();
-                }
             }
 
             // robot waits for recharging at docking station
@@ -877,16 +771,6 @@ namespace eae
                     // coordinate docking station access
                     robot->cord->Recharge();
                 }
-
-                // next goal is docking station
-                else if(robot->GoalQueue() && robot->SamePoint(robot->goal_next, robot->ds->pose)){
-                    robot->SetGoalNext();
-                }
-            }
-
-            // go to next goal
-            else if(robot->GoalQueue()){
-                robot->SetGoalNext();
             }
 
             // continue exploration

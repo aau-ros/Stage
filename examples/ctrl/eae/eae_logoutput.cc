@@ -5,7 +5,7 @@ using namespace std;
 
 namespace eae
 {
-    LogOutput::LogOutput(ModelPosition* pos, int robot, string comm, int i_cord, string s_cord, int i_pol, string s_pol, double battery, string map)
+    LogOutput::LogOutput(ModelPosition* pos, int robot, string comm, int i_pol, string s_pol, double battery, string map)
     {
         // read from world file
         Worldfile* wf = pos->GetWorld()->GetWorldFile();
@@ -48,10 +48,6 @@ namespace eae
         ostringstream ss_dss;
         ss_dss << i_dss;
 
-        // coordination strategy index for directory name
-        ostringstream ss_cord;
-        ss_cord << i_cord;
-
         // policy index for directory name
         ostringstream ss_pol;
         ss_pol << i_pol;
@@ -61,7 +57,7 @@ namespace eae
         ss_con << d_con;
 
         // path to specific experiment directory
-        path += ss_robots.str() + "-" + ss_dss.str() + "-" + ss_cord.str() + "-" + ss_pol.str() + "-" + ss_con.str() + "/";
+        path += ss_robots.str() + "-" + ss_dss.str() + "-" + ss_pol.str() + "-" + ss_con.str() + "/";
 
         // create directory if it doesn't exist
         if(MkDir(path) == false)
@@ -87,7 +83,7 @@ namespace eae
 
         // write header
         stringstream output;
-        output << "# robot\t" << robot << endl << "# number of robots\t" << i_robots << endl << "# number of docking stations\t" << i_dss << endl << "# coordination type\t" << s_cord << endl << "# ds selection policy\t" << s_pol << endl << "# room connectivity\t" << d_con << endl << "# communication type\t" <<  comm << endl << "# battery capacity\t" << battery << endl << "# bitmap\t" << map << endl;
+        output << "# robot\t" << robot << endl << "# number of robots\t" << i_robots << endl << "# number of docking stations\t" << i_dss << endl << "# ds selection policy\t" << s_pol << endl << "# room connectivity\t" << d_con << endl << "# communication type\t" <<  comm << endl << "# battery capacity\t" << battery << endl << "# bitmap\t" << map << endl;
         Write(output.str());
         Write("time\tdistance\tarea\tx position\ty position\tstate\twaiting\tds\tmessages sent\tmessasges received\tbytes sent\tbytes received");
     }

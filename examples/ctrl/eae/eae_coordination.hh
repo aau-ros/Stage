@@ -143,32 +143,9 @@ namespace eae
         Coordination(ModelPosition* pos, Robot* robot);
 
         /**
-         * Start coordination of recharging at a docking station.
-         * If market based coordination is used, start an auction.
-         * Enqueue at docking station otherwise.
+         * Start enqueueing at docking station.
          */
         void Recharge();
-
-        /**
-         * Initiate an auction for distributing frontiers amongst robots.
-         *
-         * @param Pose frontier: The position of the frontier.
-         * @param double bid: The bid for the auction.
-         */
-        void FrontierAuction(Pose frontier, double bid);
-
-        /**
-         * Initiate an auction for assigning robots to docking stations.
-
-         * @return: Success of auction generation. True if new auction was started,
-         * false if there was not enough time since last auction for the same docking station.
-         */
-        bool DockingAuction();
-
-        /**
-         * Start docking station queue. It is used for greedy coordination.
-         */
-        void DockingQueue();
 
         /**
          * Send a map update to the other robots containing the complete map.
@@ -181,15 +158,6 @@ namespace eae
          * @param GridMap* local: The map to send.
          */
         void BroadcastMap(GridMap* local);
-
-        /**
-         * Returns the distance from a given pose to the closest goal another robot has been to.
-         *
-         * @param Pose pose: The pose to calculate the distance from.
-         *
-         * @return double: The distance to the closest goal.
-         */
-        double DistRobot(Pose pose);
 
         /**
          * Update or add a docking station to the private vector.
@@ -228,34 +196,11 @@ namespace eae
         bool Finished();
 
         /**
-         * Check if a frontier has already been auctioned.
-         *
-         * @param Pose frontier: The frontier to check.
-         *
-         * @return bool: True if the frontier is in the list of auctioned frontiers.
-         */
-        bool OldFrontier(Pose frontier);
-
-        /**
          * Get the wifi model.
          *
          * @return string: The name of the wifi model.
          */
         string GetWifiModel();
-
-        /**
-         * Get the coordination strategy.
-         *
-         * @return cord_t: The index of the coordination strategy.
-         */
-        cord_t GetStrategy();
-
-        /**
-         * Get the coordination strategy.
-         *
-         * @return string: A string describing the coordination strategy.
-         */
-        string GetStrategyString();
 
         /**
          * Get the policy for selecting docking stations.
@@ -352,15 +297,6 @@ namespace eae
         Ds* ConnectedDs(double range);
 
         /**
-         * Get docking station that results from a combination of the other policies.
-         *
-         * @param double range: The range of the robot.
-         *
-         * @return Ds*: Pointer to the docking station.
-         */
-        Ds* CombinedDs(double range);
-
-        /**
          * Get docking station from evolved candidate controller.
          *
          * @param double range: The range of the robot.
@@ -386,40 +322,6 @@ namespace eae
         void UpdateMap(GridMap* map);
 
         /**
-         * Update the information of a frontier auction in the private vector.
-         *
-         * @param int id: ID of the auction.
-         * @param int robot: ID of robot giving a bid.
-         * @param double bid: Bid of the robot.
-         * @param Pose frontier: Frontier that is at auction.
-         */
-        void UpdateFrAuction(int id, int robot, double bid, Pose frontier);
-
-        /**
-         * Update the information of a docking station auction in the private vector.
-         *
-         * @param int id: ID of the auction.
-         * @param int robot: ID of robot giving a bid.
-         * @param int ds: ID of the docking station.
-         * @param double bid: Bid of the robot.
-         */
-        void UpdateDsAuction(int id, int robot, int ds, double bid);
-
-        /**
-         * Check frontier auctions.
-         * If this robot is winner of an auction that timed out, take action.
-         *
-         * @return bool: True if this robot is idle after checking the auctions.
-         */
-        bool CheckFrontierAuctions();
-
-        /**
-         * Check docking station auctions.
-         * If this robot is winner of an auction that timed out, take action.
-         */
-        void CheckDsAuctions();
-
-        /**
          * Check whether this robot is queueing for recharging
          * and is located at the docking station.
          *
@@ -428,53 +330,13 @@ namespace eae
         bool Queueing();
 
         /**
-         * Update number of robots in queue (for greedy coordination).
+         * Update number of robots in queue at a docking station.
          *
          * @param int to: The robot addressed by this queue message.
          * @param int from: The robot that sent this queue message.
          * @param int ds_id: The docking station in question.
          */
         void UpdateQueue(int to, int from, int ds_id);
-
-        /**
-         * Store a new frontier auction in the private vector.
-         *
-         * @param int id: ID of the auction.
-         * @param double bid: Bid for the auction.
-         * @param int initiator: ID of the robot who started the auction.
-         * @param int winner: ID of the current highest bidder.
-         * @param usec_t time: Timestamp of the auction.
-         * @param bool open: Whether or not the auction is still running.
-         * @param Pose pose: Position of the frontier.
-         */
-        void StoreNewFrAuction(int id, double bid, int initiator, int winner, usec_t time, bool open, Pose pose);
-
-        /**
-         * Store a new docking station auction in the private vector.
-         *
-         * @param int id: ID of the auction.
-         * @param double bid: Bid for the auction.
-         * @param int initiator: ID of the robot who started the auction.
-         * @param int winner: The current highest bidder.
-         * @param usec_t time: Timestamp of the auction.
-         * @param bool open: Whether or not the auction is still running.
-         * @param int ds_id: ID of the docking station.
-         */
-        void StoreNewDsAuction(int id, double bid, int initiator, int winner, usec_t time, bool open, int ds_id);
-
-        /**
-         * Send a broadcast message for a frontier auction.
-         *
-         * @param int id: ID of the auction.
-         */
-        void BroadcastFrAuction(int id);
-
-        /**
-         * Send a broadcast message for a docking station auction.
-         *
-         * @param int id: ID of the auction.
-         */
-        void BroadcastDsAuction(int id);
 
         /**
          * Send a broadcast message about queueing status for greedy coordination.
@@ -522,15 +384,6 @@ namespace eae
         void DsOccupied(int id);
 
         /**
-         * Calculate the bid for a docking station.
-         *
-         * @param int ds: The ID of the docking station.
-         *
-         * @return double: The bid.
-         */
-        double DockingBid(int ds);
-
-        /**
          * Callback function that is called when the wifi model is updated (happens frequently).
          *
          * @param ModelWifi* wifi: The instantiated wifi model of the robot.
@@ -547,11 +400,6 @@ namespace eae
          * @param void* coordination: Pointer to the coordination class.
          */
         static void ProcessMessage(WifiMessageBase* incoming, void* coordination);
-
-        /**
-         * The coordination strategy for coordinating the recharging at docking stations.
-         */
-        cord_t strategy;
 
         /**
          * The policy for selecting a docking station for recharging.
@@ -582,16 +430,6 @@ namespace eae
          * Vector containing all docking stations.
          */
         vector<Ds*> dss;
-
-        /**
-         * Vector containing all frontier auctions this robot participated in.
-         */
-        vector<fr_auction_t> fr_auctions;
-
-        /**
-         * Vector containing all docking station auctions this robot participated in.
-         */
-        vector<ds_auction_t> ds_auctions;
 
         /**
          * Description of docking station queue.

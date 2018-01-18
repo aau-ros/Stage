@@ -29,14 +29,12 @@ namespace eae
          * @param ModelPosition* pos: The instantiated position model of the robot.
          * @param int robot: Id of robot owning this object, used for log file name.
          * @param string comm: The communication model used for the wifi connections.
-         * @param int i_cord: The coordination strategy.
-         * @param string s_cord: The coordination strategy as a string.
          * @param int i_pol: The policy for selecting docking stations.
          * @param string s_pol: The policy for selecting docking stations as a string.
          * @param double battery: The battery capacity.
          * @param string map: The name of the bitmap of the underlying map.
          */
-        LogOutput(ModelPosition* pos, int robot, string comm, int i_cord, string s_cord, int i_pol, string s_pol, double battery, string map);
+        LogOutput(ModelPosition* pos, int robot, string comm, int i_pol, string s_pol, double battery, string map);
 
         /**
          * Destructor.

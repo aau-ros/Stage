@@ -15,7 +15,7 @@ namespace swarm
     /**
      * Folder for log files inside home directory. Create this folder beforehand, subdirectories are automatically created. Keep trailing slash.
      */
-    const string LOG_PATH = "stage_log/";
+    const string LOG_PATH = "Programs/Stage/log/";
 
     /**
      * A class for logging data.

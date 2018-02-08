@@ -13,6 +13,10 @@ namespace swarm
         // read from world file
         Worldfile* wf = pos->GetWorld()->GetWorldFile();
 
+        // read simulation identifier
+        string s_simulation = "";
+        s_simulation = wf->ReadString(0, "simulation", s_simulation);
+
         // read number of robots
         int i_robots = 0;
         i_robots = wf->ReadInt(0, "robots", i_robots);
@@ -25,15 +29,8 @@ namespace swarm
         int run = 0;
         run = wf->ReadInt(0, "run", run);
 
-        // get current time
-        std::time_t now = time(NULL);
-        struct tm* timeinfo;
-        timeinfo = localtime(&now);
-
-        // path to day directory
-        char dir[11];
-        strftime(dir, 11, "%y-%m-%d/", timeinfo);
-        string path = string(getenv("HOME")) + "/" + LOG_PATH + string(dir);
+        // path to log directory
+        string path = string(getenv("HOME")) + "/" + LOG_PATH;
 
         // create directory if it doesn't exist
         if(MkDir(path) == false)
@@ -48,7 +45,7 @@ namespace swarm
         ss_dss << i_dss;
 
         // path to specific experiment directory
-        path += ss_robots.str() + "-" + ss_dss.str() + "/";
+        path += ss_robots.str() + "-" + ss_dss.str() + "-" + s_simulation + "/";
 
         // create directory if it doesn't exist
         if(MkDir(path) == false)

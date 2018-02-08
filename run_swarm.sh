@@ -7,6 +7,7 @@ function usage(){
     echo -e "Make sure not to run multiple instances of this script with the exact same parameters!\n"
     echo -e "Options:"
     echo -e "\t-h, --help\t\tPrint this help."
+    echo -e "\t-s, --simulation\tUnique identifier for this simulation."
     echo -e "\t-r, --robots\t\tNumber of robots, max 8, mandatory."
     echo -e "\t-d, --docking-stations\tNumber of docking stations, max 9, mandatory."
     echo -e "\t-m, --map\t\tStart simulation from this map."
@@ -15,10 +16,10 @@ function usage(){
 }
 
 # define command line options
-opts=$(getopt -o hr:d:m:g --long help,robots:,docking-stations:,map:,gui -n 'run_swarm.sh' -- "$@")
+opts=$(getopt -o hs:r:d:m:g --long help,simulation:,robots:,docking-stations:,map:,gui -n 'run_swarm.sh' -- "$@")
 
 # mandatory command line options
-mandatory=(-r -d)
+mandatory=(-s -r -d)
 
 # print help for unknown option
 if [ $? != 0 ]
@@ -44,6 +45,8 @@ while true ; do
 
     # extract option and its argument into a variable
     case "$1" in
+        -s|--simulation)
+            simulation=$2 ; shift 2 ;;
         -r|--robots)
             robots=$2 ; shift 2 ;;
         -d|--docking-stations)
@@ -110,6 +113,7 @@ do
     world="include \"swarm.inc\"\n\n"
 
     # add settings to world file
+    world+="simulation \"$simulation\"\n"
     world+="robots $robots\n"
     world+="docking_stations $ds\n"
     world+="\n"
@@ -138,7 +142,7 @@ do
     world+=")\n"
 
     # world file path
-    file="worlds/swarm_${robots}_${ds}.world"
+    file="worlds/swarm_${robots}_${ds}_${simulation}.world"
 
     # write contents to world file
     echo -e ${world} > $file

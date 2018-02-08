@@ -112,6 +112,7 @@ do
     # add settings to world file
     world+="robots $robots\n"
     world+="docking_stations $ds\n"
+    world+="\n"
 
     # add robots to world file
     for (( j=1; j<=${robots}; j++ ))
@@ -133,6 +134,7 @@ do
     world+="\tpose [100 0 0 0]\n"
     world+="\tsize [250 50 1]\n"
     world+="\tbitmap \"bitmaps/lines_${i}.png\"\n"
+    world+="\tobstacle_return 1\n"
     world+=")\n"
 
     # world file path

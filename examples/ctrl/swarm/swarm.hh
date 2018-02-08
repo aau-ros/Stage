@@ -30,7 +30,7 @@ namespace swarm
     /**
      * Distance that the robot can be away from goal.
      */
-    const double GOAL_TOLERANCE = 1;
+    const double GOAL_TOLERANCE = 1.41;
 
     /**
      * Math constant π.
@@ -82,8 +82,18 @@ namespace swarm
     const string STATE_STRING[] = {"undefined", "init", "idle", "explore", "charge queue", "precharge", "going charging", "charge", "dead", "finished"};
 
     /**
+     * Wifi message types.
+     */
+    typedef enum{
+        MSG_UNDEFINED = 0,
+        MSG_ROBOT,
+        MSG_DS
+    } msg_type_t;
+
+    /**
      * Forward class declarations.
      */
+    class Coordination;
     class Edge;
     class Node;
     class Graph;
@@ -91,6 +101,9 @@ namespace swarm
     class GridMap;
     class LogOutput;
     class Robot;
+    class WifiMessage;
+    class WifiMessageRobot;
+    class WifiMessageDs;
 
     /**
      * Remove the path from a file name.

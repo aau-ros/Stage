@@ -2,9 +2,12 @@
 #define SWARM_ROBOT_H
 
 #include "swarm.hh"
+#include "swarm_coordination.hh"
+#include "swarm_ds.hh"
 #include "swarm_graph.hh"
 #include "swarm_gridmap.hh"
 #include "swarm_logoutput.hh"
+#include "swarm_wifimessage.hh"
 
 using namespace Stg;
 using namespace std;
@@ -55,9 +58,20 @@ namespace swarm
     const double EPSILON = 0.1;
     
     /**
-     * Number of directions for which to compute inputs for evolutionary controller.
+     * Number of sectors for which to compute inputs for evolutionary controller.
      */
-    const int DIRECTIONS = 4;
+    const int SECTORS = 4;
+
+    /**
+     * TODO: Obstacle avoidance.
+     */
+    /*static const double cruisespeed = 0.4;
+    static const double avoidspeed = 0.05;
+    static const double avoidturn = 0.5;
+    static const double minfrontdistance = 1.2; // 0.6
+    static const double stopdist = 0.3;
+    static const int avoidduration = 10;
+    static const double frontsector = PI / 2;*/
 
     /**
      * A class that defines the behavior of a robot.
@@ -247,13 +261,6 @@ namespace swarm
         void Finalize();
 
         /**
-         * Set the motor velocities and avoid obstacles.
-         *
-         * @param double direction: The relative direction the robot would go without obstacles.
-         */
-        void SetMotorSpeed(double direction);
-
-        /**
          * Get the name of the bitmap of the underlying map.
          *
          * @return string: The name of the map.
@@ -261,16 +268,23 @@ namespace swarm
         string MapName();
         
         /**
-         * Compute the obstacle density in a given direction using the laser scan.
-         * This is the relative number of occupied pixels.
+         * Compute the obstacle density in a given sector using the laser scan.
+         * Assumption: 360° FOV.
+         * 
+         * @param int sector: The sector for which to compute the density, 0 starts from behind in mathematically positive direction.
+         * @return double: The number of occupied samples (i.e. range < laser range) relative to the total number of samples in a sector.
+         * @todo: Take into account the distance of the obstacle, i.e. range.
          */
-        double ObstacleDensity(int direction);
+        double ObstacleDensity(int sector);
         
         /**
-         * Compute the robot density in a given direction using radio? laser scan?.
-         * This is the number of robots in each direction relative to all known robots.
+         * Compute the robot density in a given sector using positions retrieved over wifi.
+         * 
+         * @param int sector: The sector for which to compute the density, 0 starts from behind in mathematically positive direction.
+         * @return double: The number of robots in each direction relative to all known robots.
+         * @todo: Take into account the distance of the robots.
          */
-        double RobotDensity(int direction);
+        double RobotDensity(int sector);
 
         /**
          * Callback function that is called when the robot changes position.
@@ -339,6 +353,11 @@ namespace swarm
         ModelPosition* pos;
 
         /**
+         * The coordination object.
+         */
+        Coordination* cord;
+
+        /**
          * The camera object that is used for visualization.
          */
         OrthoCamera* cam;
@@ -403,6 +422,12 @@ namespace swarm
          * Number of robots in the simulation.
          */
         int num_robots;
+        
+        /**
+         * TODO: Obstacle avoidance.
+         */
+         /*int avoidcount;
+         int randcount;*/
     };
 }
 

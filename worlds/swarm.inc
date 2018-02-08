@@ -51,7 +51,7 @@ define charging_bump model
     color "orange"
 
     # cannot collide with other obstacles
-    obstacle_return 0
+    obstacle_return 1
 
     # fiducial sensor
     fiducial(
@@ -92,7 +92,7 @@ define robot pioneer3dx_no_sonar
     fiducial_return 0
 
     # cannot collide with other obstacles
-    obstacle_return 0
+    obstacle_return 1
 
     # charging connector
     charging_bump()
@@ -101,7 +101,7 @@ define robot pioneer3dx_no_sonar
     wifi(
         essid "robotnet"
         model "simple"
-        range 200 # set to ~half of robot range
+        range 20
     )
 
     # lidar

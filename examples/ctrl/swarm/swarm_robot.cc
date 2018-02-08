@@ -19,6 +19,7 @@ namespace swarm
         fid = (ModelFiducial*)pos->GetUnusedModelOfType("fiducial");
         laser = (ModelRanger*)pos->GetChild("ranger:0");
         map = new GridMap(pos, id);
+        cord = new Coordination(pos, this);
         log = new LogOutput(pos, id, pos->FindPowerPack()->GetCapacity(), MapName());
         cam = new OrthoCamera();
         wpcolor = Color(0,1,0); // waypoint color is green
@@ -60,6 +61,10 @@ namespace swarm
         // waiting time at docking stations
         waiting_time = 0;
         waiting_start = 0;
+        
+        // TODO: Obstacle avoidance
+        /*avoidcount = 0;
+        randcount = 0;*/
     }
 
     Robot::~Robot()
@@ -110,27 +115,28 @@ namespace swarm
         
         // robot battery charge percentage [0,1]
         //in[0] = robot->pos->FindPowerPack()->ProportionRemaining();
-        // obstacle density in all directions
+        // obstacle density in all sectors
         in[0] = ObstacleDensity(0);
         in[1] = ObstacleDensity(1);
         in[2] = ObstacleDensity(2);
         in[3] = ObstacleDensity(3);
-        // robot density in all directions
+        // robot density in all sectors
         in[4] = RobotDensity(0);
         in[5] = RobotDensity(1);
         in[6] = RobotDensity(2);
         in[7] = RobotDensity(3);
-        // charging point density in all directions
+        // charging point density in all sectors
         // battery charge
 
         if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id))){
             printf("[%s:%d] [robot %d]: neural network inputs\n", StripPath(__FILE__), __LINE__, id);
             printf("[%s:%d] [robot %d]: obstacle densities: [%.2f, %.2f, %.2f, %.2f]\n", StripPath(__FILE__), __LINE__, id, in[0], in[1], in[2], in[3]);
+            printf("[%s:%d] [robot %d]: robot densities: [%.2f, %.2f, %.2f, %.2f]\n", StripPath(__FILE__), __LINE__, id, in[4], in[5], in[6], in[7]);
         }
         
         // use candidate to get goal direction
         Result out = getOutput(in, 8);
-        double dir = out.output[0] * PI;
+        radians_t dir = out.output[0] * PI;
         
         // initialize goal with curren pose
         Pose goal = pos->GetPose();
@@ -156,14 +162,122 @@ namespace swarm
             
             // current pose
             Pose pose = pos->GetPose();
-
-            // get angular velocity to reach next node on path
-            double a_goal, a_error;
+            
+            // velocities
+            double x_speed = 0;
+            double turn_speed = 0;
+            
+            // get direction for following path
+            double a_goal;
             path->GoodDirection(pose, 2, a_goal);
-            a_error = normalize(a_goal - pose.a);
+            
+            // direction in robot coordinates
+            a_goal -= pose.a;
 
-            // set velocities and avoid obstacles
-            SetMotorSpeed(a_error);
+            // turn by angle, normalized within [-π,π]
+            turn_speed = normalize(a_goal);
+            
+            /* OBSTACLE AVOIDANCE
+            // get laser scan samples
+            const vector<meters_t>& scan = laser->GetSensors()[0].ranges;
+            uint32_t sample_count = scan.size();
+
+            // init with no obstacles
+            bool obstruction = false;
+            bool stop = false;
+            
+            // get samples that will be ahead if robot turns
+            unsigned int front = a_goal / (2*PI / sample_count) + sample_count / 2;
+            unsigned int front_min = (a_goal - frontsector/2) / (2*PI / sample_count) + sample_count / 2;
+            unsigned int front_max = (a_goal + frontsector/2) / (2*PI / sample_count) + sample_count / 2;
+
+            if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id))){
+                printf("[%s:%d] [robot %d]: goal direction: %.2f\n", StripPath(__FILE__), __LINE__, id, a_goal);
+                printf("[%s:%d] [robot %d]: goal sample: %d < %d < %d\n", StripPath(__FILE__), __LINE__, id, front_min, front, front_max);
+            }
+
+            // find the closest distance to the left and right and check if there's anything in front
+            double minleft = 1e6;
+            double minright = 1e6;
+
+            // check the laser scan for obstacles ahead
+            for(uint32_t i = 0; i < sample_count; i++){
+                // there is an obstacle ahead
+                if(i > front_min && i < front_max && scan[i] < minfrontdistance){
+                    obstruction = true;
+
+                    // the obstacle is very close
+                    if(scan[i] < stopdist){
+                        stop = true;
+                    }
+                }
+
+                // closest obstacle on the left and on the right half of the scan
+                if(i > front)
+                    minleft = min(minleft, scan[i]);
+                else
+                    minright = min(minright, scan[i]);
+            }
+
+            if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id))){
+                printf("[%s:%d] [robot %d]: min left: %.2f\n", StripPath(__FILE__), __LINE__, id, minleft);
+                printf("[%s:%d] [robot %d]: min right: %.2f\n", StripPath(__FILE__), __LINE__, id, minright);
+            }
+            
+            if(obstruction || stop || (avoidcount > 0)){
+                x_speed = stop ? 0.0 : avoidspeed;
+
+                // once we start avoiding, select a turn direction and stick with it for a few iterations
+                if(avoidcount < 1)
+                {
+                    avoidcount = random() % avoidduration + avoidduration;
+
+                    if(minleft < minright){
+                        turn_speed = -avoidturn;
+                    }
+                    else{
+                        turn_speed = +avoidturn;
+                    }
+                }
+
+                avoidcount--;
+            }
+            else{
+                //avoidcount = 0;
+                //pos->SetXSpeed( cruisespeed );
+                //pos->SetTurnSpeed(  0 );
+
+                // normalize angle to be within [-π,π]
+                turn_speed = normalize(a_goal);
+
+                // calculate forward speed according to turning speed
+                // the more the robot turns, the slower it goes forward
+                if(abs(turn_speed) < 0.5)
+                    x_speed = cruisespeed;
+                else if(0.5 <= abs(turn_speed) && abs(turn_speed) < 1.5)
+                    x_speed = cruisespeed * (1.5 - abs(turn_speed));
+                else
+                    x_speed = 0;
+            }
+
+            if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id))){
+                printf("[%s:%d] [robot %d]: x speed: %.2f\n", StripPath(__FILE__), __LINE__, id, x_speed);
+                printf("[%s:%d] [robot %d]: turn speed: %.2f\n", StripPath(__FILE__), __LINE__, id, turn_speed);
+            }
+            */
+            
+            // calculate forward speed according to turning speed
+            // the more the robot turns, the slower it goes forward
+            if(abs(turn_speed) < 0.5)
+                x_speed = pos->velocity_bounds->max;
+            else if(0.5 <= abs(turn_speed) && abs(turn_speed) < 1.5)
+                x_speed = pos->velocity_bounds->max * (1.5 - abs(turn_speed));
+            else
+                x_speed = 0;
+
+            // set speed
+            pos->SetXSpeed(x_speed);
+            pos->SetTurnSpeed(turn_speed);
         }
     }
 
@@ -334,7 +448,8 @@ namespace swarm
 
     void Robot::Log()
     {
-        log->Log(pos->GetWorld()->SimTimeNow(), dist_travel, map->Explored(), goal.x, goal.y, STATE_STRING[state], waiting_time, map);//, map->Rasterize(), map->Width(), map->Height());
+        // TODO: log message statistics?
+        log->Log(pos->GetWorld()->SimTimeNow(), dist_travel, map->Explored(), goal.x, goal.y, STATE_STRING[state], waiting_time, map);
     }
 
     void Robot::Finalize()
@@ -348,28 +463,9 @@ namespace swarm
         // log data
         Log();
 
-        // pause simulation
-        pos->GetWorld()->Stop();
-    }
-
-    void Robot::SetMotorSpeed(double direction)
-    {
-        // speed of the robot
-        double turn_speed = direction;
-        double x_speed;
-
-        // calculate forward speed according to turning speed
-        // the more the robot turns, the slower it goes forward
-        if(abs(turn_speed) < 0.5)
-            x_speed = pos->velocity_bounds->max;
-        else if(0.5 <= abs(turn_speed) && abs(turn_speed) < 1.5)
-            x_speed = pos->velocity_bounds->max * (1.5 - abs(turn_speed));
-        else
-            x_speed = 0;
-
-        // set speed
-        pos->SetXSpeed(x_speed);
-        pos->SetTurnSpeed(turn_speed);
+        // pause if all other robots finished already
+        if(cord->Finished())
+            pos->GetWorld()->Stop();
     }
 
     string Robot::MapName()
@@ -383,7 +479,7 @@ namespace swarm
         return name;
     }
     
-    double Robot::ObstacleDensity(int direction)
+    double Robot::ObstacleDensity(int sector)
     {
         // get lidar sensor object
         ModelRanger::Sensor lidar = laser->GetSensors()[0];
@@ -392,9 +488,9 @@ namespace swarm
         vector<meters_t> scan = lidar.ranges;
         vector<meters_t>::iterator it;
         
-        // portion of scan that belongs to a specific direction
-        vector<meters_t>::iterator begin = scan.begin() + direction * lidar.sample_count / DIRECTIONS;
-        vector<meters_t>::iterator end = scan.begin() + (direction + 1) * lidar.sample_count / DIRECTIONS - 1;
+        // portion of scan that belongs to a specific sector
+        vector<meters_t>::iterator begin = scan.begin() + sector * lidar.sample_count / SECTORS;
+        vector<meters_t>::iterator end = scan.begin() + (sector + 1) * lidar.sample_count / SECTORS - 1;
         
         // count occupied samples
         double occupied = 0;
@@ -404,13 +500,20 @@ namespace swarm
         }
         
         // return density
-        return occupied / (lidar.sample_count / DIRECTIONS);
+        return occupied / (lidar.sample_count / SECTORS);
     }
     
-    double Robot::RobotDensity(int direction)
+    double Robot::RobotDensity(int sector)
     {
-        // TODO: also description in header file
-        return 0.0;
+        // total number of robots in range
+        int num_robots = cord->NumRobots();
+        
+        // no robots there
+        if(num_robots == 0)
+            return 0;
+        
+        // compute density
+        return (double) cord->NumRobots(sector * 2*PI / SECTORS, (sector + 1) * 2*PI / SECTORS) / (double) num_robots;
     }
 
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)
@@ -485,7 +588,6 @@ namespace swarm
 
     int Robot::FiducialUpdate(ModelFiducial* fid, Robot* robot)
     {
-        /*
         // get all fiducials
         vector<ModelFiducial::Fiducial>& fids = fid->GetFiducials();
         vector<ModelFiducial::Fiducial>::iterator it;
@@ -494,7 +596,6 @@ namespace swarm
         for(it = fids.begin(); it<fids.end(); ++it){
             robot->cord->UpdateDs(it->id, it->pose);
         }
-        */
 
         return 0; // run again
     }

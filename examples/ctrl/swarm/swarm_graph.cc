@@ -96,7 +96,8 @@ namespace swarm
         }
 
         if(best_node == NULL){
-            printf("[%s:%d] [robot %d]: path planner: no nodes in range\n", StripPath(__FILE__), __LINE__, robot);
+            if(InArray(robot, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(robot)))
+                printf("[%s:%d] [robot %d]: path planner: no nodes in range\n", StripPath(__FILE__), __LINE__, robot);
             return false;
         }
 

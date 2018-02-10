@@ -204,9 +204,9 @@ namespace eae
         }
 
         // x index out of bounds, extend vector in x dimension
-        if(x_max < x){
+        if(x_max <= x){
             // number of columns to add
-            int add = x - x_max;
+            int add = x - x_max + 1;
             // column containing unknown values
             vector<grid_cell_v> col(y_dim, CELL_UNKNOWN);
             // add column
@@ -235,9 +235,9 @@ namespace eae
         }
 
         // y index out of bounds, extend vector in y dimension
-        if(y_max < y){
+        if(y_max <= y){
             // number of elements to add to both sides of each column
-            int add = y - y_max;
+            int add = y - y_max + 1;
             // add elements to every column
             for(it=grid.begin(); it<grid.end(); ++it){
                 for(int i=0; i<add; ++i){

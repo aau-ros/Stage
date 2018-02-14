@@ -134,17 +134,28 @@ namespace swarm
             printf("[%s:%d] [robot %d]: robot densities: [%.2f, %.2f, %.2f, %.2f]\n", StripPath(__FILE__), __LINE__, id, in[4], in[5], in[6], in[7]);
         }
         
-        // use candidate to get goal direction
+        // use candidate to get coordinates for next goal
         Result out = getOutput(in, 8);
-        radians_t dir = out.output[0] * PI;
         
         // initialize goal with curren pose
         Pose goal = pos->GetPose();
         
-        // calculate coordinates of goal in given direction
-        goal.x += (laser->GetSensors()[0].range.max / 2) * sin(dir);
-        goal.y += (laser->GetSensors()[0].range.max / 2) * cos(dir);
-
+        /**
+         * TODO output sectors are rotated 45° against x/y axes
+         */
+        // calculate coordinates of goal from given outputs
+        try{
+            if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id))){
+                printf("[%s:%d] [robot %d]: neural network output: [%.2f, %.2f, %.2f, %.2f]\n", StripPath(__FILE__), __LINE__, id, out.output[0], out.output[1], out.output[2], out.output[3]);
+            }
+            
+            goal.x += (laser->GetSensors()[0].range.max * 0.5) * (out.output[0] - out.output[2]);
+            goal.y += (laser->GetSensors()[0].range.max * 0.5) * (out.output[1] - out.output[99]);
+        }
+        catch(const out_of_range& e){
+            printf("[%s:%d] [robot %d]: neural network output has wrong size! shutting down...\n", StripPath(__FILE__), __LINE__, id);
+            Finalize();
+        }
         // goal found, move there
         SetGoal(goal);
     }

@@ -328,7 +328,7 @@ ModelWifi::ModelWifi( World* world, Model* parent, const std::string& type )
   //If it wasn't opened okay, then we'll rely on the standard fallback of using the time.  This isn't optimal in the least
   //and probably results in bad randomness on windows systems.  Oh well. :)
   FILE* f = fopen("/dev/random", "r");
-  if ( f  )
+  if ( /*f*/ false  )
   {
     unsigned int seed_data;
     size_t size = fread(&seed_data, sizeof(unsigned int), 1, f);

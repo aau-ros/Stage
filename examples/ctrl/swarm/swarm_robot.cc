@@ -150,7 +150,7 @@ namespace swarm
             }
             
             goal.x += (laser->GetSensors()[0].range.max * 0.5) * (out.output[0] - out.output[2]);
-            goal.y += (laser->GetSensors()[0].range.max * 0.5) * (out.output[1] - out.output[99]);
+            goal.y += (laser->GetSensors()[0].range.max * 0.5) * (out.output[1] - out.output[3]);
         }
         catch(const out_of_range& e){
             printf("[%s:%d] [robot %d]: neural network output has wrong size! shutting down...\n", StripPath(__FILE__), __LINE__, id);

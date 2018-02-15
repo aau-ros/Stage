@@ -25,6 +25,12 @@ namespace swarm
      * Tolerance when calculating the distance to the closest docking station.
      */
     const double DS_TOLERANCE = 2;
+    
+    /**
+     * Distance at which robots are considered close by.
+     * It is used for computing the robot density in a sector.
+     */
+    const double CLOSE_DIST = 2;
 
     /**
      * Robot type.
@@ -78,10 +84,15 @@ namespace swarm
         int NumRobots();
         
         /**
-         * Get the number of robots within a given direction of the robot.
+         * Compute the robot density in a given sector using positions retrieved over wifi.
          * This includes only robots from which a beacon has been received in twice the beacon timeout.
+         * 
+         * @param radians_t angle_min: The angle at which the sector starts.
+         * @param radians_t angle_max: The angle at which the sector ends.
+         * 
+         * @return float: The relative number of robots in a sector normalized to their distances.
          */
-        int NumRobots(radians_t angle_min, radians_t angle_max);
+        float RobotDensity(radians_t angle_min, radians_t angle_max);
 
         /**
          * Number of messages sent over wifi.

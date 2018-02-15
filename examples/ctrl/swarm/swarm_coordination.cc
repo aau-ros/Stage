@@ -89,14 +89,21 @@ namespace swarm
         return robots.size();
     }
     
-    int Coordination::NumRobots(radians_t angle_min, radians_t angle_max)
+    float Coordination::RobotDensity(radians_t angle_min, radians_t angle_max)
     {
-        // number of robots
+        // no robots there
+        if(NumRobots() == 0)
+            return 0;
+        
+        // number of robots in sector
         int num_robots = 0;
+        
+        // distances to robots in sector
+        meters_t distances = 0;
         
         // iterator
         vector<robot_t>::iterator it;
-                
+        
         // iterate through all robots
         for(it=robots.begin(); it<robots.end(); ++it){
             // offset between robots
@@ -118,12 +125,35 @@ namespace swarm
             if(2*PI <= angle)
                 angle -= 2*PI;
             
-            // count robots in given sector
-            if(angle_min <= angle && angle < angle_max)
+            // robots in given sector
+            if(angle_min <= angle && angle < angle_max){
+                // count robots
                 ++num_robots;
+                
+                // distance between robots
+                meters_t dist = hypot(dx, dy);
+                
+                // clip distance within reasonable range
+                if(dist < CLOSE_DIST)
+                    dist = 0;
+                if(dist > wifi->GetConfig()->GetRange())
+                    dist = wifi->GetConfig()->GetRange();
+                
+                // add distance between robots
+                distances += dist;
+            }
         }
         
-        return num_robots;
+        // robot density in sector
+        float density = (float)num_robots / (float)NumRobots();
+        
+        // normalize density with average distances
+        if(num_robots > 0)
+            density *= 1 - (float)distances / (num_robots * (float)wifi->GetConfig()->GetRange());
+        else
+            density = 0;
+        
+        return density;
     }
 
     string Coordination::GetWifiModel()

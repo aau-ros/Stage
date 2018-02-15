@@ -272,18 +272,19 @@ namespace swarm
          * Assumption: 360° FOV.
          * 
          * @param int sector: The sector for which to compute the density, 0 starts from behind in mathematically positive direction.
-         * @return double: The number of occupied samples (i.e. range < laser range) relative to the total number of samples in a sector.
+         * 
+         * @return float: The number of occupied samples (i.e. range < laser range) relative to the total number of samples in a sector.
          */
-        double ObstacleDensity(int sector);
+        float ObstacleDensity(int sector);
         
         /**
          * Compute the robot density in a given sector using positions retrieved over wifi.
          * 
          * @param int sector: The sector for which to compute the density, 0 starts from behind in mathematically positive direction.
-         * @return double: The number of robots in each direction relative to all known robots.
-         * @todo: Take into account the distance of the robots.
+         * 
+         * @return float: The relative number of robots in a sector normalized to their distances.
          */
-        double RobotDensity(int sector);
+        float RobotDensity(int sector);
 
         /**
          * Callback function that is called when the robot changes position.

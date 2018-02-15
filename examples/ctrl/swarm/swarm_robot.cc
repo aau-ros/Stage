@@ -495,7 +495,7 @@ namespace swarm
         return name;
     }
     
-    double Robot::ObstacleDensity(int sector)
+    float Robot::ObstacleDensity(int sector)
     {
         // get lidar sensor object
         ModelRanger::Sensor lidar = laser->GetSensors()[0];
@@ -509,27 +509,27 @@ namespace swarm
         vector<meters_t>::iterator end = scan.begin() + (sector + 1) * lidar.sample_count / SECTORS;
         
         // measure free space
-        double free = 0;
+        float free = 0;
+        int test_count = 0;
         
-        for(it = begin; it <= end && it < scan.end(); ++it){
-            free += *it;
+        for(it = begin; it < end && it < scan.end(); ++it){
+            ++test_count;
+            // clip lidar to valid ranges
+            if(*it < 0)
+                free += 0;
+            else if(lidar.range.max < *it)
+                free += (float)lidar.range.max;
+            else
+                free += *it;
         }
         
         // return density
-        return 1 - free / (lidar.sample_count * lidar.range.max / SECTORS);
+        return 1 - free / ((end - begin) * (float)lidar.range.max);
     }
     
-    double Robot::RobotDensity(int sector)
+    float Robot::RobotDensity(int sector)
     {
-        // total number of robots in range
-        int num_robots = cord->NumRobots();
-        
-        // no robots there
-        if(num_robots == 0)
-            return 0;
-        
-        // compute density
-        return (double) cord->NumRobots(sector * 2*PI / SECTORS, (sector + 1) * 2*PI / SECTORS) / (double) num_robots;
+        return cord->RobotDensity(sector * 2*PI / SECTORS, (sector + 1) * 2*PI / SECTORS);
     }
 
     int Robot::PositionUpdate(ModelPosition* pos, Robot* robot)

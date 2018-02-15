@@ -140,17 +140,22 @@ namespace swarm
         // initialize goal with curren pose
         Pose goal = pos->GetPose();
         
-        /**
-         * TODO output sectors are rotated 45° against x/y axes
-         */
         // calculate coordinates of goal from given outputs
         try{
             if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id))){
                 printf("[%s:%d] [robot %d]: neural network output: [%.2f, %.2f, %.2f, %.2f]\n", StripPath(__FILE__), __LINE__, id, out.output[0], out.output[1], out.output[2], out.output[3]);
             }
             
-            goal.x += (laser->GetSensors()[0].range.max * 0.5) * (out.output[0] - out.output[2]);
-            goal.y += (laser->GetSensors()[0].range.max * 0.5) * (out.output[1] - out.output[3]);
+            // angular offset between sectors and x/y axes
+            radians_t a = -PI / 4;
+            
+            // rotated x/y values from candidate outputs
+            meters_t xr = (laser->GetSensors()[0].range.max * 0.5) * (out.output[0] - out.output[2]);
+            meters_t yr = (laser->GetSensors()[0].range.max * 0.5) * (out.output[1] - out.output[3]);
+            
+            // rotate outputs to x/y axes
+            goal.x += xr * cos(a) - yr * sin(a);
+            goal.y += xr * sin(a) + yr * cos(a);
         }
         catch(const out_of_range& e){
             printf("[%s:%d] [robot %d]: neural network output has wrong size! shutting down...\n", StripPath(__FILE__), __LINE__, id);

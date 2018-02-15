@@ -551,7 +551,7 @@ void ModelPosition::Move(void)
   UnMapWithChildren(layer); // remove from all blocks
   MapWithChildren(layer); // render into new blocks
 
-  /*if (TestCollision()) // crunch!
+  if (TestCollision()) // crunch!
   {
     // put things back the way they were
     // this is expensive, but it happens _very_ rarely for most people
@@ -562,7 +562,7 @@ void ModelPosition::Move(void)
     SetStall(true);
   } else {
     SetStall(false);
-  }*/
+  }
 }
 
 void ModelPosition::Startup(void)

@@ -89,13 +89,18 @@ define robot pioneer3dx_no_sonar
     localization_origin [ 0 0 0 0 ]
 
     # cannot be detected by fiducial sensors
-    fiducial_return 0
+    fiducial_return -1
 
     # cannot collide with other obstacles
-    obstacle_return 1
+    obstacle_return 0
+    
+    # cannot be detected by range sensors
+    ranger_return -1
 
     # charging connector
-    charging_bump()
+    charging_bump(
+        obstacle_return 0
+    )
 
     # wifi interface (see ../libstage/model_wifi.cc)
     wifi(
@@ -112,7 +117,8 @@ define robot pioneer3dx_no_sonar
             fov 360 # field of view
         )
         color "blue"
-        ranger_return 1
+        ranger_return -1
+        obstacle_return 0
         watts 8
     )
 )
@@ -127,10 +133,10 @@ define docking_station model
     color "purple"
 
     # cannot be detected by a laser range finder
-    ranger_return -1
+    ranger_return 0
 
     # cannot collide with other obstacles
-    obstacle_return 0
+    obstacle_return -1
 
     # amount of stored energy (-1 is infinite)
     kjoules -1

@@ -506,17 +506,17 @@ namespace swarm
         
         // portion of scan that belongs to a specific sector
         vector<meters_t>::iterator begin = scan.begin() + sector * lidar.sample_count / SECTORS;
-        vector<meters_t>::iterator end = scan.begin() + (sector + 1) * lidar.sample_count / SECTORS - 1;
+        vector<meters_t>::iterator end = scan.begin() + (sector + 1) * lidar.sample_count / SECTORS;
         
-        // count occupied samples
-        double occupied = 0;
+        // measure free space
+        double free = 0;
+        
         for(it = begin; it <= end && it < scan.end(); ++it){
-            if(*it < lidar.range.max)
-                ++occupied;
+            free += *it;
         }
         
         // return density
-        return occupied / (lidar.sample_count / SECTORS);
+        return 1 - free / (lidar.sample_count * lidar.range.max / SECTORS);
     }
     
     double Robot::RobotDensity(int sector)

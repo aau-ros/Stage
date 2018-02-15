@@ -273,7 +273,6 @@ namespace swarm
          * 
          * @param int sector: The sector for which to compute the density, 0 starts from behind in mathematically positive direction.
          * @return double: The number of occupied samples (i.e. range < laser range) relative to the total number of samples in a sector.
-         * @todo: Take into account the distance of the obstacle, i.e. range.
          */
         double ObstacleDensity(int sector);
         

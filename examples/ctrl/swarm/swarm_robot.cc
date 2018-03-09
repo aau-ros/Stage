@@ -173,127 +173,8 @@ namespace swarm
 
         // move robot to frontier / docking station
         if(state == STATE_EXPLORE || state == STATE_GOING_CHARGING || state == STATE_CHARGE_QUEUE){
-            // go on a straight line towards goal
-            //pos->GoTo(goal);
-            
-            // current pose
-            Pose pose = pos->GetPose();
-            
-            // velocities
-            double x_speed = 0;
-            double turn_speed = 0;
-            
-            // get direction for following path
-            double a_goal;
-            path->GoodDirection(pose, 2, a_goal);
-            
-            // direction in robot coordinates
-            a_goal -= pose.a;
-
-            // turn by angle, normalized within [-π,π]
-            turn_speed = normalize(a_goal);
-            
-            /* OBSTACLE AVOIDANCE
-            // get laser scan samples
-            const vector<meters_t>& scan = laser->GetSensors()[0].ranges;
-            uint32_t sample_count = scan.size();
-
-            // init with no obstacles
-            bool obstruction = false;
-            bool stop = false;
-            
-            // get samples that will be ahead if robot turns
-            unsigned int front = a_goal / (2*PI / sample_count) + sample_count / 2;
-            unsigned int front_min = (a_goal - frontsector/2) / (2*PI / sample_count) + sample_count / 2;
-            unsigned int front_max = (a_goal + frontsector/2) / (2*PI / sample_count) + sample_count / 2;
-
-            if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id))){
-                printf("[%s:%d] [robot %d]: goal direction: %.2f\n", StripPath(__FILE__), __LINE__, id, a_goal);
-                printf("[%s:%d] [robot %d]: goal sample: %d < %d < %d\n", StripPath(__FILE__), __LINE__, id, front_min, front, front_max);
-            }
-
-            // find the closest distance to the left and right and check if there's anything in front
-            double minleft = 1e6;
-            double minright = 1e6;
-
-            // check the laser scan for obstacles ahead
-            for(uint32_t i = 0; i < sample_count; i++){
-                // there is an obstacle ahead
-                if(i > front_min && i < front_max && scan[i] < minfrontdistance){
-                    obstruction = true;
-
-                    // the obstacle is very close
-                    if(scan[i] < stopdist){
-                        stop = true;
-                    }
-                }
-
-                // closest obstacle on the left and on the right half of the scan
-                if(i > front)
-                    minleft = min(minleft, scan[i]);
-                else
-                    minright = min(minright, scan[i]);
-            }
-
-            if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id))){
-                printf("[%s:%d] [robot %d]: min left: %.2f\n", StripPath(__FILE__), __LINE__, id, minleft);
-                printf("[%s:%d] [robot %d]: min right: %.2f\n", StripPath(__FILE__), __LINE__, id, minright);
-            }
-            
-            if(obstruction || stop || (avoidcount > 0)){
-                x_speed = stop ? 0.0 : avoidspeed;
-
-                // once we start avoiding, select a turn direction and stick with it for a few iterations
-                if(avoidcount < 1)
-                {
-                    avoidcount = random() % avoidduration + avoidduration;
-
-                    if(minleft < minright){
-                        turn_speed = -avoidturn;
-                    }
-                    else{
-                        turn_speed = +avoidturn;
-                    }
-                }
-
-                avoidcount--;
-            }
-            else{
-                //avoidcount = 0;
-                //pos->SetXSpeed( cruisespeed );
-                //pos->SetTurnSpeed(  0 );
-
-                // normalize angle to be within [-π,π]
-                turn_speed = normalize(a_goal);
-
-                // calculate forward speed according to turning speed
-                // the more the robot turns, the slower it goes forward
-                if(abs(turn_speed) < 0.5)
-                    x_speed = cruisespeed;
-                else if(0.5 <= abs(turn_speed) && abs(turn_speed) < 1.5)
-                    x_speed = cruisespeed * (1.5 - abs(turn_speed));
-                else
-                    x_speed = 0;
-            }
-
-            if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id))){
-                printf("[%s:%d] [robot %d]: x speed: %.2f\n", StripPath(__FILE__), __LINE__, id, x_speed);
-                printf("[%s:%d] [robot %d]: turn speed: %.2f\n", StripPath(__FILE__), __LINE__, id, turn_speed);
-            }
-            */
-            
-            // calculate forward speed according to turning speed
-            // the more the robot turns, the slower it goes forward
-            if(abs(turn_speed) < 0.5)
-                x_speed = pos->velocity_bounds->max;
-            else if(0.5 <= abs(turn_speed) && abs(turn_speed) < 1.5)
-                x_speed = pos->velocity_bounds->max * (1.5 - abs(turn_speed));
-            else
-                x_speed = 0;
-
-            // set speed
-            pos->SetXSpeed(x_speed);
-            pos->SetTurnSpeed(turn_speed);
+            // go to next waypoint
+            pos->GoTo(int_goal);
         }
     }
 
@@ -326,6 +207,9 @@ namespace swarm
 
         // store goal for visualization
         pos->waypoints.push_back(ModelPosition::Waypoint(goal, wpcolor));
+        
+        // next intermediate goal
+        int_goal = path->PopBack()->pose;
 
         // move towards goal
         Move();
@@ -591,6 +475,35 @@ namespace swarm
             robot->Explore();
 
             return 0;
+        }
+        
+        // robot reached intermediate goal
+        if(robot->valid_path && pos->GetPose().Distance(robot->int_goal) < GOAL_TOLERANCE){ // euclidean
+            // next intermediate goal
+            Node* node = robot->path->PopBack();
+            
+            // valid intermediate goal
+            if(node != NULL)
+                robot->int_goal = node->pose;
+            
+            // invalid path
+            else{
+                delete robot->path;
+                robot->valid_path = false;
+                
+                // clear map, in case the two goals where closer than MAP_UPDATE_DIST
+                if(!map_update)
+                    robot->UpdateMap();
+                
+                // log data
+                robot->Log();
+                
+                // continue exploration
+                robot->Explore();
+                
+                return 0;
+            }
+                
         }
 
         // robot is following the path to the next step, continue moving

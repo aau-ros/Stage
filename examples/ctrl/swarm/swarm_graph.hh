@@ -125,7 +125,6 @@ namespace swarm
          */
         void AddNode(Node* node);
 
-    private:
         /**
          * Remove a node from the beginning and return it.
          *
@@ -140,6 +139,7 @@ namespace swarm
          */
         Node* PopBack();
 
+    private:
         /**
          * Get the size of the graph.
          *

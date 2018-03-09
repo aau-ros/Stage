@@ -30,7 +30,7 @@ namespace swarm
     /**
      * Distance that the robot can be away from goal.
      */
-    const double GOAL_TOLERANCE = 1.41;
+    const double GOAL_TOLERANCE = 0.1;
 
     /**
      * Math constant π.

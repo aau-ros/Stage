@@ -366,6 +366,11 @@ namespace swarm
          * The goal where the robot navigates to.
          */
         Pose goal;
+        
+        /**
+         * Intermediate goal the robot navigates to on its path to the goal.
+         */
+        Pose int_goal;
 
         /**
          * The color for visualizing the waypoints.

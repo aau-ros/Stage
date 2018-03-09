@@ -56,16 +56,24 @@ namespace swarm
 
     Node* Graph::PopFront()
     {
-        const std::vector<Node*>::iterator& it = nodes.begin();
-        nodes.erase(it);
-        return *it;
+        if(nodes.size() > 0){
+            const std::vector<Node*>::iterator& it = nodes.begin();
+            nodes.erase(it);
+            return *it;
+        }
+        else
+            return NULL;
     }
-
+    
     Node* Graph::PopBack()
     {
-        const std::vector<Node*>::iterator& it = nodes.end()-1;
-        nodes.erase(it);
-        return *it;
+        if(nodes.size() > 0){
+            const std::vector<Node*>::iterator& it = nodes.end()-1;
+            nodes.erase(it);
+            return *it;
+        }
+        else
+            return NULL;
     }
 
     void Graph::Draw() const

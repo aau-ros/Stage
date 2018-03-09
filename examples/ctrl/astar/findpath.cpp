@@ -314,7 +314,7 @@ bool ast::astar(uint8_t* map,
 		}
 		else if( SearchState == AStarSearch<MapSearchNode>::SEARCH_STATE_FAILED )
 		  {
-			 cout << "Search terminated. Did not find goal state\n";
+			 //cout << "Search terminated. Did not find goal state\n";
 
 		  }
 

@@ -191,16 +191,14 @@ namespace swarm
         valid_path = Plan(pos->GetPose(), goal);
 
         // no plan found
-        // try to find new, reachable goal
         if(!valid_path){
             if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
                 printf("[%s:%d] [robot %d]: cannot reach (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, goal.x, goal.y);
             
-            // finish simulation
-            Finalize();
-            
-            // set goal to current pose so that exploration continues
-            //goal = pos->GetPose();
+            // turn robot, then try again to find a goal
+            Pose rpos = pos->GetPose();
+            rpos.a = normalize(rpos.a + MAP_UPDATE_ANGLE);
+            pos->GoTo(rpos);
             
             return;
         }
@@ -431,6 +429,12 @@ namespace swarm
 
         // start exploration
         if(robot->state == STATE_IDLE){
+            robot->Explore();
+            return 0;
+        }
+        
+        // continue exploration
+        if(robot->valid_path == false){
             robot->Explore();
             return 0;
         }

@@ -1,0 +1,49 @@
+# include definition of world, robots, and docking stations for exploration with a swarm of robots
+include "swarm.inc"
+
+# simulation id that is used for creating a uniqe log folder
+simulation "example"
+
+# number of robots
+robots 1
+
+# number of docking stations
+docking_stations 1
+
+# a robot
+robot(
+    # position in world coordinates
+    pose [ 1 0 0 0 ]
+)
+
+# a docking station
+docking_station(
+    # position in world coordinates
+    pose [ 0 0 0 0 ]
+
+    # fiducial id that is returned to a fiducial sensor
+    # must be unique among multiple docking stations
+    fiducial_return 1
+
+    # name of the docking station
+    # must be ds + fiducial id
+    name "ds1"
+)
+
+# the map
+floorplan
+(
+    # shift of the map
+    pose [100 0 0 0]
+
+    # size of the map
+    size [250 50 1]
+
+    # path to the underlying bitmap
+    # the map name should always end with _#.ext
+    bitmap "bitmaps/lines_1.png"
+
+    # robots can collide with map obstacles
+    obstacle_return 1
+)
+

@@ -7,6 +7,7 @@ function usage(){
     echo -e "Make sure not to run multiple instances of this script with the exact same parameters!\n"
     echo -e "Options:"
     echo -e "\t-h, --help\t\tPrint this help."
+    echo -e "\t-p, --install-prefix\tInstall prefix, specifies the path for Stage installation, mandatory.\n\t\t\t\tMake sure the current user has write access. The following directories will be used within this path:\n\t\t\t\t<prefix>/bin: Executables, including the 'stage' program\n\t\t\t\t<prefix>/include: Stage header file\n\t\t\t\t<prefix>/lib: Compiled libraries, including libstage\n\t\t\t\t<prefix>/log: Stage log files\n\t\t\t\t<prefix>/share: Data resources, such as images or world files"
     echo -e "\t-s, --simulation\tUnique identifier for this simulation."
     echo -e "\t-r, --robots\t\tNumber of robots, max 8, mandatory."
     echo -e "\t-d, --docking-stations\tNumber of docking stations, max 9, mandatory."
@@ -16,10 +17,10 @@ function usage(){
 }
 
 # define command line options
-opts=$(getopt -o hs:r:d:m:g --long help,simulation:,robots:,docking-stations:,map:,gui -n 'run_swarm.sh' -- "$@")
+opts=$(getopt -o hp:s:r:d:m:g --long help,install-prefix:,simulation:,robots:,docking-stations:,map:,gui -n 'run_swarm.sh' -- "$@")
 
 # mandatory command line options
-mandatory=(-s -r -d)
+mandatory=(-p -s -r -d)
 
 # print help for unknown option
 if [ $? != 0 ]
@@ -45,6 +46,8 @@ while true ; do
 
     # extract option and its argument into a variable
     case "$1" in
+        -p|--install-prefix)
+            prefix=$2 ; shift 2 ;;
         -s|--simulation)
             simulation=$2 ; shift 2 ;;
         -r|--robots)
@@ -71,13 +74,15 @@ done
 
 # switch pwd
 cd $(dirname "$0")
-echo $PWD
 
 # setup stage include paths
-export LD_LIBRARY_PATH=~/Programs/Stage/lib
-export STAGEPATH=~/Programs/Stage/lib
+export LD_LIBRARY_PATH=${prefix}/lib
+export STAGEPATH=${prefix}/lib
 export CMAKE_INCLUDE_PATH=/opt/local/include
 export CMAKE_LIBRARY_PATH=/opt/local/lib
+
+# create log folder
+mkdir ${prefix}/log
 
 # compile swarm controller
 make install
@@ -158,9 +163,9 @@ do
     # run stage
     if [ ${gui} = true ]
     then
-        ~/Programs/Stage/bin/stage $PWD/$file
+        ${prefix}/bin/stage $PWD/$file
     else
-        ~/Programs/Stage/bin/stage -g $PWD/$file
+        ${prefix}/bin/stage -g $PWD/$file
     fi
 done
 

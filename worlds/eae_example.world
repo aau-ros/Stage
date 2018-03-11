@@ -2,7 +2,7 @@
 include "eae.inc"
 
 # number of robots
-robots 2
+robots 1
 
 # number of docking stations
 docking_stations 1

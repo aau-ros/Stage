@@ -72,9 +72,6 @@ for ((i = 0 ; i < ${#mandatory[@]} ; i++ )); do
   fi
 done
 
-# switch pwd
-cd $(dirname "$0")
-
 # setup stage include paths
 export LD_LIBRARY_PATH=${prefix}/lib
 export STAGEPATH=${prefix}/lib
@@ -147,7 +144,7 @@ do
     world+=")\n"
 
     # world file path
-    file="worlds/swarm_${robots}_${ds}_${simulation}.world"
+    file="${prefix}/share/stage/worlds/swarm_${robots}_${ds}_${simulation}.world"
 
     # write contents to world file
     echo -e ${world} > $file
@@ -163,9 +160,9 @@ do
     # run stage
     if [ ${gui} = true ]
     then
-        ${prefix}/bin/stage $PWD/$file
+        ${prefix}/bin/stage $file
     else
-        ${prefix}/bin/stage -g $PWD/$file
+        ${prefix}/bin/stage -g $file
     fi
 done
 

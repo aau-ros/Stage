@@ -51,7 +51,7 @@ while true ; do
         -s|--simulation)
             simulation=$2 ; shift 2 ;;
         -r|--robots)
-            robots=$2 ; shift 2 ;;
+            num_robots=$2 ; shift 2 ;;
         -d|--docking-stations)
             ds=$2 ; shift 2 ;;
         -m|--map)
@@ -118,12 +118,12 @@ do
     # add settings to world file
     world+="log \"$log\"\n"
     world+="simulation \"$simulation\"\n"
-    world+="robots $robots\n"
+    world+="robots $num_robots\n"
     world+="docking_stations $ds\n"
     world+="\n"
 
     # add robots to world file
-    for (( j=1; j<=${robots}; j++ ))
+    for (( j=1; j<=${num_robots}; j++ ))
     do
         world+="${robots[$j]}\n"
     done
@@ -146,7 +146,8 @@ do
     world+=")\n"
 
     # world file path
-    file="${prefix}/share/stage/worlds/swarm_${robots}_${ds}_${simulation}.world"
+    file="${prefix}/share/stage/worlds/swarm_${num_robots}_${ds}_${simulation}.world"
+    echo ${file}
 
     # write contents to world file
     echo -e ${world} > $file

@@ -147,7 +147,6 @@ do
 
     # world file path
     file="${prefix}/share/stage/worlds/swarm_${num_robots}_${ds}_${simulation}.world"
-    echo ${file}
 
     # write contents to world file
     echo -e ${world} > $file

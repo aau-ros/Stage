@@ -13,11 +13,6 @@ using namespace std;
 namespace swarm
 {
     /**
-     * Folder for log files inside home directory. Create this folder beforehand, subdirectories are automatically created. Keep trailing slash.
-     */
-    const string LOG_PATH = "Programs/Stage/log/";
-
-    /**
      * A class for logging data.
      */
     class LogOutput
@@ -25,7 +20,7 @@ namespace swarm
     public:
         /**
          * Constructor.
-         * Creates a subdirectory in the LOG_PATH directory, according to current date.
+         * Creates a subdirectory in the log directory specified in the world file, according to current date.
          *
          * @param ModelPosition* pos: The instantiated position model of the robot.
          * @param int robot: Id of robot owning this object, used for log file name.

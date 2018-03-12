@@ -28,9 +28,10 @@ namespace swarm
         // read number of current run
         int run = 0;
         run = wf->ReadInt(0, "run", run);
-
-        // path to log directory
-        string path = string(getenv("HOME")) + "/" + LOG_PATH;
+        
+        // read path to log directory
+        string path = "";
+        path = wf->ReadString(0, "log", path);
 
         // create directory if it doesn't exist
         if(MkDir(path) == false)
@@ -114,8 +115,7 @@ namespace swarm
         struct stat sb;
         if(stat(path.c_str(), &sb) != 0 || S_ISDIR(sb.st_mode) == false){
             if(mkdir(path.c_str(), 0755) < 0){
-                string base_path = string(getenv("HOME")) + "/" + LOG_PATH;
-                printf("Could not create log folder %s, please create it manually!\n", base_path.c_str());
+                printf("Could not create log folder %s, please create it manually!\n", path.c_str());
                 return false;
             }
         }

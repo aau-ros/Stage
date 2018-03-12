@@ -79,7 +79,8 @@ export CMAKE_INCLUDE_PATH=/opt/local/include
 export CMAKE_LIBRARY_PATH=/opt/local/lib
 
 # create log folder
-mkdir ${prefix}/log
+log=${prefix}/log/
+mkdir $log
 
 # compile swarm controller
 make install
@@ -115,6 +116,7 @@ do
     world="include \"swarm.inc\"\n\n"
 
     # add settings to world file
+    world+="log \"$log\"\n"
     world+="simulation \"$simulation\"\n"
     world+="robots $robots\n"
     world+="docking_stations $ds\n"

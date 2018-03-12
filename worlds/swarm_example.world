@@ -1,6 +1,9 @@
 # include definition of world, robots, and docking stations for exploration with a swarm of robots
 include "swarm.inc"
 
+# path to log directory
+log "/home/micha/Programs/Stage/log/"
+
 # simulation id that is used for creating a uniqe log folder
 simulation "example"
 

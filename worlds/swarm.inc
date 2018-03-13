@@ -11,7 +11,7 @@ include "map.inc"
 paused 1
 
 # force simulation to quit after quit_time simulated seconds
-quit_time 600
+quit_time 1200
 
 # resolution of map in meters / cell
 resolution 1

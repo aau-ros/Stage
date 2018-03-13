@@ -61,7 +61,13 @@ namespace swarm
         // waiting time at docking stations
         waiting_time = 0;
         waiting_start = 0;
-        
+
+        // timeout for retrying exploration
+        to_exp = 0;
+
+        // countdown for unsuccessful exploration tries
+        cd_exp = CD_EXP;
+
         // TODO: Obstacle avoidance
         /*avoidcount = 0;
         randcount = 0;*/
@@ -84,7 +90,7 @@ namespace swarm
 
         // pose at last map update
         last_pose = pos->GetPose();
-            
+
         // initial logging
         Log();
 
@@ -94,6 +100,17 @@ namespace swarm
 
     void Robot::Explore()
     {
+        // finish exploration after countdown
+        if(cd_exp <= 0){
+            Finalize();
+            return;
+        }
+
+        // only explore with a given rate
+        if(to_exp > pos->GetWorld()->SimTimeNow()){
+            return;
+        }
+
         // only explore if currently exploring or idle
         if(state != STATE_EXPLORE){
             if(state != STATE_IDLE)
@@ -112,7 +129,7 @@ namespace swarm
 
         // candidate inputs
         float in[8];
-        
+
         // robot battery charge percentage [0,1]
         //in[0] = robot->pos->FindPowerPack()->ProportionRemaining();
         // obstacle density in all sectors
@@ -133,26 +150,26 @@ namespace swarm
             printf("[%s:%d] [robot %d]: obstacle densities: [%.2f, %.2f, %.2f, %.2f]\n", StripPath(__FILE__), __LINE__, id, in[0], in[1], in[2], in[3]);
             printf("[%s:%d] [robot %d]: robot densities: [%.2f, %.2f, %.2f, %.2f]\n", StripPath(__FILE__), __LINE__, id, in[4], in[5], in[6], in[7]);
         }
-        
+
         // use candidate to get coordinates for next goal
         Result out = getOutput(in, 8);
-        
+
         // initialize goal with curren pose
         Pose goal = pos->GetPose();
-        
+
         // calculate coordinates of goal from given outputs
         try{
             if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id))){
                 printf("[%s:%d] [robot %d]: neural network output: [%.2f, %.2f, %.2f, %.2f]\n", StripPath(__FILE__), __LINE__, id, out.output[0], out.output[1], out.output[2], out.output[3]);
             }
-            
+
             // angular offset between sectors and x/y axes
             radians_t a = -PI / 4;
-            
+
             // rotated x/y values from candidate outputs
             meters_t xr = (laser->GetSensors()[0].range.max * 0.5) * (out.output[0] - out.output[2]);
             meters_t yr = (laser->GetSensors()[0].range.max * 0.5) * (out.output[1] - out.output[3]);
-            
+
             // rotate outputs to x/y axes
             goal.x += xr * cos(a) - yr * sin(a);
             goal.y += xr * sin(a) + yr * cos(a);
@@ -161,6 +178,10 @@ namespace swarm
             printf("[%s:%d] [robot %d]: neural network output has wrong size! shutting down...\n", StripPath(__FILE__), __LINE__, id);
             Finalize();
         }
+
+        // set timeout after which next exploration can happen
+        to_exp = pos->GetWorld()->SimTimeNow() + TO_EXP;
+
         // goal found, move there
         SetGoal(goal);
     }
@@ -194,18 +215,24 @@ namespace swarm
         if(!valid_path){
             if(InArray(id, DEBUG_ROBOTS, sizeof(DEBUG_ROBOTS)/sizeof(id)))
                 printf("[%s:%d] [robot %d]: cannot reach (%.2f,%.2f)\n", StripPath(__FILE__), __LINE__, id, goal.x, goal.y);
-            
+
+            // continue countdown
+            --cd_exp;
+
             // turn robot, then try again to find a goal
             Pose rpos = pos->GetPose();
             rpos.a = normalize(rpos.a + MAP_UPDATE_ANGLE);
             pos->GoTo(rpos);
-            
+
             return;
         }
 
+        // reset countdown
+        cd_exp = CD_EXP;
+
         // store goal for visualization
         pos->waypoints.push_back(ModelPosition::Waypoint(goal, wpcolor));
-        
+
         // next intermediate goal
         int_goal = path->PopBack()->pose;
 
@@ -360,10 +387,6 @@ namespace swarm
 
         // log data
         Log();
-
-        // pause if all other robots finished already
-        if(cord->Finished())
-            pos->GetWorld()->Stop();
     }
 
     string Robot::MapName()
@@ -376,24 +399,24 @@ namespace swarm
         }
         return name;
     }
-    
+
     float Robot::ObstacleDensity(int sector)
     {
         // get lidar sensor object
         ModelRanger::Sensor lidar = laser->GetSensors()[0];
-        
+
         // get current laser scan samples
         vector<meters_t> scan = lidar.ranges;
         vector<meters_t>::iterator it;
-        
+
         // portion of scan that belongs to a specific sector
         vector<meters_t>::iterator begin = scan.begin() + sector * lidar.sample_count / SECTORS;
         vector<meters_t>::iterator end = scan.begin() + (sector + 1) * lidar.sample_count / SECTORS;
-        
+
         // measure free space
         float free = 0;
         int test_count = 0;
-        
+
         for(it = begin; it < end && it < scan.end(); ++it){
             ++test_count;
             // clip lidar to valid ranges
@@ -404,11 +427,11 @@ namespace swarm
             else
                 free += *it;
         }
-        
+
         // return density
         return 1 - free / ((end - begin) * (float)lidar.range.max);
     }
-    
+
     float Robot::RobotDensity(int sector)
     {
         return cord->RobotDensity(sector * 2*PI / SECTORS, (sector + 1) * 2*PI / SECTORS);
@@ -432,7 +455,7 @@ namespace swarm
             robot->Explore();
             return 0;
         }
-        
+
         // continue exploration
         if(robot->valid_path == false){
             robot->Explore();
@@ -461,7 +484,7 @@ namespace swarm
         if(dist > GOAL_TOLERANCE && pos->GetPose().Distance(robot->goal) < GOAL_TOLERANCE){ // euclidean
             // stop moving
             pos->Stop();
-            
+
             // remove current path plan
             if(robot->valid_path){
                 delete robot->path;
@@ -471,7 +494,7 @@ namespace swarm
             // clear map, in case the two goals where closer than MAP_UPDATE_DIST
             if(!map_update)
                 robot->UpdateMap();
-            
+
             // log data
             robot->Log();
 
@@ -480,34 +503,34 @@ namespace swarm
 
             return 0;
         }
-        
+
         // robot reached intermediate goal
         if(robot->valid_path && pos->GetPose().Distance(robot->int_goal) < GOAL_TOLERANCE){ // euclidean
             // next intermediate goal
             Node* node = robot->path->PopBack();
-            
+
             // valid intermediate goal
             if(node != NULL)
                 robot->int_goal = node->pose;
-            
+
             // invalid path
             else{
                 delete robot->path;
                 robot->valid_path = false;
-                
+
                 // clear map, in case the two goals where closer than MAP_UPDATE_DIST
                 if(!map_update)
                     robot->UpdateMap();
-                
+
                 // log data
                 robot->Log();
-                
+
                 // continue exploration
                 robot->Explore();
-                
+
                 return 0;
             }
-                
+
         }
 
         // robot is following the path to the next step, continue moving

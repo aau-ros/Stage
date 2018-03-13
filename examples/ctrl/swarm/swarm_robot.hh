@@ -56,11 +56,24 @@ namespace swarm
      * Allowed distance between two points for them to be still at the same location.
      */
     const double EPSILON = 0.1;
-    
+
     /**
      * Number of sectors for which to compute inputs for evolutionary controller.
      */
     const int SECTORS = 4;
+
+    /**
+     * Timeout for retrying exploration.
+     * It defines the maximum rate at which the robots can plan paths.
+     * This avoids the robots slowing down the simulation by trying to plan paths too often when failing.
+     */
+    const usec_t TO_EXP = 1000000;
+
+    /**
+     * Countdown for retrying exploration when failing to plan path.
+     * When the countdown finishes, robots give up and shut down.
+     */
+    const int CD_EXP = 50;
 
     /**
      * TODO: Obstacle avoidance.
@@ -427,7 +440,20 @@ namespace swarm
          * Number of robots in the simulation.
          */
         int num_robots;
-        
+
+        /**
+         * Timeout for retrying exploration.
+         * It defines the maximum rate at which the robots can plan paths.
+         * This avoids the robots slowing down the simulation by trying to plan paths too often when failing.
+         */
+        usec_t to_exp;
+
+        /**
+         * Countdown for retrying exploration when failing to plan path.
+         * When the countdown finishes, robots give up and shut down.
+         */
+        int cd_exp;
+
         /**
          * TODO: Obstacle avoidance.
          */

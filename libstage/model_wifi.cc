@@ -338,7 +338,7 @@ ModelWifi::ModelWifi( World* world, Model* parent, const std::string& type )
   }
   else
   {
-    PRINT_ERR( "NOTE: RNG couldn't seed from /dev/random as /dev/random doesn't exist.  The random numbers may not be optimal in this case.\n");
+    PRINT_MSG( "NOTE: RNG couldn't seed from /dev/random as /dev/random doesn't exist.  The random numbers may not be optimal in this case.\n");
     random_seed = static_cast<unsigned int>(std::time(0));
   }
   //Get a unique MAC address for this wifi model among all other wifi models

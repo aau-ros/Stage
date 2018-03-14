@@ -83,6 +83,7 @@ log=${prefix}/log/
 mkdir $log
 
 # compile swarm controller
+cd $(dirname "$0")
 make install
 
 # define robots

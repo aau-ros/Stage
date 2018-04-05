@@ -139,7 +139,7 @@ namespace swarm
         double Explored();
 
         /**
-         * Compute distance between two points.
+         * Compute distance between two points using the A* algorithm.
          *
          * @param double from_x: X-coordinate of starting point.
          * @param double from_y: Y-coordinate of starting point.
